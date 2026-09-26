@@ -1,8 +1,7 @@
 # JANISSARY — Port Workflow Tracker
-
-## STATUS: PHASE 3 COMPLETE - PHASE 4 READY
-## NEXT: Phase 4 — Launch (README polish, M4 blog post + demo video)
-## LAST COMPLETED: P3.3 — Agent / FindingStore / PlatformKB (303 tests pass)
+## STATUS: PHASE 4 COMPLETE - READY TO LAUNCH
+## NEXT: Execute docs/launch-plan.md (Show HN, r/netsec, blog cross-post)
+## LAST COMPLETED: P4.4 — Launch plan, blog, demo GIF, README proof block (314 tests pass)
 
 Last updated: 2026-09-26
 Project root: C:\Users\M5 E60\janissary-project\janissary
