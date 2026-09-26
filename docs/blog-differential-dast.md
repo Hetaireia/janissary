@@ -74,7 +74,7 @@ looks like this:
            - [sql_single_quote] payload_reflected: Payload reflected (raw)
 ```
 
-Nine signals. **One bug.** Every piece of evidence for `F-001` points at
+Eleven signals. **One bug.** Every piece of evidence for `F-001` points at
 the same SQL injection, so JANISSARY groups them. `F-002` is a different
 root cause — reflection — and stays separate.
 

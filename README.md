@@ -30,12 +30,14 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 
 ## See it work
 
+![JANISSARY demo](docs/demo.gif)
+
 One real SQL injection, scanned with `janissary scan`:
 
 ```text
-$ janissary scan -u "http://localhost:5000/search?q=test" -p q
+$ janissary scan -u "http://localhost:5001/sqli?q=test" -p q
 
-[*] Scanning http://localhost:5000/search?q=test
+[*] Scanning http://localhost:5001/sqli?q=test
 [*] Parameters: q
 [*] Baseline samples: 10
 
@@ -49,25 +51,27 @@ $ janissary scan -u "http://localhost:5000/search?q=test" -p q
 ============================================================
 SCAN SUMMARY
 ============================================================
-  Target:          http://localhost:5000/search?q=test
+  Target:          http://localhost:5001/sqli?q=test
   Parameters:      q
   Method:          GET
   Total requests:  29
-  Findings:        9 in 2 groups
+  Findings:        11 in 2 groups
 
   Baselines:
-    q: samples=10 mean=2.0488s std=0.0127s stable_body=True
+    q: samples=10 mean=2.0484s std=0.0098s stable_body=True
 
   Findings:
     F-001  CRITICAL sqli:sql_injection  (param=q)
            - [sql_single_quote] db_error: SQLITE error signature matched
            - [sql_single_quote] status_change: Baseline 200 -> Payload 500
-           - [sql_or_1eq1]      length_anomaly: Response 3.2x baseline
+           - [sql_single_quote] length_anomaly: Response 3.6x baseline
+           - [sql_or_1eq1]      length_anomaly: Response 3.8x baseline
            - [sql_union_null]   status_change: Baseline 200 -> Payload 500
-           - [sql_union_null]   length_anomaly: Response 8.3x baseline
+           - [sql_union_null]   length_anomaly: Response 10.1x baseline
            - [sql_sleep_mysql]  status_change: Baseline 200 -> Payload 500
+           - [sql_sleep_mysql]  length_anomaly: Response 3.3x baseline
            - [sql_sleep_pg]     status_change: Baseline 200 -> Payload 500
-           - [sql_sleep_pg]     length_anomaly: Response 4.7x baseline
+           - [sql_sleep_pg]     length_anomaly: Response 5.8x baseline
 
     F-002  LOW      sqli:reflection  (param=q)
            - [sql_single_quote] payload_reflected: Payload reflected (raw)
@@ -75,11 +79,11 @@ SCAN SUMMARY
   Findings by severity:
     CRITICAL   1
     HIGH       4
-    MEDIUM     3
+    MEDIUM     5
     LOW        1
 ```
 
-Nine signals, **one bug**. Every piece of evidence for `F-001` points
+Eleven signals, **one bug**. Every piece of evidence for `F-001` points
 at the same SQL injection, so JANISSARY groups them. `F-002` is a
 different root cause (reflection) and stays separate. One finding to
 triage, with the receipts attached.
@@ -88,7 +92,9 @@ triage, with the receipts attached.
 ## Install
 
 ```bash
-pip install janissary
+git clone https://github.com/Damn-Infidel/janissary.git
+cd janissary
+pip install -e .
 ```
 
 ---
@@ -104,7 +110,7 @@ janissary terms accept
 Scan a single endpoint:
 
 ```bash
-janissary scan -u "https://target.example/search?q=test" -p q
+janissary scan -u "https://target.example/sqli?q=test" -p q
 ```
 
 Scan a Git repository for leaked credentials:
