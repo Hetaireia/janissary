@@ -171,18 +171,6 @@ janissary agent https://target.example --attack-confirm --store findings.json
 
 ---
 
-## Status
-
-**Phase 3 complete.** 312 tests passing. All subsystems shipped:
-
-- Phase 0 - green baseline
-- Phase 1 - credentials, Git history, WAF + pacer, XML-RPC, fingerprint
-- Phase 2 - GraphQL, WebSocket, admin probe
-- Phase 3 - SQLi UNION extractor, Nuclei runner, agent
-
-Roadmap: [JANISSARY_ASCENSION.md](JANISSARY_ASCENSION.md).
-
----
 
 ## Contributing
 

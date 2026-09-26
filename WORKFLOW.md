@@ -1,7 +1,7 @@
 # JANISSARY — Port Workflow Tracker
 ## STATUS: PHASE 4 COMPLETE - READY TO LAUNCH
 ## NEXT: Execute docs/launch-plan.md (Show HN, r/netsec, blog cross-post)
-## LAST COMPLETED: P4.4 — Launch plan, blog, demo GIF, README proof block (314 tests pass)
+## LAST COMPLETED: P4.5 — Pre-flight verification: README sample synced to bench data (11/2 groups, port 5001, /sqli), blog line 77 corrected, install line switched to source install, 314 tests pass, CI green on a58bb0c
 
 Last updated: 2026-09-26
 Project root: C:\Users\M5 E60\janissary-project\janissary
@@ -229,16 +229,10 @@ Phase 4 - Launch.
 NEXT: M4 - Technical blog post + demo video.
 
 After that:
-- M5 README polish (use the positioning statement from
-  JANISSARY_ASCENSION.md).
+- M5 README polish.
 - M6 Launch posts: HN (Show HN), r/netsec, r/AskNetsec,
   r/blueteamsec, OWASP Slack, awesome-security lists.
 - M7 Claim listings: G2, Capterra, PeerSpot, AlternativeTo.
-
-The detailed plan for each milestone is in JANISSARY_ASCENSION.md.
-Track progress with:
-
-    python tools/ascension.py
 ## Post-launch backlog
 
 Candidates for the first feature after M4/M6/M7 ship. Final pick
@@ -290,17 +284,7 @@ authenticated scanning - it is the safest bet.
 
 ## Git status note
 
-All work through P3.1 is committed and pushed. The legal framework,
-the ASCENSION roadmap, the countdown tracker, and P3.1 are on GitHub
+All work through P3.1 is committed and pushed. The legal framework
+and P3.1 are on GitHub
 at the latest `main`.
 
----
-
-## Vision
-
-See `JANISSARY_ASCENSION.md` for the full roadmap to top-20 DAST
-ranking, the competitive positioning, and the 12-month timeline.
-
-Track progress:
-
-    python tools/ascension.py
