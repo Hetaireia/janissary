@@ -6,7 +6,7 @@ style, and the PR process.
 ## Development Setup
 
 ```bash
-git clone https://github.com/yourorg/janissary
+git clone https://github.com/Hetaireia/janissary
 cd janissary
 python -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\Activate.ps1

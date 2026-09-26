@@ -12,7 +12,7 @@
 **Do not open a public issue for security vulnerabilities.**
 
 Report vulnerabilities in JANISSARY itself to
-`security@yourorg.example`. Include:
+`hetaireia.it@gmail.com`. Include:
 
 - A description of the vulnerability
 - Steps to reproduce

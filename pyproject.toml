@@ -8,13 +8,12 @@ version = "7.1.0"
 description = "Automated offensive security platform for small teams"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
-authors = [{ name = "Your Name", email = "you@example.com" }]
+license = "Apache-2.0"
+authors = [{ name = "Hetaireia", email = "hetaireia.it@gmail.com" }]
 keywords = ["security", "dast", "pentest", "scanner", "vulnerability"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -42,9 +41,9 @@ dev = [
 janissary = "janissary.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourorg/janissary"
-Documentation = "https://github.com/yourorg/janissary/tree/main/docs"
-Issues = "https://github.com/yourorg/janissary/issues"
+Homepage = "https://github.com/Hetaireia/janissary"
+Documentation = "https://github.com/Hetaireia/janissary/tree/main/docs"
+Issues = "https://github.com/Hetaireia/janissary/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
