@@ -223,16 +223,28 @@ Suite: 303 tests passing. Ruff clean. Phase 3 complete.
 ---
 
 ## Current step
-
 Phase 4 - Launch.
 
-NEXT: M4 - Technical blog post + demo video.
+COMPLETE:
+- M1-M3 shipped, 314 tests pass, CI green.
+- M4 blog + demo GIF, M5 README polish + pre-flight verification.
+- README/blog sample synced to bench-sqli-1.json (11 findings / 2 groups, port 5001, /sqli).
+- Repo moved to github.com/Hetaireia/janissary (org created 2026-09-27).
+- History rewritten: ascension doc and tracker removed from all commits, force-pushed.
+- pyproject metadata fixed: URLs to Hetaireia, author Hetaireia, SPDX license.
+- Build artifacts clean: janissary-7.1.0.tar.gz + wheel, twine check PASSED.
 
-After that:
-- M5 README polish.
-- M6 Launch posts: HN (Show HN), r/netsec, r/AskNetsec,
-  r/blueteamsec, OWASP Slack, awesome-security lists.
-- M7 Claim listings: G2, Capterra, PeerSpot, AlternativeTo.
+BLOCKED ON (browser, your end):
+- TestPyPI + PyPI accounts, 2FA, API tokens.
+- Then upload to TestPyPI, verify fresh-venv install, upload to PyPI.
+- Then revert README install line from git clone to pip install janissary.
+
+PENDING (browser):
+- Register hetaireia.io first, then hetaireia.com.au (needs ABN or ACN).
+
+THEN:
+- M6 launch posts per docs/launch-plan.md and reference doc. Tuesday or Wednesday 08:00 ET.
+
 ## Post-launch backlog
 
 Candidates for the first feature after M4/M6/M7 ship. Final pick

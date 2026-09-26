@@ -852,7 +852,7 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
                     "driver": {
                         "name": "JANISSARY",
                         "version": __version__,
-                        "informationUri": "https://github.com/yourorg/janissary",
+                        "informationUri": "https://github.com/Hetaireia/janissary",
                     }
                 },
                 "results": results,
