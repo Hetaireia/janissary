@@ -1,0 +1,9 @@
+# Run scratch: keep committed runs, ignore in-progress work
+runs/**/*.tmp
+runs/**/*.partial
+track-a/.cache/
+track-b/.cache/
+charts/*.png
+charts/*.svg
+__pycache__/
+*.pyc
