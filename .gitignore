@@ -51,5 +51,22 @@ test-install/
 # asciinema recordings
 demo.cast
 
+# local-only ascension roadmap and tracker (see commit 471f2b60)
+JANISSARY_ASCENSION.md
+tools/ascension.py
+tools/ascension_state.json
+
 # local scratch
 vulnapp.py
+
+# local-only ascension dashboard (regenerable, inputs are ignored)
+tools/render_ascension.py
+tools/ascension.ps1
+ASCENSION.html
+WORKFLOW.html
+
+# local benchmark scratch
+bench-*.json
+benchapp.py
+benchdata/
+
