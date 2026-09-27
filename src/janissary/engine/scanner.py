@@ -257,10 +257,23 @@ class Scanner:
     # ---------------------------------------------------------------
 
     def collect_baseline(self, param: str) -> Baseline:
+        """Sample the target N times using a single known-good value.
+
+        The baseline must measure the app's response to *identical* input.
+        If the user pointed us at a URL that already carries a value for
+        this parameter (e.g. ?f=readme.txt), that value is the known-good
+        one and we replay it. Otherwise we fall back to a fixed literal.
+
+        Rotating through different benign values makes `is_stable_body` a
+        test of the payload list rather than the target, and on endpoints
+        that 500 for unknown input it makes `modal_status` 500 -- silently
+        disabling the status and length gates before any payload is sent.
+        """
         baseline = Baseline()
-        benign = ["1", "test", "index", "home", "default"]
-        for i in range(self.baseline_count):
-            value = benign[i % len(benign)]
+        parsed = urlparse(self.target)
+        existing = parse_qs(parsed.query, keep_blank_values=True).get(param)
+        value = existing[0] if existing else "1"
+        for _ in range(self.baseline_count):
             try:
                 r = self._paced_request(self.target, param, value)
             except requests.RequestException:
@@ -312,6 +325,12 @@ class Scanner:
 
             if baseline.is_static and not quiet:
                 print(f"  [{param}] baseline is static - timing gates disabled")
+
+            if baseline.modal_status >= 400 and not quiet:
+                print(
+                    f"  [{param}] warning: baseline modal status is "
+                    f"{baseline.modal_status} - status gate disabled"
+                )
 
             for name, value, category, _severity in DEFAULT_PAYLOADS:
                 try:
