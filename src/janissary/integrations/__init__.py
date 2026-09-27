@@ -27,7 +27,7 @@ from .websocket import (
 )
 from .websocket import scan as websocket_scan
 from .websocket import scan_sync as websocket_scan_sync
-from .xmlrpc import (
+from .xmlrpc import (  # nosec B411 # relative import of local .xmlrpc package, not stdlib xmlrpclib
     AUTH_METHODS,
     METHODS_OF_INTEREST,
     XmlRpcAttempt,
@@ -41,8 +41,12 @@ from .xmlrpc import (
     parse_response,
     pingback_probe,
 )
-from .xmlrpc import detect as xmlrpc_detect
-from .xmlrpc import resolve_endpoint as xmlrpc_resolve_endpoint
+from .xmlrpc import (
+    detect as xmlrpc_detect,  # nosec B411 # relative import of local .xmlrpc package, not stdlib xmlrpclib
+)
+from .xmlrpc import (
+    resolve_endpoint as xmlrpc_resolve_endpoint,  # nosec B411 # relative import of local .xmlrpc package, not stdlib xmlrpclib
+)
 
 __all__ = [
     "ARG_PAYLOADS",
