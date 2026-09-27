@@ -32,7 +32,7 @@ finding on a baseline comparison — nothing is emitted from a single
 response — and groups multiple payload confirmations of the same bug into
 one finding with attached evidence.
 
-https://github.com/Damn-Infidel/janissary
+https://github.com/Hetaireia/janissary
 
 Dual-use security tool; run it only against authorised targets.
 ```
