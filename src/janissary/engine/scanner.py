@@ -55,6 +55,19 @@ DEFAULT_USER_AGENT = (
 # -------------------------------------------------------------------
 
 
+
+# Finding types the analyzer emits without any category-specific gate.
+# They are corroborators, not detectors: on a target that 500s for any
+# unknown input, every payload class produces the same observation, so
+# attaching the payload's category would attribute one fact to several
+# categories (F-002 through F-007 on /traversal). Dropped as standalone
+# findings. See WORKFLOW.md, "Structural misattribution".
+CORROBORATOR_ONLY_TYPES = frozenset({
+    "status_change",
+    "length_anomaly",
+    "length_shrink",
+})
+
 def build_url(base: str, param: str, value: str) -> str:
     """Inject `param=value` into the URL, preserving other parameters."""
     parsed = urlparse(base)
@@ -354,6 +367,8 @@ class Scanner:
 
                 for f in raw_findings:
                     if f.get("severity") == "info":
+                        continue
+                    if f.get("type") in CORROBORATOR_ONLY_TYPES:
                         continue
                     finding = ScanFinding(
                         param=param,
