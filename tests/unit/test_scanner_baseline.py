@@ -111,25 +111,18 @@ def test_baseline_is_stable_when_endpoint_500s_unknown_input(make_scanner):
     assert baseline.is_stable_body is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "structural misattribution: category-agnostic detectors inherit the "
-        "payload's category, so a 500-on-unknown endpoint emits spurious "
-        "sqli/xss/cmdi findings. See WORKFLOW.md SESSION HANDOFF."
-    ),
-    strict=True,
-)
 def test_500_on_unknown_input_does_not_misattribute_categories(make_scanner):
     """Reproduce the /traversal shape: known file 200s, anything else 500s.
 
     The baseline (readme.txt) succeeds, so the status gate is live; every
-    payload 500s, so `_check_status` fires. Those findings inherit the
-    payload's category even though the detector is category-agnostic.
+    payload 500s, so `_check_status` would fire. Those observations are
+    category-agnostic -- they carry no evidence of sqli, xss, or cmdi --
+    and are now suppressed as standalone findings by the scanner's
+    CORROBORATOR_ONLY_TYPES filter. This test asserts no finding carries a
+    category-specific label it did not earn.
 
     Categories are bare strings ('sqli', 'xss', 'cmdi', 'traversal'), not
-    'sqli:sql_injection'. Traversal findings are allowed here -- the payload
-    set being sent IS the traversal set for this target, so a traversal
-    status_change is not a misattribution.
+    'sqli:sql_injection'.
     """
     def responses(value: str):
         if value == "readme.txt":
