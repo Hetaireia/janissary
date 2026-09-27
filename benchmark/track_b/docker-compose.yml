@@ -1,0 +1,43 @@
+# Track B target: OWASP Juice Shop.
+#
+# Deployed on a VPS. Public DNS through Cloudflare (proxied, orange cloud)
+# with free-tier defaults. Do NOT add custom WAF rules - the benchmark
+# tests default Cloudflare, not a tuned deployment.
+#
+# Pin the image tag before any official run and record it in tools.env
+# (TARGET_VERSION). If the tag moves, the benchmark is invalid.
+#
+# Run:    docker compose up -d
+# Reset:  docker compose down -v  &&  docker compose up -d
+#         (fresh database every run - required by BENCHMARK.md)
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:v17.1.1
+    container_name: janissary-juice-shop
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/rest/admin/application-version"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Nginx in front so we can terminate TLS locally before Cloudflare.
+  # Cloudflare talks to this container; the container talks to juice-shop.
+  # Keeping the origin behind a reverse proxy is what a real deployment
+  # looks like and avoids exposing Juice Shop's Node.js server directly.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: janissary-juice-shop-proxy
+    restart: unless-stopped
+    depends_on:
+      juice-shop:
+        condition: service_healthy
+    ports:
+      - "0.0.0.0:8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
