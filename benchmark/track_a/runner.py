@@ -4,7 +4,7 @@ Drives JANISSARY, OWASP ZAP, or Nuclei against a running OWASP Benchmark
 instance. Writes raw output per run into a timestamped directory.
 
 Usage:
-    python -m benchmark.track-a.runner --tool janissary --run-number 1 \
+    python -m benchmark.track_a.runner --tool janissary --run-number 1 \
         --target-base http://127.0.0.1:8080 --cases-csv cases.csv
 
 The cases CSV must have a header row with at least:
@@ -191,7 +191,6 @@ def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
         for site in doc.get("site", []):
             for alert in site.get("alerts", []):
                 for inst in alert.get("instances", []):
-                    findings.write_text("", encoding="utf-8") if False else None
                     row = {
                         "url": inst.get("uri"),
                         "alert": alert.get("alert"),
@@ -219,7 +218,7 @@ DRIVERS = {
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="benchmark.track-a.runner",
+        prog="benchmark.track_a.runner",
         description="Track A runner (see BENCHMARK.md).",
     )
     p.add_argument("--tool", required=True, choices=sorted(DRIVERS))
