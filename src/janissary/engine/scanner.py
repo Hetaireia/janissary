@@ -8,6 +8,7 @@ later passes.
 
 from __future__ import annotations
 
+import sys
 import time
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -18,6 +19,10 @@ from janissary.detection import (
     Baseline,
     DifferentialAnalyzer,
     ResponseSnapshot,
+)
+from janissary.output.raw_http import (
+    serialize_request,
+    serialize_response,
 )
 from janissary.recon import (
     AdaptivePacer,
@@ -49,6 +54,17 @@ DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+
+# -------------------------------------------------------------------
+# STDERR LOGGING
+# -------------------------------------------------------------------
+
+
+def _say(*args, **kwargs) -> None:
+    """Status prints go to stderr; stdout is reserved for the payload."""
+    kwargs["file"] = sys.stderr
+    print(*args, **kwargs)
+
 
 # -------------------------------------------------------------------
 # URL BUILDING
@@ -116,6 +132,12 @@ class ScanFinding:
     response_time: float | None = None
     reflection_context: str | None = None
     response_content_type: str = ""
+
+    # Wire-level artifacts for Burp Repeater paste-in.
+    url: str = ""
+    method: str = "GET"
+    raw_request: str | None = None
+    raw_response: str | None = None
 
 
 @dataclass
@@ -255,16 +277,16 @@ class Scanner:
             user_agent=self._ua,
         )
         if not quiet:
-            print("[*] Probing for WAF...")
+            _say("[*] Probing for WAF...")
         profile = detector.detect(self.target)
         if not quiet:
             if profile.detected:
                 vendor = profile.vendor or "unknown"
-                print(
+                _say(
                     f"    WAF detected: {vendor} (confidence {profile.confidence:.2f})"
                 )
             else:
-                print("    No WAF signatures observed")
+                _say("    No WAF signatures observed")
         return profile
 
     # ---------------------------------------------------------------
@@ -323,7 +345,7 @@ class Scanner:
             waf_profile=self.waf_profile,
         )
         if not quiet and self._pacer.delay > 0:
-            print(f"[*] Initial inter-request delay: {self._pacer.delay:.2f}s")
+            _say(f"[*] Initial inter-request delay: {self._pacer.delay:.2f}s")
 
         for param in self.params:
             baseline = self.collect_baseline(param)
@@ -337,10 +359,10 @@ class Scanner:
             }
 
             if baseline.is_static and not quiet:
-                print(f"  [{param}] baseline is static - timing gates disabled")
+                _say(f"  [{param}] baseline is static - timing gates disabled")
 
             if baseline.modal_status >= 400 and not quiet:
-                print(
+                _say(
                     f"  [{param}] warning: baseline modal status is "
                     f"{baseline.modal_status} - status gate disabled"
                 )
@@ -350,7 +372,7 @@ class Scanner:
                     r = self._paced_request(self.target, param, value)
                 except requests.RequestException as e:
                     if not quiet:
-                        print(f"  [{param}] {name} - error: {e}")
+                        _say(f"  [{param}] {name} - error: {e}")
                     continue
                 summary.total_requests += 1
                 if r is None:
@@ -370,6 +392,7 @@ class Scanner:
                         continue
                     if f.get("type") in CORROBORATOR_ONLY_TYPES:
                         continue
+                    request_obj = getattr(r, "request", None)
                     finding = ScanFinding(
                         param=param,
                         payload_name=name,
@@ -383,11 +406,15 @@ class Scanner:
                         response_time=snapshot.elapsed,
                         reflection_context=f.get("reflection_context"),
                         response_content_type=snapshot.content_type,
+                        url=getattr(request_obj, "url", None) or self.target,
+                        method=self.method,
+                        raw_request=serialize_request(request_obj),
+                        raw_response=serialize_response(r),
                     )
                     summary.findings.append(finding)
                     summary.finding_count += 1
                     if not quiet:
-                        print(
+                        _say(
                             f"  [{param}] {name} -> "
                             f"{finding.severity.upper()}: {finding.finding_type} "
                             f"| {finding.detail[:80]}"
