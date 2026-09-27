@@ -1,0 +1,1 @@
+"""JANISSARY benchmark harness. See ../BENCHMARK.md for methodology."""

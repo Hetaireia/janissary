@@ -1,0 +1,6 @@
+# Benchmark harness dependencies. Pinned.
+# Separate from the JANISSARY runtime deps so the harness can be
+# audited independently.
+scipy==1.13.1
+matplotlib==3.9.0
+requests==2.32.3
