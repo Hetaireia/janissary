@@ -20,7 +20,6 @@ from dataclasses import dataclass
 # ---------------------------------------------------------------------------
 
 BLOCK_STATUSES = frozenset({403, 406, 418, 429, 501, 503})
-SOFT_ERROR_STATUSES = frozenset({500, 502, 504})
 
 
 @dataclass
@@ -104,10 +103,13 @@ class AdaptivePacer:
             self._events.append(event)
             return
 
-        if status in SOFT_ERROR_STATUSES:
+        if 500 <= status < 600 and status not in BLOCK_STATUSES:
+            # Server-side error: not a block signal, not a success. The app
+            # (or its upstream) failed to serve the request. Backing off here
+            # does not help -- it just slows the scan on targets that return
+            # 5xx for unknown input. Do not count it toward recovery either.
             self._clean_streak = 0
-            self._backoff()
-            event["action"] = "backoff_soft_error"
+            event["action"] = "server_error_no_backoff"
             self._events.append(event)
             return
 
