@@ -92,7 +92,7 @@ triage, with the receipts attached.
 ## Install
 
 ```bash
-git clone https://github.com/Damn-Infidel/janissary.git
+git clone https://github.com/Hetaireia/janissary.git
 cd janissary
 pip install -e .
 ```
