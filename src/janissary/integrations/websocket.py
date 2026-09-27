@@ -28,7 +28,7 @@ DEFAULT_UA = (
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 
-LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
+LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})  # nosec # classification set, not a bind address
 
 DEFAULT_ECHO_PAYLOAD = "<script>alert(1)</script>"
 
@@ -39,6 +39,7 @@ PING_MESSAGE = "__janissary_ping__"
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class WebSocketFinding:
@@ -52,6 +53,7 @@ class WebSocketFinding:
             "severity": self.severity,
             "detail": self.detail,
         }
+
 
 @dataclass
 class WebSocketProfile:
@@ -78,9 +80,11 @@ class WebSocketProfile:
             "notes": list(self.notes),
         }
 
+
 # ---------------------------------------------------------------------------
 # URL helpers
 # ---------------------------------------------------------------------------
+
 
 def is_plaintext(url: str) -> bool:
     """True if the URL uses ws:// against a non-loopback host."""
@@ -90,9 +94,11 @@ def is_plaintext(url: str) -> bool:
     host = (parsed.hostname or "").lower()
     return host not in LOOPBACK_HOSTS
 
+
 # ---------------------------------------------------------------------------
 # Low-level connect
 # ---------------------------------------------------------------------------
+
 
 async def _connect(
     url: str,
@@ -118,9 +124,11 @@ async def _connect(
 
     return await websockets.connect(url, **kwargs)
 
+
 # ---------------------------------------------------------------------------
 # Scan
 # ---------------------------------------------------------------------------
+
 
 async def scan(
     url: str,
@@ -158,9 +166,7 @@ async def scan(
             subprotocols=subprotocols,
         )
     except Exception as exc:
-        profile.notes.append(
-            f"baseline connect failed: {type(exc).__name__}: {exc}"
-        )
+        profile.notes.append(f"baseline connect failed: {type(exc).__name__}: {exc}")
         return profile
 
     profile.reachable = True
@@ -208,9 +214,7 @@ async def scan(
                 subprotocols=subprotocols,
             )
         except Exception as exc:
-            profile.notes.append(
-                f"origin check appears enforced: {type(exc).__name__}"
-            )
+            profile.notes.append(f"origin check appears enforced: {type(exc).__name__}")
         else:
             profile.findings.append(
                 WebSocketFinding(
@@ -224,17 +228,21 @@ async def scan(
 
     return profile
 
+
 # ---------------------------------------------------------------------------
 # Sync wrapper
 # ---------------------------------------------------------------------------
+
 
 def scan_sync(url: str, **kwargs) -> WebSocketProfile:
     """Synchronous wrapper around ``scan`` for CLI and sync callers."""
     return asyncio.run(scan(url, **kwargs))
 
+
 # ---------------------------------------------------------------------------
 # JSON convenience
 # ---------------------------------------------------------------------------
+
 
 def profile_to_json(profile: WebSocketProfile) -> str:
     return json.dumps(profile.to_dict(), indent=2)

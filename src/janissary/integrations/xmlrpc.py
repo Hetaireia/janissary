@@ -14,19 +14,20 @@ This module is the harness. It knows how to:
 - run batched credential attempts against auth-bearing methods,
 - exercise ``pingback.ping`` as a server-side request forgery probe.
 
-Transport is via ``requests``. XML is parsed with ``xml.etree``.
+Transport is via ``requests``. XML is parsed with ``defusedxml``.
 Nothing here knows about the scanner or the CLI.
 """
 
 from __future__ import annotations
 
 import time
-import xml.etree.ElementTree as ET
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+import defusedxml.ElementTree as ET  # noqa: N817 - ET is the conventional alias
 import requests
+from defusedxml.common import DefusedXmlException
 
 XMLRPC_PATH_DEFAULT = "/xmlrpc.php"
 
@@ -67,8 +68,10 @@ AUTH_METHODS: tuple[str, ...] = (
 # Errors
 # ---------------------------------------------------------------------------
 
+
 class XmlRpcError(Exception):
     """Base class for XML-RPC transport/parse errors."""
+
 
 class XmlRpcFault(XmlRpcError):  # noqa: N818
     """A ``<fault>`` response from the server."""
@@ -78,17 +81,15 @@ class XmlRpcFault(XmlRpcError):  # noqa: N818
         self.code = code
         self.message = message
 
+
 # ---------------------------------------------------------------------------
 # XML encoding
 # ---------------------------------------------------------------------------
 
+
 def _escape(text: Any) -> str:
-    return (
-        str(text)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-    )
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
 
 def encode_value(value: Any) -> str:
     """Encode a Python value as an XML-RPC ``<value>`` element."""
@@ -104,6 +105,7 @@ def encode_value(value: Any) -> str:
         return f"<value><string>{_escape(value)}</string></value>"
     if isinstance(value, (bytes, bytearray)):
         import base64
+
         encoded = base64.b64encode(bytes(value)).decode("ascii")
         return f"<value><base64>{encoded}</base64></value>"
     if isinstance(value, (list, tuple)):
@@ -117,6 +119,7 @@ def encode_value(value: Any) -> str:
         return f"<value><struct>{members}</struct></value>"
     raise TypeError(f"unsupported XML-RPC value type: {type(value).__name__}")
 
+
 def build_call(method: str, params: Iterable[Any] = ()) -> str:
     """Build a ``<methodCall>`` document for a single method."""
     p = "".join(f"<param>{encode_value(v)}</param>" for v in params)
@@ -125,6 +128,7 @@ def build_call(method: str, params: Iterable[Any] = ()) -> str:
         f"<methodCall><methodName>{_escape(method)}</methodName>"
         f"<params>{p}</params></methodCall>"
     )
+
 
 def build_multicall(calls: Iterable[tuple[str, Iterable[Any]]]) -> str:
     """Build a ``system.multicall`` envelope.
@@ -136,9 +140,11 @@ def build_multicall(calls: Iterable[tuple[str, Iterable[Any]]]) -> str:
         structs.append({"methodName": name, "params": list(params)})
     return build_call("system.multicall", [structs])
 
+
 # ---------------------------------------------------------------------------
 # XML decoding
 # ---------------------------------------------------------------------------
+
 
 def _parse_value(elem: ET.Element) -> Any:
     """Decode a ``<value>`` element into a Python object."""
@@ -181,6 +187,7 @@ def _parse_value(elem: ET.Element) -> Any:
         return out
     return child.text or ""
 
+
 def parse_response(xml_text: str) -> tuple[Any, dict | None]:
     """Parse a ``<methodResponse>`` into ``(result, fault)``.
 
@@ -191,7 +198,7 @@ def parse_response(xml_text: str) -> tuple[Any, dict | None]:
         raise XmlRpcError("empty response body")
     try:
         root = ET.fromstring(xml_text)
-    except ET.ParseError as exc:
+    except (ET.ParseError, DefusedXmlException) as exc:
         raise XmlRpcError(f"invalid XML: {exc}") from exc
     if root.tag != "methodResponse":
         raise XmlRpcError(f"unexpected root element: {root.tag}")
@@ -215,9 +222,11 @@ def parse_response(xml_text: str) -> tuple[Any, dict | None]:
         return None, None
     return _parse_value(value), None
 
+
 # ---------------------------------------------------------------------------
 # Transport
 # ---------------------------------------------------------------------------
+
 
 class XmlRpcClient:
     """Minimal XML-RPC client bound to a single endpoint."""
@@ -245,9 +254,7 @@ class XmlRpcClient:
             "Connection": "close",
         }
 
-    def call_raw(
-        self, method: str, params: Iterable[Any] = ()
-    ) -> requests.Response:
+    def call_raw(self, method: str, params: Iterable[Any] = ()) -> requests.Response:
         body = build_call(method, params)
         return self.session.post(
             self.endpoint,
@@ -264,9 +271,7 @@ class XmlRpcClient:
             raise XmlRpcError(f"HTTP {r.status_code}")
         result, fault = parse_response(r.text)
         if fault is not None:
-            raise XmlRpcFault(
-                fault.get("faultCode"), fault.get("faultString", "")
-            )
+            raise XmlRpcFault(fault.get("faultCode"), fault.get("faultString", ""))
         return result
 
     def multicall_raw(
@@ -282,26 +287,22 @@ class XmlRpcClient:
             proxies=self.proxies,
         )
 
-    def multicall(
-        self, calls: Iterable[tuple[str, Iterable[Any]]]
-    ) -> list[Any]:
+    def multicall(self, calls: Iterable[tuple[str, Iterable[Any]]]) -> list[Any]:
         r = self.multicall_raw(calls)
         if r.status_code >= 400:
             raise XmlRpcError(f"HTTP {r.status_code}")
         result, fault = parse_response(r.text)
         if fault is not None:
-            raise XmlRpcFault(
-                fault.get("faultCode"), fault.get("faultString", "")
-            )
+            raise XmlRpcFault(fault.get("faultCode"), fault.get("faultString", ""))
         if not isinstance(result, list):
-            raise XmlRpcError(
-                f"multicall returned {type(result).__name__}, not array"
-            )
+            raise XmlRpcError(f"multicall returned {type(result).__name__}, not array")
         return result
+
 
 # ---------------------------------------------------------------------------
 # Detection
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class XmlRpcProfile:
@@ -324,6 +325,7 @@ class XmlRpcProfile:
             "notes": list(self.notes),
         }
 
+
 def resolve_endpoint(base_url: str) -> str:
     """Return the XML-RPC endpoint URL for a base URL.
 
@@ -337,6 +339,7 @@ def resolve_endpoint(base_url: str) -> str:
     if lowered.endswith("xmlrpc.php") or "/xmlrpc" in lowered:
         return base
     return base.rstrip("/") + XMLRPC_PATH_DEFAULT
+
 
 def detect(
     base_url: str,
@@ -385,9 +388,7 @@ def detect(
     if isinstance(result, list):
         profile.methods = [str(m) for m in result]
     else:
-        profile.notes.append(
-            f"system.listMethods returned {type(result).__name__}"
-        )
+        profile.notes.append(f"system.listMethods returned {type(result).__name__}")
 
     profile.multicall_supported = "system.multicall" in profile.methods
     if not profile.multicall_supported:
@@ -395,6 +396,7 @@ def detect(
 
     profile.pingback_supported = "pingback.ping" in profile.methods
     return profile
+
 
 def _try_multicall(client: XmlRpcClient) -> bool:
     """Best-effort check that ``system.multicall`` is accepted."""
@@ -412,9 +414,11 @@ def _try_multicall(client: XmlRpcClient) -> bool:
         return False
     return isinstance(result, list)
 
+
 # ---------------------------------------------------------------------------
 # Multicall-driven credential attempts
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class XmlRpcAttempt:
@@ -436,6 +440,7 @@ class XmlRpcAttempt:
             "fault_message": self.fault_message,
         }
 
+
 def _classify_entry(entry: Any) -> tuple[bool, int | None, str, Any]:
     """Decode one multicall response entry.
 
@@ -452,6 +457,7 @@ def _classify_entry(entry: Any) -> tuple[bool, int | None, str, Any]:
     if isinstance(entry, list):
         return True, None, "", (entry[0] if entry else None)
     return True, None, "", entry
+
 
 def bruteforce_multicall(
     client: XmlRpcClient,
@@ -551,9 +557,11 @@ def bruteforce_multicall(
 
     return attempts
 
+
 # ---------------------------------------------------------------------------
 # Pingback / SSRF probe
 # ---------------------------------------------------------------------------
+
 
 def pingback_probe(
     client: XmlRpcClient,
