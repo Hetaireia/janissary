@@ -84,5 +84,6 @@ benchdata/
 /ansi_shadow_full.txt
 /cyber_block.txt
 /slant.txt
-/banners_raw.txt/ansi_shadow.txt
+/banners_raw.txt
+/ansi_shadow.txt
 /tools/_update_workflow.py
