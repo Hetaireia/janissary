@@ -70,3 +70,19 @@ bench-*.json
 benchapp.py
 benchdata/
 
+
+# --- banner scratch (one-shot extractors, 27-SEP-2026) ---
+/extract_banners.py
+/extract_cyberblock.py
+/extract_slant.py
+/extract_shadow.py
+/gen_banner.py
+/gen_banner_py.py
+/patch_banner.py
+/fix_banner.py
+/diag_banner.py
+/ansi_shadow_full.txt
+/cyber_block.txt
+/slant.txt
+/banners_raw.txt/ansi_shadow.txt
+/tools/_update_workflow.py
