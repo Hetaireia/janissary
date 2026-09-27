@@ -59,6 +59,7 @@ WINDOWS_RETRYABLE_CODES = {3221225477, 3221225501}  # ACCESS_VIOLATION, DLL_INIT
 # PATH VALIDATION
 # -------------------------------------------------------------------
 
+
 def _validate_repo_path(repo_path: str, allow_root: str | None = None) -> Path:
     """Return a resolved Path to a git working tree, or raise ValueError.
 
@@ -84,6 +85,7 @@ def _validate_repo_path(repo_path: str, allow_root: str | None = None) -> Path:
 # -------------------------------------------------------------------
 # GIT WRAPPER
 # -------------------------------------------------------------------
+
 
 def _run_git(
     repo: Path,
@@ -154,6 +156,7 @@ def list_commits(
 # DIFF FILTER
 # -------------------------------------------------------------------
 
+
 def _added_lines(diff_text: str) -> str:
     """Return only the added (+) lines from a diff.
 
@@ -179,6 +182,7 @@ def _added_lines(diff_text: str) -> str:
 # PER-COMMIT SCAN
 # -------------------------------------------------------------------
 
+
 def scan_commit(
     repo: Path,
     sha: str,
@@ -203,6 +207,7 @@ def scan_commit(
 # -------------------------------------------------------------------
 # TOP-LEVEL
 # -------------------------------------------------------------------
+
 
 def scan_git_history(
     repo_path: str,

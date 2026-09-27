@@ -48,6 +48,7 @@ FINDING_KEYS: tuple[str, ...] = (
     "recorded_at",
 )
 
+
 @dataclass
 class Finding:
     target: str
@@ -63,9 +64,7 @@ class Finding:
 
     def __post_init__(self) -> None:
         if not self.recorded_at:
-            self.recorded_at = datetime.now(timezone.utc).isoformat(
-                timespec="seconds"
-            )
+            self.recorded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     def dedup_key(self) -> str:
         parts = [
@@ -88,8 +87,14 @@ class Finding:
     @classmethod
     def from_dict(cls, data: dict) -> Finding:
         known = {
-            "target", "category", "severity", "finding_type",
-            "discriminator", "detail", "payload", "response_status",
+            "target",
+            "category",
+            "severity",
+            "finding_type",
+            "discriminator",
+            "detail",
+            "payload",
+            "response_status",
             "recorded_at",
         }
         base = {k: data.get(k) for k in known if k in data}
@@ -156,9 +161,7 @@ class FindingStore:
         """Write the store atomically. Returns the path."""
         payload = {
             "version": 1,
-            "saved_at": datetime.now(timezone.utc).isoformat(
-                timespec="seconds"
-            ),
+            "saved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "findings": [f.to_dict() for f in self._findings],
         }
         self.path.parent.mkdir(parents=True, exist_ok=True)

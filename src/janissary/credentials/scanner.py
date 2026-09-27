@@ -38,40 +38,129 @@ from .rules import ALL_RULES
 # -------------------------------------------------------------------
 
 CONFIG_EXTS: tuple[str, ...] = (
-    ".env", ".env.local", ".env.production", ".env.development",
-    ".env.staging", ".env.test", ".yaml", ".yml", ".json",
-    ".toml", ".ini", ".conf", ".properties", ".tf", ".tfvars",
-    ".cfg", ".config", ".sh", ".bash", ".zsh", ".ps1", ".bat",
+    ".env",
+    ".env.local",
+    ".env.production",
+    ".env.development",
+    ".env.staging",
+    ".env.test",
+    ".yaml",
+    ".yml",
+    ".json",
+    ".toml",
+    ".ini",
+    ".conf",
+    ".properties",
+    ".tf",
+    ".tfvars",
+    ".cfg",
+    ".config",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".ps1",
+    ".bat",
 )
 
 TEXT_EXTS: tuple[str, ...] = (
-    ".py", ".js", ".ts", ".tsx", ".jsx", ".rb", ".go", ".rs", ".java",
-    ".kt", ".php", ".cs", ".cpp", ".c", ".h", ".hpp", ".sh", ".bash",
-    ".zsh", ".ps1", ".bat", ".fish", ".yml", ".yaml", ".json", ".toml",
-    ".ini", ".conf", ".properties", ".tf", ".tfvars", ".env", ".txt",
-    ".md", ".cfg", ".config", ".xml", ".html", ".liquid", ".vue", ".svelte",
-    ".sql", ".graphql", ".gql", ".dockerfile", ".makefile", ".mk",
-    ".editorconfig", ".gitignore", ".npmrc", ".yarnrc",
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".rb",
+    ".go",
+    ".rs",
+    ".java",
+    ".kt",
+    ".php",
+    ".cs",
+    ".cpp",
+    ".c",
+    ".h",
+    ".hpp",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".ps1",
+    ".bat",
+    ".fish",
+    ".yml",
+    ".yaml",
+    ".json",
+    ".toml",
+    ".ini",
+    ".conf",
+    ".properties",
+    ".tf",
+    ".tfvars",
+    ".env",
+    ".txt",
+    ".md",
+    ".cfg",
+    ".config",
+    ".xml",
+    ".html",
+    ".liquid",
+    ".vue",
+    ".svelte",
+    ".sql",
+    ".graphql",
+    ".gql",
+    ".dockerfile",
+    ".makefile",
+    ".mk",
+    ".editorconfig",
+    ".gitignore",
+    ".npmrc",
+    ".yarnrc",
 )
 
-SKIP_DIRS: frozenset[str] = frozenset({
-    ".git", "node_modules", "__pycache__", ".venv", "venv", "env",
-    "dist", "build", ".next", ".nuxt", "target", ".cache", ".pytest_cache",
-    ".mypy_cache", ".ruff_cache", "vendor", "site-packages",
-    "playwright-report", "test-results", ".terraform",
-})
+SKIP_DIRS: frozenset[str] = frozenset(
+    {
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "env",
+        "dist",
+        "build",
+        ".next",
+        ".nuxt",
+        "target",
+        ".cache",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        "vendor",
+        "site-packages",
+        "playwright-report",
+        "test-results",
+        ".terraform",
+    }
+)
 
 MAX_FILE_BYTES: int = 5 * 1024 * 1024
 
-BARE_TEXT_FILENAMES: frozenset[str] = frozenset({
-    "dockerfile", "makefile", ".env", ".npmrc", ".yarnrc",
-    ".editorconfig", ".gitignore", ".dockerignore",
-})
+BARE_TEXT_FILENAMES: frozenset[str] = frozenset(
+    {
+        "dockerfile",
+        "makefile",
+        ".env",
+        ".npmrc",
+        ".yarnrc",
+        ".editorconfig",
+        ".gitignore",
+        ".dockerignore",
+    }
+)
 
 
 # -------------------------------------------------------------------
 # ENTROPY
 # -------------------------------------------------------------------
+
 
 def shannon_entropy(data: str, charset: str = "base64") -> float:
     """Shannon entropy in bits per character over the given charset."""
@@ -81,9 +170,7 @@ def shannon_entropy(data: str, charset: str = "base64") -> float:
         allowed = set("0123456789abcdefABCDEF")
     else:
         allowed = set(
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz"
-            "0123456789+/="
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
         )
     filtered = [c for c in data if c in allowed]
     if not filtered:
@@ -100,6 +187,7 @@ def shannon_entropy(data: str, charset: str = "base64") -> float:
 # -------------------------------------------------------------------
 # REDACTION
 # -------------------------------------------------------------------
+
 
 def redact_token(token: str) -> str:
     """Return a fingerprint that is safe to print.
@@ -125,6 +213,8 @@ def redact_token(token: str) -> str:
     if len(hexpart) >= 12:
         return f"{prefix}_{hexpart[:8]}...{hexpart[-4:]}"
     return token[:8] + "..." + token[-4:]
+
+
 def _iter_secret_matches(
     text: str,
     enable_entropy: bool = True,
@@ -170,9 +260,7 @@ def _iter_secret_matches(
         return
 
     def _overlaps(start: int, end: int) -> bool:
-        return any(
-            start < s_end and s_start < end for s_start, s_end in spans
-        )
+        return any(start < s_end and s_start < end for s_start, s_end in spans)
 
     def _classes_ok(candidate: str) -> bool:
         classes = 0
@@ -206,6 +294,8 @@ def _iter_secret_matches(
                     "entropy": 0.0,
                 }
                 yield synthetic, candidate, m.start(), m.end()
+
+
 def scan_text_for_secrets(
     text: str,
     source_label: str,
@@ -236,24 +326,27 @@ def scan_text_for_secrets(
         context = context_raw.replace(secret, redacted)[:200]
         threshold = rule.get("entropy", 0.0)
         ent = shannon_entropy(secret, "base64") if threshold > 0.0 else 0.0
-        findings.append({
-            "token_type": rule["id"],
-            "description": rule.get("description", ""),
-            "redacted": redacted,
-            "full_token": secret,
-            "source": source_label,
-            "line": line_num,
-            "context": context,
-            "severity": "high",
-            "entropy": round(ent, 3),
-            "timestamp": now,
-        })
+        findings.append(
+            {
+                "token_type": rule["id"],
+                "description": rule.get("description", ""),
+                "redacted": redacted,
+                "full_token": secret,
+                "source": source_label,
+                "line": line_num,
+                "context": context,
+                "severity": "high",
+                "entropy": round(ent, 3),
+                "timestamp": now,
+            }
+        )
     return findings
 
 
 # -------------------------------------------------------------------
 # FILE / DIRECTORY
 # -------------------------------------------------------------------
+
 
 def _is_text_file(path: str) -> bool:
     base = os.path.basename(path).lower()
@@ -297,9 +390,8 @@ def iter_candidate_files(root: str, env_only: bool = False) -> Iterator[str]:
             full = os.path.join(dirpath, fn)
             if env_only:
                 base = fn.lower()
-                is_config = (
-                    base.startswith(".env")
-                    or any(base.endswith(e) for e in CONFIG_EXTS)
+                is_config = base.startswith(".env") or any(
+                    base.endswith(e) for e in CONFIG_EXTS
                 )
                 if not is_config:
                     continue
@@ -322,7 +414,9 @@ def scan_directory(
     findings: list[dict] = []
     for full in iter_candidate_files(root_abs, env_only=env_only):
         hits = scan_file_for_secrets(
-            full, enable_entropy=enable_entropy, min_entropy=min_entropy,
+            full,
+            enable_entropy=enable_entropy,
+            min_entropy=min_entropy,
         )
         findings.extend(hits)
         if verbose and hits:

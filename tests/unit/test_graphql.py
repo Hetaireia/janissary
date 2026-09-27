@@ -13,8 +13,8 @@ class FakeResp:
         self.status_code = status
         self.headers = headers or {}
         self._body = body
-        self.text = text if text is not None else (
-            json.dumps(body) if body is not None else ""
+        self.text = (
+            text if text is not None else (json.dumps(body) if body is not None else "")
         )
 
     def json(self):
@@ -36,6 +36,7 @@ def _client(responses, endpoint="http://t/graphql"):
 # ---------------------------------------------------------------------------
 # Query builders
 # ---------------------------------------------------------------------------
+
 
 def test_build_nested_query_depth_1():
     assert g.build_nested_query("__typename", 1) == "{ __typename }"
@@ -75,6 +76,7 @@ def test_gql_literal_null_byte():
 # Response parsing
 # ---------------------------------------------------------------------------
 
+
 def test_parse_success():
     body = {"data": {"__typename": "Query"}}
     client = _client([FakeResp(body=body)])
@@ -99,6 +101,7 @@ def test_parse_non_json_body():
 
 def test_transport_error():
     import requests
+
     session = MagicMock()
     session.post.side_effect = requests.RequestException("boom")
     client = g.GraphQLClient("http://t/graphql", session=session)
@@ -117,6 +120,7 @@ def test_batch_response():
 # ---------------------------------------------------------------------------
 # Endpoint resolution
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_endpoint_candidates():
     urls = g.resolve_endpoint("http://t")
@@ -138,6 +142,7 @@ def test_resolve_endpoint_recognises_graphql_url():
 # Detection
 # ---------------------------------------------------------------------------
 
+
 def test_detect_introspection_enabled():
     typename_body = {"data": {"__typename": "Query"}}
     schema = {
@@ -150,14 +155,18 @@ def test_detect_introspection_enabled():
     }
     intro_body = {"data": schema}
     batch_body = [{"data": {"__typename": "Query"}}, {"data": {"__typename": "Query"}}]
-    suggestion_body = {"errors": [{"message": 'Cannot query field "x". Did you mean "user"?'}]}
+    suggestion_body = {
+        "errors": [{"message": 'Cannot query field "x". Did you mean "user"?'}]
+    }
 
-    client = _client([
-        FakeResp(body=typename_body),
-        FakeResp(body=intro_body),
-        FakeResp(body=batch_body),
-        FakeResp(body=suggestion_body),
-    ])
+    client = _client(
+        [
+            FakeResp(body=typename_body),
+            FakeResp(body=intro_body),
+            FakeResp(body=batch_body),
+            FakeResp(body=suggestion_body),
+        ]
+    )
     profile = g.detect("http://t/graphql", client=client)
     assert profile.reachable is True
     assert profile.introspection_enabled is True
@@ -174,12 +183,14 @@ def test_detect_introspection_disabled():
     batch_body = {"errors": [{"message": "batch not supported"}]}
     suggestion_body = {"errors": [{"message": "no suggestion"}]}
 
-    client = _client([
-        FakeResp(body=typename_body),
-        FakeResp(body=intro_body),
-        FakeResp(body=batch_body),
-        FakeResp(body=suggestion_body),
-    ])
+    client = _client(
+        [
+            FakeResp(body=typename_body),
+            FakeResp(body=intro_body),
+            FakeResp(body=batch_body),
+            FakeResp(body=suggestion_body),
+        ]
+    )
     profile = g.detect("http://t/graphql", client=client)
     assert profile.reachable is True
     assert profile.introspection_enabled is False
@@ -204,6 +215,7 @@ def test_profile_to_dict():
 # Field enumeration
 # ---------------------------------------------------------------------------
 
+
 def test_enumerate_fields_from_suggestions():
     suggestion_body = {"errors": [{"message": 'Did you mean "user"?'}]}
 
@@ -226,6 +238,7 @@ def test_enumerate_fields_no_suggestions():
 # Depth and alias probes
 # ---------------------------------------------------------------------------
 
+
 def _stateful_depth_session(cap):
     """Return a session that errors once the nesting depth exceeds ``cap``."""
     session = MagicMock()
@@ -234,7 +247,9 @@ def _stateful_depth_session(cap):
         payload = json.loads(data.decode("utf-8") if isinstance(data, bytes) else data)
         depth = payload["query"].count("{")
         if depth > cap:
-            return FakeResp(body={"errors": [{"message": "Query depth exceeds maximum"}]})
+            return FakeResp(
+                body={"errors": [{"message": "Query depth exceeds maximum"}]}
+            )
         return FakeResp(body={"data": {"__typename": "Query"}})
 
     session.post.side_effect = post
@@ -252,6 +267,7 @@ def test_depth_probe_finds_cap():
 def _stateful_alias_session(cap):
     """Return a session that errors once the alias count exceeds ``cap``."""
     import re as _re
+
     session = MagicMock()
 
     def post(url, data, **kwargs):
@@ -277,6 +293,7 @@ def test_alias_probe_finds_cap():
 # Argument fuzzing
 # ---------------------------------------------------------------------------
 
+
 def test_fuzz_arguments_runs_all_payloads():
     body = {"data": {"user": None}}
     responses = [FakeResp(body=body)] * len(g.ARG_PAYLOADS)
@@ -292,7 +309,10 @@ def test_fuzz_arguments_reports_errors():
     body = {"errors": [{"message": "argument id invalid"}]}
     client = _client([FakeResp(body=body)])
     results = g.fuzz_arguments(
-        client, "user", "id", payloads=[("one", "x")],
+        client,
+        "user",
+        "id",
+        payloads=[("one", "x")],
     )
     assert len(results) == 1
     assert results[0].errors == ["argument id invalid"]

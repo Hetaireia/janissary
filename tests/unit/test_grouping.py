@@ -1,4 +1,5 @@
 """Tests for janissary.engine.grouping."""
+
 from __future__ import annotations
 
 from janissary.engine.grouping import (
@@ -81,7 +82,9 @@ def test_different_param_splits():
 
 
 def test_severity_escalates():
-    g = FindingGroup(param="q", category="sqli", root_cause="sql_injection", severity="low")
+    g = FindingGroup(
+        param="q", category="sqli", root_cause="sql_injection", severity="low"
+    )
     g.add(_F("q", "sqli", "high", "db_error"))
     g.add(_F("q", "sqli", "critical", "status_change"))
     g.add(_F("q", "sqli", "medium", "length_anomaly"))
@@ -89,7 +92,9 @@ def test_severity_escalates():
 
 
 def test_payload_names_dedup_preserves_order():
-    g = FindingGroup(param="q", category="sqli", root_cause="sql_injection", severity="low")
+    g = FindingGroup(
+        param="q", category="sqli", root_cause="sql_injection", severity="low"
+    )
     g.add(_F("q", "sqli", "high", "db_error", payload_name="a"))
     g.add(_F("q", "sqli", "high", "status_change", payload_name="b"))
     g.add(_F("q", "sqli", "high", "length_anomaly", payload_name="a"))

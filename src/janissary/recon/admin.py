@@ -122,13 +122,9 @@ PROTECTED_IS_HIT = frozenset(
 # Detection regexes
 # ---------------------------------------------------------------------------
 
-PASSWORD_INPUT_RE = re.compile(
-    r'<input[^>]+type=["\']password["\']', re.IGNORECASE
-)
+PASSWORD_INPUT_RE = re.compile(r'<input[^>]+type=["\']password["\']', re.IGNORECASE)
 FORM_RE = re.compile(r"<form\b", re.IGNORECASE)
-TITLE_RE = re.compile(
-    r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL
-)
+TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 GENERATOR_RE = re.compile(
     r'<meta[^>]+name=["\']generator["\'][^>]+content=["\']([^"\']+)["\']',
     re.IGNORECASE,
@@ -145,6 +141,7 @@ SERVER_BANNER_RE = re.compile(
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class AdminHit:
@@ -169,6 +166,7 @@ class AdminHit:
             "notes": list(self.notes),
         }
 
+
 @dataclass
 class AdminProfile:
     target: str
@@ -186,9 +184,11 @@ class AdminProfile:
             "notes": list(self.notes),
         }
 
+
 # ---------------------------------------------------------------------------
 # Probing
 # ---------------------------------------------------------------------------
+
 
 class AdminProbe:
     def __init__(
@@ -299,9 +299,7 @@ class AdminProbe:
                 if vm:
                     version_hint = vm.group(0)
 
-        is_login_form = bool(
-            PASSWORD_INPUT_RE.search(body) and FORM_RE.search(body)
-        )
+        is_login_form = bool(PASSWORD_INPUT_RE.search(body) and FORM_RE.search(body))
 
         notes: list[str] = []
         if status in (401, 403):
@@ -320,9 +318,11 @@ class AdminProbe:
             notes=notes,
         )
 
+
 # ---------------------------------------------------------------------------
 # Convenience entry point
 # ---------------------------------------------------------------------------
+
 
 def probe_admin(
     target: str,

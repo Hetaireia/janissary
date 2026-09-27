@@ -24,6 +24,7 @@ def _finding(**kwargs) -> Finding:
 # Finding
 # ---------------------------------------------------------------------------
 
+
 def test_finding_sets_recorded_at():
     f = _finding()
     assert f.recorded_at
@@ -67,6 +68,7 @@ def test_from_dict_backfills_missing():
 # ---------------------------------------------------------------------------
 # Store basics
 # ---------------------------------------------------------------------------
+
 
 def test_add_returns_true_then_false_on_duplicate():
     s = FindingStore(":memory:")
@@ -113,6 +115,7 @@ def test_len_matches_count():
 # ---------------------------------------------------------------------------
 # Persistence
 # ---------------------------------------------------------------------------
+
 
 def test_save_and_load(tmp_path: Path):
     p = tmp_path / "findings.json"
@@ -168,6 +171,7 @@ def test_clear_empties_store():
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
+
 
 def test_summary_counts():
     s = FindingStore(":memory:")

@@ -25,9 +25,9 @@ from janissary.credentials.scanner import (
 # RULES SANITY
 # -------------------------------------------------------------------
 
+
 def test_all_rules_have_required_keys():
-    required = {"id", "description", "regex", "secret_group",
-                "entropy", "allowlist"}
+    required = {"id", "description", "regex", "secret_group", "entropy", "allowlist"}
     for r in ALL_RULES:
         assert required.issubset(r.keys()), f"rule {r.get('id')} missing keys"
 
@@ -47,6 +47,7 @@ def test_expected_rule_counts():
 # -------------------------------------------------------------------
 # ENTROPY
 # -------------------------------------------------------------------
+
 
 def test_entropy_of_uniform_string_is_zero():
     assert shannon_entropy("a" * 40) == 0.0
@@ -72,6 +73,7 @@ def test_entropy_respects_charset():
 # -------------------------------------------------------------------
 # PROVIDER RULES
 # -------------------------------------------------------------------
+
 
 def test_github_pat_fires():
     text = "token = ghp_abcdefghijklmnopqrstuvwxyz1234567890"
@@ -102,6 +104,7 @@ def test_private_key_block_fires():
 # -------------------------------------------------------------------
 # ENTROPY FALLBACK
 # -------------------------------------------------------------------
+
 
 def test_entropy_fallback_fires_on_random_base64():
     blob = "value=QWxhZGRpbjpvcGVuIHNlc2FtZQpBQkNERUZHSElKS0xNTk9Q"
@@ -140,6 +143,7 @@ def test_provider_span_suppresses_overlapping_entropy():
 # REDACTION
 # -------------------------------------------------------------------
 
+
 def test_redact_short_token():
     # Empty string passes through
     assert redact_token("") == ""
@@ -152,6 +156,8 @@ def test_redact_short_token():
     # Critically: an 8-char token must not be fully visible
     out8 = redact_token("abcdefgh")
     assert "abcdefgh" not in out8
+
+
 def test_redact_long_underscore_token():
     out = redact_token("ghp_abcdefghijklmnopqrstuvwxyz1234567890")
     assert out.startswith("ghp_")
@@ -175,10 +181,10 @@ def test_finding_never_drops_full_token_from_payload():
 # FILE SCAN
 # -------------------------------------------------------------------
 
+
 def test_scan_file_for_secrets(tmp_path: Path):
     f = tmp_path / "creds.env"
-    f.write_text("TOKEN=ghp_abcdefghijklmnopqrstuvwxyz1234567890\n",
-                 encoding="utf-8")
+    f.write_text("TOKEN=ghp_abcdefghijklmnopqrstuvwxyz1234567890\n", encoding="utf-8")
     hits = scan_file_for_secrets(str(f))
     assert any(h["token_type"] == "github-pat" for h in hits)
     assert hits[0]["source"] == str(f)
@@ -191,6 +197,7 @@ def test_scan_file_missing_returns_empty():
 # -------------------------------------------------------------------
 # DIRECTORY SCAN
 # -------------------------------------------------------------------
+
 
 def test_scan_directory_skips_venv(tmp_path: Path):
     (tmp_path / ".venv").mkdir()
@@ -224,14 +231,16 @@ def test_scan_directory_does_not_require_cwd():
     # silently returned [] for any path outside the CWD.
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "leak.env"
-        p.write_text("TOKEN=ghp_abcdefghijklmnopqrstuvwxyz1234567890\n",
-                     encoding="utf-8")
+        p.write_text(
+            "TOKEN=ghp_abcdefghijklmnopqrstuvwxyz1234567890\n", encoding="utf-8"
+        )
         hits = scan_directory(td)
         assert hits, "scan must work outside CWD"
 
 
 def test_scan_directory_not_a_directory():
     import pytest
+
     with pytest.raises(NotADirectoryError):
         scan_directory("definitely_not_a_dir_xyz")
 
@@ -240,12 +249,14 @@ def test_scan_directory_not_a_directory():
 # EXPORT
 # -------------------------------------------------------------------
 
+
 def test_export_json_omits_full_token_by_default(tmp_path: Path):
     text = "token = ghp_abcdefghijklmnopqrstuvwxyz1234567890"
     hits = scan_text_for_secrets(text, "test")
     out = tmp_path / "out.json"
     export_credentials(hits, str(out))
     import json
+
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["finding_count"] == len(hits)
     for f in data["findings"]:
@@ -258,6 +269,7 @@ def test_export_json_can_include_full_token(tmp_path: Path):
     out = tmp_path / "out.json"
     export_credentials(hits, str(out), include_full_token=True)
     import json
+
     data = json.loads(out.read_text(encoding="utf-8"))
     assert any("full_token" in f for f in data["findings"])
 
@@ -275,6 +287,7 @@ def test_export_csv(tmp_path: Path):
 # -------------------------------------------------------------------
 # SELF-SCAN
 # -------------------------------------------------------------------
+
 
 def test_scanner_does_not_flag_its_own_source():
     """If our own rules are too broad, they fire on our own code."""

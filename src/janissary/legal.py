@@ -30,9 +30,7 @@ MARKER_DIRNAME = ".janissary"
 MARKER_FILENAME = "terms-accepted.json"
 
 # Commands that touch a remote target and therefore require acceptance.
-GATED_COMMANDS = frozenset(
-    {"scan", "fingerprint", "graphql", "ws", "admin", "attack"}
-)
+GATED_COMMANDS = frozenset({"scan", "fingerprint", "graphql", "ws", "admin", "attack"})
 
 ACCEPT_PROMPT = "Type I AGREE to continue: "
 ACCEPT_TOKEN = "I AGREE"

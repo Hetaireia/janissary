@@ -119,11 +119,13 @@ ARG_PAYLOADS: list[tuple[str, Any]] = [
 # Result types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class GraphQLError:
     message: str
     path: list | None = None
     extensions: dict | None = None
+
 
 @dataclass
 class GraphQLResponse:
@@ -140,6 +142,7 @@ class GraphQLResponse:
 
     def error_messages(self) -> list[str]:
         return [e.message for e in self.errors]
+
 
 @dataclass
 class GraphQLProfile:
@@ -173,9 +176,11 @@ class GraphQLProfile:
             "notes": list(self.notes),
         }
 
+
 # ---------------------------------------------------------------------------
 # Query builders
 # ---------------------------------------------------------------------------
+
 
 def build_nested_query(field: str, depth: int) -> str:
     """Build a query that nests ``field`` ``depth`` levels deep."""
@@ -185,15 +190,18 @@ def build_nested_query(field: str, depth: int) -> str:
         inner = f"{field} {{ {inner} }}"
     return "{ " + inner + " }"
 
+
 def build_alias_query(field: str, count: int) -> str:
     """Build a query with ``count`` aliases of the same field."""
     count = max(1, int(count))
     parts = [f"a{i}: {field}" for i in range(count)]
     return "{ " + " ".join(parts) + " }"
 
+
 def build_argument_query(field: str, arg: str, value: Any) -> str:
     """Build ``{ field(arg: <literal>) }`` with a JSON-ish literal."""
     return "{ " + f"{field}({arg}: {_gql_literal(value)})" + " }"
+
 
 def _gql_literal(value: Any) -> str:
     """Serialise a Python value as a GraphQL literal (not JSON)."""
@@ -218,9 +226,11 @@ def _gql_literal(value: Any) -> str:
         return "[" + ", ".join(_gql_literal(v) for v in value) + "]"
     return f'"{value!s}"'
 
+
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
+
 
 class GraphQLClient:
     def __init__(
@@ -284,6 +294,7 @@ class GraphQLClient:
         elapsed = time.perf_counter() - start
         return _parse_response(r, elapsed)
 
+
 def _parse_response(r: requests.Response, elapsed: float) -> GraphQLResponse:
     body: Any = None
     try:
@@ -327,9 +338,11 @@ def _parse_response(r: requests.Response, elapsed: float) -> GraphQLResponse:
         data=data,
     )
 
+
 # ---------------------------------------------------------------------------
 # Detection
 # ---------------------------------------------------------------------------
+
 
 def resolve_endpoint(base_url: str, explicit_path: str | None = None) -> list[str]:
     """Return candidate endpoints to probe, in priority order.
@@ -355,6 +368,7 @@ def resolve_endpoint(base_url: str, explicit_path: str | None = None) -> list[st
             out.append(c)
     return out
 
+
 def detect(
     base_url: str,
     client: GraphQLClient | None = None,
@@ -368,16 +382,12 @@ def detect(
     if client is not None:
         # Caller supplied a client: probe that one endpoint and return
         # whatever we learn, reachable or not.
-        return _probe_endpoint(
-            client, client.endpoint, probe_batching=probe_batching
-        )
+        return _probe_endpoint(client, client.endpoint, probe_batching=probe_batching)
 
     candidates = resolve_endpoint(base_url, explicit_path)
     last: GraphQLProfile | None = None
     for endpoint in candidates:
-        cli = GraphQLClient(
-            endpoint, timeout=timeout, proxies=proxies, session=session
-        )
+        cli = GraphQLClient(endpoint, timeout=timeout, proxies=proxies, session=session)
         profile = _probe_endpoint(cli, endpoint, probe_batching=probe_batching)
         last = profile
         if profile.reachable:
@@ -390,6 +400,7 @@ def detect(
         reachable=False,
         notes=["no GraphQL endpoint responded"],
     )
+
 
 def _probe_endpoint(
     client: GraphQLClient, endpoint: str, probe_batching: bool
@@ -427,9 +438,7 @@ def _probe_endpoint(
         # Introspection disabled is a valid finding.
         messages = intro.error_messages()
         if messages:
-            profile.notes.append(
-                f"introspection rejected: {messages[0][:80]}"
-            )
+            profile.notes.append(f"introspection rejected: {messages[0][:80]}")
         else:
             profile.notes.append("introspection returned no schema")
 
@@ -448,15 +457,18 @@ def _probe_endpoint(
 
     return profile
 
+
 def _type_name(node: Any) -> str | None:
     if isinstance(node, dict):
         name = node.get("name")
         return str(name) if name else None
     return None
 
+
 # ---------------------------------------------------------------------------
 # Field enumeration via suggestions
 # ---------------------------------------------------------------------------
+
 
 def enumerate_fields(
     client: GraphQLClient,
@@ -491,9 +503,11 @@ def enumerate_fields(
 
     return sorted(found)
 
+
 # ---------------------------------------------------------------------------
 # Depth and alias probes
 # ---------------------------------------------------------------------------
+
 
 def depth_probe(
     client: GraphQLClient,
@@ -536,6 +550,7 @@ def depth_probe(
 
     return low or None, refusal
 
+
 def alias_probe(
     client: GraphQLClient,
     field_name: str = "__typename",
@@ -571,16 +586,20 @@ def alias_probe(
 
     return low or None, refusal
 
+
 def _refused(resp: GraphQLResponse, pattern: re.Pattern) -> bool:
     return any(pattern.search(msg) for msg in resp.error_messages())
+
 
 def _is_error_only(resp: GraphQLResponse) -> bool:
     """A response with errors and no data usually means the server refused."""
     return bool(resp.errors) and resp.data in (None, {})
 
+
 # ---------------------------------------------------------------------------
 # Argument fuzzing
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class FuzzResult:
@@ -604,6 +623,7 @@ class FuzzResult:
             "elapsed": round(self.elapsed, 4),
             "errors": list(self.errors),
         }
+
 
 def fuzz_arguments(
     client: GraphQLClient,

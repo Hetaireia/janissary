@@ -39,6 +39,7 @@ class PacerConfig:
 # Pacer
 # ---------------------------------------------------------------------------
 
+
 class AdaptivePacer:
     """Stateful adaptive delay between requests.
 
@@ -63,9 +64,7 @@ class AdaptivePacer:
         # WAF was detected so we begin stealthy rather than get banned.
         self.delay = max(self.config.base_delay, self.config.min_delay)
         if waf_profile is not None and getattr(waf_profile, "detected", False):
-            bump = 1.0 + 2.0 * float(
-                getattr(waf_profile, "confidence", 0.0) or 0.0
-            )
+            bump = 1.0 + 2.0 * float(getattr(waf_profile, "confidence", 0.0) or 0.0)
             self.delay = max(self.delay, min(self.config.max_delay, bump))
 
         self._clean_streak = 0
@@ -97,9 +96,7 @@ class AdaptivePacer:
             self._clean_streak = 0
             # Fast 403s are the classic WAF tell; escalate immediately.
             if self._block_streak >= self.config.block_streak_before_hard_backoff:
-                self.delay = min(
-                    self.config.max_delay, max(self.delay, 1.0) * 2.0
-                )
+                self.delay = min(self.config.max_delay, max(self.delay, 1.0) * 2.0)
                 event["action"] = "hard_backoff"
             else:
                 self._backoff()

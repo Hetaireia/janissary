@@ -13,8 +13,15 @@ import os
 from datetime import datetime, timezone
 
 CSV_COLUMNS = [
-    "token_type", "description", "redacted", "source", "line",
-    "context", "severity", "entropy", "timestamp",
+    "token_type",
+    "description",
+    "redacted",
+    "source",
+    "line",
+    "context",
+    "severity",
+    "entropy",
+    "timestamp",
 ]
 
 
@@ -35,7 +42,9 @@ def export_credentials(
     if ext == ".csv":
         with open(export_path, "w", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(
-                fh, fieldnames=CSV_COLUMNS, extrasaction="ignore",
+                fh,
+                fieldnames=CSV_COLUMNS,
+                extrasaction="ignore",
             )
             writer.writeheader()
             writer.writerows(payload)

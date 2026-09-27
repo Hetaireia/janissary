@@ -16,6 +16,7 @@ from .finding_store import Finding
 # Adapters
 # ---------------------------------------------------------------------------
 
+
 def admin_adapter(target: str, context: dict) -> list[Finding]:
     """Run the admin panel probe and return findings for each hit."""
     from janissary.recon.admin import probe_admin
@@ -164,6 +165,7 @@ def fingerprint_adapter(target: str, context: dict) -> list[Finding]:
 # ---------------------------------------------------------------------------
 # Default registry
 # ---------------------------------------------------------------------------
+
 
 def default_adapters() -> dict[str, Any]:
     """Return a mapping suitable for Agent(adapters=...)."""

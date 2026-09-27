@@ -12,6 +12,7 @@ from janissary.integrations import xmlrpc as x
 # Encoding
 # ---------------------------------------------------------------------------
 
+
 def test_encode_scalar_string():
     assert x.encode_value("hi") == "<value><string>hi</string></value>"
 
@@ -55,6 +56,7 @@ def test_build_multicall_has_structs():
 # ---------------------------------------------------------------------------
 # Decoding
 # ---------------------------------------------------------------------------
+
 
 def _response(inner: str) -> str:
     return (
@@ -121,6 +123,7 @@ def test_parse_empty_raises():
 # Endpoint resolution
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_endpoint_appends_xmlrpc():
     assert x.resolve_endpoint("http://t/") == "http://t/xmlrpc.php"
 
@@ -132,6 +135,7 @@ def test_resolve_endpoint_passthrough():
 # ---------------------------------------------------------------------------
 # Client + detection
 # ---------------------------------------------------------------------------
+
 
 class FakeResp:
     def __init__(self, status=200, text="", headers=None):
@@ -148,7 +152,9 @@ def _session(responses):
 
 def test_client_call_returns_value():
     xml = _response("<value><string>hello</string></value>")
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     assert client.call("demo.sayHello") == "hello"
 
 
@@ -160,7 +166,9 @@ def test_client_call_raises_fault():
         "<member><name>faultString</name><value><string>no</string></value></member>"
         "</struct></value></fault></methodResponse>"
     )
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     with pytest.raises(x.XmlRpcFault) as exc:
         client.call("x")
     assert exc.value.code == 1
@@ -174,7 +182,9 @@ def test_detect_lists_methods():
         "<value><string>pingback.ping</string></value>"
         "</data></array></value>"
     )
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     profile = x.detect("http://t/", client=client)
     assert profile.reachable is True
     assert "system.listMethods" in profile.methods
@@ -183,7 +193,9 @@ def test_detect_lists_methods():
 
 
 def test_detect_handles_http_error():
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(status=404)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(status=404)])
+    )
     profile = x.detect("http://t/", client=client)
     assert profile.reachable is False
     assert any("404" in n for n in profile.notes)
@@ -192,6 +204,7 @@ def test_detect_handles_http_error():
 # ---------------------------------------------------------------------------
 # Multicall bruteforce
 # ---------------------------------------------------------------------------
+
 
 def test_bruteforce_parses_success_and_fault():
     # Two pairs, one succeeds, one faults.
@@ -204,7 +217,9 @@ def test_bruteforce_parses_success_and_fault():
         "</struct></value>"
         "</data></array></value>"
     )
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     attempts = x.bruteforce_multicall(
         client,
         usernames=["admin"],
@@ -242,6 +257,7 @@ def test_bruteforce_batches():
 def test_bruteforce_transport_error():
     session = MagicMock()
     import requests
+
     session.post.side_effect = requests.RequestException("down")
     client = x.XmlRpcClient("http://t/xmlrpc.php", session=session)
     attempts = x.bruteforce_multicall(
@@ -264,9 +280,12 @@ def test_bruteforce_empty_input():
 # Pingback
 # ---------------------------------------------------------------------------
 
+
 def test_pingback_probe_success():
     xml = _response("<value><string>Pingback registered</string></value>")
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     ok, msg = x.pingback_probe(client, "http://target/post", "http://src/")
     assert ok is True
     assert "Pingback" in msg
@@ -280,7 +299,9 @@ def test_pingback_probe_fault():
         "<member><name>faultString</name><value><string>nope</string></value></member>"
         "</struct></value></fault></methodResponse>"
     )
-    client = x.XmlRpcClient("http://t/xmlrpc.php", session=_session([FakeResp(text=xml)]))
+    client = x.XmlRpcClient(
+        "http://t/xmlrpc.php", session=_session([FakeResp(text=xml)])
+    )
     ok, msg = x.pingback_probe(client, "http://target/post")
     assert ok is False
     assert "33" in msg
