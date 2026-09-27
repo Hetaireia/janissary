@@ -222,65 +222,83 @@ Suite: 303 tests passing. Ruff clean. Phase 3 complete.
 
 ---
 
-## SESSION HANDOFF — 2026-09-27 (late)
+## SESSION HANDOFF
 
-### What happened
-Bench accuracy re-check. Re-ran all three benches against benchapp.py (port 5001). SQLi and XSS reproduced exactly. Traversal had been producing ZERO traversal findings — investigation found this was a real scanner bug, not a bench artefact.
+### 2026-09-27 (late) — baseline + pacer fixes, CI verified
 
-### The bug (fixed, uncommitted)
-`src/janissary/engine/scanner.py`, `collect_baseline`:
+Two bugs from the previous handoff are fixed, tested, and pushed. CI is green
+on `1a32eb0` across py3.10-3.14. This is the first verified CI run since
+`8ced0f4`.
 
-OLD: rotated through `["1","test","index","home","default"]`, one value per sample.
-NEW: reads the existing value for `param` from the target URL, samples that value `N` times. Falls back to `"1"` if the URL has no value for `param`.
+#### Commits this session
 
-Why it mattered: on `/traversal`, benign values `1`/`test`/... all 500 (file not found). So baseline `modal_status=500` -> `_check_status` bails (`base >= 400`), and every baseline body differed -> `is_stable_body=False` -> `_check_length` bails. Both gates dead before any payload was sent. `/sqli` escaped this because unknown input yields a stable empty result set at 200.
+- `03adc5b` fix(scanner): sample baseline with the URL's existing param value
+  + 5 tests in `tests/unit/test_scanner_baseline.py`, one xfail (see below).
+  Traversal bench: 12/1 (no traversal) -> 36/7.
+- `97313f4` docs(workflow): handoff for the baseline fix (superseded by this).
+- `33f3877` fix(pacer): stop backing off on server-side 5xx + 3 tests.
+- `1a32eb0` chore: ruff gate fix (trailing newline, deprecated ANN101/ANN102).
 
-Also added: a warning line in `scan()` when baseline modal_status >= 400.
+#### Closed from previous handoff
 
-### Verification
-- SQLi `?q=test`: 11 findings / 2 groups / 29 requests — UNCHANGED. baseline stable=True.
-- XSS `?name=test`: 12 findings / 1 group / 29 requests — UNCHANGED.
-- Traversal `?f=readme.txt`: WAS 12/1 (no traversal), NOW 36/7. F-005 traversal:path_traversal fires with traversal_passwd + traversal_encoded.
+- **Traversal produced zero findings.** Real scanner bug: `collect_baseline`
+  rotated through `["1","test","index","home","default"]`, one value per
+  sample. On `/traversal` all five benign values 500'd, so `modal_status`
+  became 500 and `is_stable_body` became False -- both the status and length
+  gates bailed before any payload was sent. Now reads the target URL's
+  existing value for `param` and replays it N times. Falls back to `"1"` only
+  when the URL has no value for the param. `keep_blank_values=True` preserves
+  the `?q=` / `?q` distinction.
+- **Pacer backs off to 30s on app-level 500s.** `SOFT_ERROR_STATUSES =
+  {500, 502, 504}` called `_backoff()` on any of them. On targets that 500
+  for unknown input, delay doubled 0.5 -> 1.0 -> 2.0 -> ... -> 30.0. Removed
+  the set and the branch. 5xx still resets `clean_streak` (cannot count
+  toward recovery) but no longer touches delay. Block statuses unchanged:
+  `{403, 406, 418, 429, 501, 503}`.
+- **~2.0s "localhost floor."** Not a separate bug. It was the pacer's
+  doubling sequence mid-escalation. Closed with the pacer fix.
+- **CI verified on HEAD.** Five matrix jobs (py3.10-3.14) green on `1a32eb0`.
 
-### Structural issue found (NOT fixed — next session's call)
-`_check_status` and `_check_length` in detection/analyzer.py are category-agnostic; findings inherit the payload's `category`. So on `/traversal` (which 500s for any non-matching file), EVERY payload class produced a status_change group:
-- F-002 sqli:sql_injection  (spurious — not SQLi)
-- F-003 xss:status_change    (spurious — not XSS)
-- F-004 xss:length_anomaly   (spurious)
-- F-005 traversal:path_traversal (accidentally right, same reason as F-002)
-- F-006 cmdi:command_injection (spurious)
-- F-007 cmdi:length_anomaly  (spurious)
+#### Still open
 
-F-002 and F-005 are the SAME observation attributed to two categories. On SQLi this is masked by the `db_error` corroborator. Traversal has no corroborator, so status_change alone carries the whole claim. This is misattribution, not strictly a false positive. Design conversation, do not hotfix.
+- **Structural misattribution (design decision).** `_check_status` and
+  `_check_length` in `detection/analyzer.py` are category-agnostic; findings
+  inherit the payload's `category`. On `/traversal` (which 500s for any
+  non-matching file) this emits spurious `sqli` / `xss` / `cmdi`
+  `status_change` findings. Documented as
+  `test_500_on_unknown_input_does_not_misattribute_categories` with
+  `@pytest.mark.xfail(strict=True)`. That test flips to a hard failure the
+  day the misattribution is fixed -- that is the signal to remove the marker.
+  Do not hotfix; this is a design conversation.
+- **`docs/launch-plan.md` numbers are STALE.** Says "23 findings / 3 groups"
+  and "1 group with 8 evidence rows." Actual SQLi = 11/2 with 10 evidence
+  rows in F-001. Update AFTER the misattribution is settled, not before.
+- **CI only runs ruff + pytest.** mypy, bandit, pip-audit are local-only
+  despite WORKFLOW.md claiming all five gates green. Add them to
+  `.github/workflows/ci.yml` as a separate work item.
+- **PyPI / launch.** Browser-blocked. TestPyPI + PyPI accounts, 2FA, API
+  tokens, upload, fresh-venv verify, README install-line revert.
+- **Domains.** Register hetaireia.io first, then hetaireia.com.au (needs ABN
+  or ACN).
 
-### Other findings from this session (all deferred)
-- Pacer backs off to `final_delay=30.0s` on app-level 500s. A 500 is not a WAF block. Reproducible. `recon/pacer.py` + how scanner records status.
-- ~2.0s floor on every request to localhost. Unexplained (Flask on loopback should be <10ms). Present in every bench run. Not investigated.
-- `docs/launch-plan.md` numbers are STALE: says "23 findings / 3 groups" and "1 group with 8 evidence rows". Actual SQLi = 11/2 with 10 evidence rows in F-001. Update AFTER the structural issue is settled, not before.
-- Stray file: `tests/unit/test_git_history.py.p1.1b.bak`.
-- CI (`.github/workflows/ci.yml`) only runs `ruff check .` and `pytest -q`. mypy, bandit, pip-audit are LOCAL-ONLY despite WORKFLOW.md claiming all five gates green.
-- HEAD `8ced0f4` is 3 commits ahead of tag `v7.1.0`. Latest commits are docs/chore/tools only. CI on HEAD has NOT been verified in this session.
+#### Local dev note (Windows only)
 
-### Files touched this session
-- `src/janissary/engine/scanner.py` — collect_baseline rewrite + baseline warning. UNCOMMITTED.
-- `bench-*-rerun.json`, `bench-*-fixed.json` — local outputs, gitignored.
-- `_patch_scanner.py`, `_patch_workflow_hdr.py`, `_patch_workflow.py` — one-shot patch scripts. Delete before commit.
-- `WORKFLOW.md` — this handoff.
+Python 3.14.7 on Windows hard-crashes pytest with `0xC0000005` (access
+violation) before any test runs. Not reproducible on Linux; CI is unaffected.
+Workaround for local dev only: run `pytest -p no:faulthandler ...`. Do NOT
+add `-p no:faulthandler` to `pyproject.toml` -- that would disable fault
+handling for all contributors on all platforms, including Linux CI, to paper
+over a Windows-only interpreter bug.
 
-### To resume
-Read this section. Then:
-1. Run `git status` and `git diff src/janissary/engine/scanner.py` to see the uncommitted fix.
-2. Add regression tests for the baseline behaviour (see below) BEFORE committing.
-3. Commit the baseline fix + tests.
-4. Decide on the structural misattribution issue.
-5. Then PyPI/launch (browser-blocked, unchanged).
+#### To resume
 
-### Regression tests to add (not yet written)
-- `collect_baseline` sends the SAME param value N times when the URL carries a value for that param (assert via mock session).
-- `collect_baseline` falls back to "1" when the URL has no value for param.
-- A scan against a mock endpoint that 500s on unknown input yields `status_change` findings for its declared payload categories.
-
----
+1. `git log --oneline -6` -- confirm `1a32eb0` is HEAD and CI is green.
+2. Decide on the structural misattribution. The xfail test is the driving
+   signal. Read the previous handoff (this file's git history) for the
+   original analysis of F-002 through F-007.
+3. Update `docs/launch-plan.md` numbers once (2) is settled.
+4. Add mypy/bandit/pip-audit to CI as a separate commit.
+5. PyPI/launch (browser-blocked, unchanged).
 
 ## Current step
 Phase 4 - Launch.
