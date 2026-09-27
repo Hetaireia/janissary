@@ -14,8 +14,25 @@ import contextlib
 import json
 import sys
 
+import requests
+
 from janissary import __version__
+from janissary.auth import (
+    add_auth_flags,
+    apply_to_session,
+    auth_from_args,
+)
 from janissary.engine.scanner import Scanner, ScanSummary
+from janissary.output import (
+    OutputEmitter,
+    OutputFormat,
+    add_output_flags,
+)
+from janissary.scope import (
+    ScopeError,
+    add_scope_flags,
+    scope_from_args,
+)
 
 # -------------------------------------------------------------------
 # OUTPUT HELPERS
@@ -56,6 +73,12 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
             for f in summary.findings
         ],
     }
+
+
+def _emit_abort_reason(reason: str | None) -> None:
+    """Abort reasons reach stderr even under --quiet."""
+    if reason:
+        print(f"[!] aborted: {reason}", file=sys.stderr)
 
 
 def _print_banner() -> None:
@@ -155,9 +178,26 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print("[!] --params produced no valid parameter names", file=sys.stderr)
         return 64
 
+    try:
+        scope_from_args(args).require(args.url)
+    except ScopeError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        return 64
+
+    fmt = getattr(args, "output_format", OutputFormat.HUMAN)
+    real_stdout = sys.stdout
+    if fmt is not OutputFormat.HUMAN:
+        sys.stdout = sys.stderr
+
     proxies = None
     if args.proxy:
         proxies = {"http": args.proxy, "https": args.proxy}
+
+    auth_cfg = auth_from_args(args)
+    auth_session = None
+    if not auth_cfg.is_empty:
+        auth_session = requests.Session()
+        apply_to_session(auth_session, auth_cfg)
 
     scanner = Scanner(
         target=args.url,
@@ -169,6 +209,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         stealth=args.stealth,
         proxies=proxies,
         detect_waf=not args.no_waf,
+        session=auth_session,
     )
 
     if not args.quiet:
@@ -180,6 +221,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print()
 
     summary = scanner.scan(quiet=args.quiet)
+    if summary.aborted:
+        _emit_abort_reason(summary.abort_reason)
 
     if not args.quiet:
         _print_summary(summary)
@@ -196,6 +239,15 @@ def cmd_scan(args: argparse.Namespace) -> int:
             with open(args.export, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, indent=2)
         print(f"[*] Results exported to {args.export}")
+
+    sys.stdout = real_stdout
+    if fmt is not OutputFormat.HUMAN:
+        meta = _summary_to_dict(summary)
+        meta.pop("findings", None)
+        meta.pop("groups", None)
+        OutputEmitter(fmt, redact=getattr(args, "redact_auth", False)).emit(
+            summary.findings, meta
+        )
 
     if summary.aborted:
         return 2
@@ -535,6 +587,12 @@ def cmd_attack_sqli_union(args: argparse.Namespace) -> int:
         )
         return 64
 
+    try:
+        scope_from_args(args).require(args.url)
+    except ScopeError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        return 64
+
     proxies = None
     if getattr(args, "proxy", None):
         proxies = {"http": args.proxy, "https": args.proxy}
@@ -644,6 +702,12 @@ def cmd_attack_nuclei(args: argparse.Namespace) -> int:
     if args.tags:
         tags = [t.strip() for t in args.tags.split(",") if t.strip()]
 
+    try:
+        scope_from_args(args).require(args.url)
+    except ScopeError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        return 64
+
     if not args.quiet:
         print("JANISSARY — Nuclei runner")
         print("=" * 60)
@@ -724,6 +788,17 @@ def cmd_agent(args: argparse.Namespace) -> int:
         )
         return 64
 
+    try:
+        scope_from_args(args).require(args.url)
+    except ScopeError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        return 64
+
+    fmt = getattr(args, "output_format", OutputFormat.HUMAN)
+    real_stdout = sys.stdout
+    if fmt is not OutputFormat.HUMAN:
+        sys.stdout = sys.stderr
+
     store = FindingStore(args.store)
     loaded = store.load()
 
@@ -769,7 +844,19 @@ def cmd_agent(args: argparse.Namespace) -> int:
     if args.platforms:
         extra_platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
 
-    result = agent.run(args.url, extra_platforms=extra_platforms)
+    auth_cfg = auth_from_args(args)
+    _orig_session_init = requests.Session.__init__
+    if not auth_cfg.is_empty:
+        def _auth_init(self, *a, **kw):
+            _orig_session_init(self, *a, **kw)
+            apply_to_session(self, auth_cfg)
+
+        requests.Session.__init__ = _auth_init
+    try:
+        result = agent.run(args.url, extra_platforms=extra_platforms)
+    finally:
+        if not auth_cfg.is_empty:
+            requests.Session.__init__ = _orig_session_init
 
     if not args.quiet:
         print(f"[*] Platforms:       {', '.join(result.platforms) or '-'}")
@@ -790,6 +877,8 @@ def cmd_agent(args: argparse.Namespace) -> int:
                 print(f"    {sev:10} {n}")
 
     store.save()
+    if result.aborted:
+        _emit_abort_reason(result.abort_reason)
     if not args.quiet:
         print(f"[*] Findings written to {args.store}")
 
@@ -807,6 +896,13 @@ def cmd_agent(args: argparse.Namespace) -> int:
                 indent=2,
             )
         print(f"[*] Results exported to {args.export}")
+
+    sys.stdout = real_stdout
+    if fmt is not OutputFormat.HUMAN:
+        meta = {"target": args.url, "store": args.store}
+        OutputEmitter(fmt, redact=getattr(args, "redact_auth", False)).emit(
+            store.all(), meta
+        )
 
     if result.aborted:
         return 2
@@ -907,6 +1003,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print version and exit",
     )
+    add_output_flags(scan)
+    add_scope_flags(scan)
+    add_auth_flags(scan)
     scan.set_defaults(func=cmd_scan)
 
     # -- creds ----------------------------------------------------
@@ -1059,6 +1158,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--export", default=None, help="write the full run to a .json file"
     )
     agent.add_argument("--quiet", action="store_true")
+    add_output_flags(agent)
+    add_scope_flags(agent)
+    add_auth_flags(agent)
     agent.set_defaults(func=cmd_agent)
 
     # -- attack ---------------------------------------------------
@@ -1090,6 +1192,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     union.add_argument("--export", default=None, help="write results to a .json file")
     union.add_argument("--quiet", action="store_true")
+    add_scope_flags(union)
     union.set_defaults(func=cmd_attack_sqli_union)
 
     nuclei = attack_sub.add_parser(
@@ -1114,6 +1217,7 @@ def build_parser() -> argparse.ArgumentParser:
     nuclei.add_argument("--rate-limit", type=int, default=50)
     nuclei.add_argument("--export", default=None, help="write results to a .json file")
     nuclei.add_argument("--quiet", action="store_true")
+    add_scope_flags(nuclei)
     nuclei.set_defaults(func=cmd_attack_nuclei)
 
     return p

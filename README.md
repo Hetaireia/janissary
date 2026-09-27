@@ -166,11 +166,73 @@ The `attack` subcommands are opt-in. They require `--attack-confirm` in addition
 The `agent` command ties the recon modules together: fingerprint, detect WAF, consult the platform knowledge base, run applicable modules, persist findings.
 
 ```bash
-janissary agent https://target.example --attack-confirm --store findings.json
+janissary agent https://target.example --attack-confirm
 ```
 
 ---
 
+
+## Scope, authentication, and machine-readable output
+
+### Scope enforcement
+
+Hunters run against bug-bounty programs whose scope is contractual.
+`--scope-include` and `--scope-exclude` refuse to touch anything outside
+the declared boundary - before any network I/O, with exit code 64 and an
+empty stdout.
+
+```bash
+# Only scan example.com and its subdomains, never admin.example.com
+janissary scan -u "https://api.example.com/v1/items?id=1" -p id \
+  --scope-include "*.example.com" \
+  --scope-exclude "admin.example.com"
+
+# Internal network, CIDR-based
+janissary scan -u "http://10.1.2.3/" -p q --scope-include "10.0.0.0/8"
+```
+
+Deny always beats allow. Pattern syntax: `example.com`, `*.example.com`,
+`10.0.0.0/8`, `10.0.0.5`, `/api/`, `https://api.example.com/v1/`, or `*`
+for any. If no `--scope-include` is given, everything passes the include
+check; excludes still apply.
+
+### Authentication
+
+Static cookie and bearer-token headers apply to every request in the scan:
+WAF probes, preflight, baselines, and payloads.
+
+```bash
+janissary scan -u "https://app.example.com/profile?id=1" -p id \
+  --cookie "session=abc123; csrf=xyz"
+
+janissary agent https://app.example.com --attack-confirm \
+  --bearer "eyJhbGciOi..."
+```
+
+`--redact-auth` swaps `Authorization` and `Cookie` header values with
+`[REDACTED]` in JSON/JSONL output only. Body content is untouched - a
+leaked secret inside a response body is often the actual bug. Use this
+before pasting scan output into a bug report.
+
+### Machine-readable output
+
+`--json` emits one envelope document to stdout. `--jsonl` emits one
+finding per line. Both reserve stdout for the machine payload; every
+human status line (progress, WAF feedback, backoff) goes to stderr.
+`--quiet` silences stderr only - it never affects stdout.
+
+```bash
+# One document, all findings
+janissary scan -u "https://target.example/?q=1" -p q --json > scan.json
+
+# Streaming, filter with jq
+janissary scan -u "https://target.example/?q=1" -p q --jsonl | jq -c .
+```
+
+Every finding carries `raw_request` and `raw_response` as HTTP/1.1 text
+with CRLF line endings, ready to paste into Burp Repeater.
+
+---
 
 ## Contributing
 
