@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "janissary"
 version = "7.1.0"
-description = "Automated offensive security platform for small teams"
+description = "Differential DAST for teams who need results they can trust."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
