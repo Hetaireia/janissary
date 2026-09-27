@@ -52,8 +52,8 @@ Two-sided p from chi2 with 1 degree of freedom. Under b+c < 25 the
 exact binomial fallback is used instead. That fallback is documented in
 the output under method="exact_binomial".
 
-No dependencies beyond scipy for the chi-square and binomial tests and
-the stdlib otherwise.
+Stdlib only. Chi-square df=1 survival uses math.erfc; the exact binomial
+two-sided p-value uses math.lgamma.
 """
 
 from __future__ import annotations
@@ -245,16 +245,8 @@ def mcnemar(a: dict[str, str], b: dict[str, str]) -> dict:
         elif ok_a and not ok_b:
             cc += 1
 
-    from scipy.stats import binomtest
-    from scipy.stats import chi2 as chi2_dist
-
     if bb + cc < 25:
-        # Exact binomial fallback. Two-sided, p=0.5 under H0.
-        if bb + cc == 0:
-            p = 1.0
-        else:
-            res = binomtest(bb, bb + cc, 0.5, alternative="two-sided")
-            p = float(res.pvalue)
+        p = _exact_binomial_two_sided(bb, bb + cc)
         return {
             "n": len(common),
             "b": bb,
@@ -266,7 +258,16 @@ def mcnemar(a: dict[str, str], b: dict[str, str]) -> dict:
         }
 
     chi2 = (abs(bb - cc) - 1) ** 2 / (bb + cc)
-    p = float(1.0 - chi2_dist.cdf(chi2, df=1))
+    p = _chi2_df1_sf(chi2)
+    return {
+        "n": len(common),
+        "b": bb,
+        "c": cc,
+        "chi2": round(chi2, 6),
+        "p": round(p, 6),
+        "method": "chi2_continuity_corrected",
+        "significant_0_05": p < 0.05,
+    }
     return {
         "n": len(common),
         "b": bb,
@@ -278,6 +279,49 @@ def mcnemar(a: dict[str, str], b: dict[str, str]) -> dict:
     }
 
 
+
+
+def _chi2_df1_sf(x: float) -> float:
+    """Survival function P(X > x) for chi-square with 1 degree of freedom.
+
+    For df=1: 1 - CDF(x) = erfc(sqrt(x/2)).
+    Stdlib-only; matches scipy.stats.chi2.sf(x, 1) to machine precision.
+    """
+    import math
+
+    if x <= 0:
+        return 1.0
+    return math.erfc(math.sqrt(x / 2.0))
+
+
+def _exact_binomial_two_sided(k: int, n: int) -> float:
+    """Two-sided exact binomial p-value for H0: p=0.5.
+
+    Returns the sum of P(X=i) for all i with P(X=i) <= P(X=k), where
+    X ~ Binomial(n, 0.5). This is the standard "method of small p-values"
+    and matches scipy.stats.binomtest(..., alternative="two-sided").
+    """
+    import math
+
+    if n == 0:
+        return 1.0
+
+    def log_pmf(i: int) -> float:
+        return (
+            math.lgamma(n + 1)
+            - math.lgamma(i + 1)
+            - math.lgamma(n - i + 1)
+            - n * math.log(2)
+        )
+
+    log_pk = log_pmf(k)
+    tol = 1e-12
+    p = 0.0
+    for i in range(n + 1):
+        lp = log_pmf(i)
+        if lp <= log_pk + tol:
+            p += math.exp(lp)
+    return min(1.0, p)
 # ---------------------------------------------------------------------
 # entry point
 # ---------------------------------------------------------------------

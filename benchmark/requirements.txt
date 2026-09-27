@@ -1,6 +1,9 @@
 # Benchmark harness dependencies. Pinned.
 # Separate from the JANISSARY runtime deps so the harness can be
 # audited independently.
-scipy==1.13.1
+#
+# Note: analyze.py is intentionally stdlib-only (math.erfc for the
+# chi-square df=1 survival, math.lgamma for the exact binomial two-sided
+# test). No scipy dependency. matplotlib is only needed for chart output.
 matplotlib==3.9.0
 requests==2.32.3
