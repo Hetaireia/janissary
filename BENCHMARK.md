@@ -205,4 +205,20 @@ Amendments to this document after the initial commit must be:
 
 ---
 
-*(No amendments as of initial registration.)*
+### Amendment 1 — 2026-09-28
+
+**What changed:** directory names `benchmark/track-a/` and `benchmark/track-b/`
+became `benchmark/track_a/` and `benchmark/track_b/`.
+
+**Why:** Python package names cannot contain hyphens. The harness is invoked
+as `python -m benchmark.track_a.runner`, which requires an importable module
+name. Renaming the directories was the minimal fix.
+
+**Effect on methodology:** none. "Track A" and "Track B" remain the
+pre-registered concepts. All references to file paths in this document should
+be read with underscores in place of hyphens where a Python module path is
+implied. No hypothesis, metric, target, tool pin, or statistical test changed.
+
+---
+
+*(No further amendments as of 2026-09-28.)*

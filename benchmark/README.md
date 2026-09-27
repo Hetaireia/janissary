@@ -5,8 +5,8 @@ holds the harness that executes that methodology.
 
 ## Layout
 
-- `track-a/` — OWASP Benchmark (Java), 2,740 labelled cases, 3 tools x 3 runs
-- `track-b/` — OWASP Juice Shop behind Cloudflare free tier, 3 tools x 1 run
+- `track_a/` — OWASP Benchmark (Java), 2,740 labelled cases, 3 tools x 3 runs
+- `track_b/` — OWASP Juice Shop behind Cloudflare free tier, 3 tools x 1 run
 - `common/` — shared harness code (subprocess wrappers, JSON helpers)
 - `runs/` — raw run artifacts, committed verbatim after each official run
 - `analyze.py` — top-level entry: reads runs/, emits metrics + charts
