@@ -81,24 +81,31 @@ def looks_blocked(status: int, body: bytes) -> bool:
 
 
 def probe(target_url: str, timeout: float = 10.0) -> tuple[int, bytes] | None:
+    import urllib.error
     import urllib.request
+    from urllib.parse import urlsplit
+
+    # Refuse any scheme other than http/https. Prevents file:// or custom
+    # schemes from being reached via a caller-supplied URL (bandit B310).
+    scheme = (urlsplit(target_url).scheme or "").lower()
+    if scheme not in ("http", "https"):
+        return None
+
     req = urllib.request.Request(
         target_url, method="GET",
         headers={"User-Agent": "janissary-bench-probe/1.0"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310
             body = resp.read(4096)
             return resp.status, body
-    except Exception as exc:
-        # urllib raises on 4xx/5xx; pull the code if it's an HTTPError.
-        code = getattr(exc, "code", None)
-        if isinstance(code, int):
-            try:
-                body = exc.read(4096)
-            except Exception:
-                body = b""
-            return code, body
+    except urllib.error.HTTPError as exc:
+        try:
+            body = exc.read(4096)
+        except Exception:
+            body = b""
+        return int(exc.code), body
+    except Exception:
         return None
 
 
