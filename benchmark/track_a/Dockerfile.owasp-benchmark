@@ -1,0 +1,37 @@
+# Custom Dockerfile for OWASP Benchmark, pinned to our target-version.txt
+# commit. The upstream VMs/Dockerfile clones BenchmarkJava from GitHub at
+# build time, which does not respect our pre-registration pin.
+#
+# Build (from the sibling checkout as context):
+#   docker build `
+#     -f benchmark/track_a/Dockerfile.owasp-benchmark `
+#     -t janissary/owasp-benchmark:20cbf3d `
+#     "C:\Users\M5 E60\janissary-project\owasp-benchmark"
+#
+# Run:
+#   docker run --rm -p 8443:8443 janissary/owasp-benchmark:20cbf3d
+
+FROM eclipse-temurin:17-jdk-jammy
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        git maven wget ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# BenchmarkUtils is an external Maven dependency that BenchmarkJava needs.
+# It is not part of our pinned checkout, so we clone it fresh. Record its
+# SHA in target-version.txt after the first build for full reproducibility.
+RUN git clone --depth 1 https://github.com/OWASP-Benchmark/BenchmarkUtils.git /owasp/BenchmarkUtils
+WORKDIR /owasp/BenchmarkUtils
+RUN mvn -q install -DskipTests
+
+# Copy our pinned BenchmarkJava checkout from the build context.
+COPY . /owasp/BenchmarkJava
+WORKDIR /owasp/BenchmarkJava
+RUN git config --global --add safe.directory /owasp/BenchmarkJava || true
+RUN mvn -q clean package cargo:install -DskipTests
+
+EXPOSE 8443
+
+# runBenchmark.sh starts Tomcat on 8443 (HTTPS, self-signed cert).
+CMD ["./runBenchmark.sh"]
