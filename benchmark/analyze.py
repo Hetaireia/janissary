@@ -64,6 +64,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean, pstdev
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -356,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
     for t in by_tool:
         by_tool[t].sort(key=lambda r: r["run_number"] or 0)
 
-    summary = {
+    summary: dict[str, Any] = {
         "schema_version": "1.0",
         "cases_csv": str(args.cases_csv),
         "runs_dir": str(args.runs_dir),
