@@ -1,7 +1,7 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: PHASE 4 IN PROGRESS - v7.1.0 TAGGED, LAUNCH PENDING
-## NEXT: Execute docs/launch-plan.md (Show HN, r/netsec, blog cross-post) — milestone M6, target 16-OCT-2026
-## LAST COMPLETED: Security hardening + release. XXE fix in XML-RPC parser (defusedxml), bandit gate closed (0 Medium / 0 High), ruff format pass across 36 files, v7.1.0 tagged and pushed. CI green on a688bec, 314 tests pass.
+## STATUS: BASELINE BUG FOUND + FIXED (UNCOMMITTED) — bench verified, structural issue found
+## NEXT: Commit scanner.py baseline fix + regression tests, then decide on structural misattribution issue (see SESSION HANDOFF below). PyPI/launch still browser-blocked.
+## LAST COMPLETED: Bench re-check found a real bug in collect_baseline (engine/scanner.py). It sampled 5 ROTATING benign values instead of one value N times. On endpoints that 500 for unknown input this made modal_status=500 and is_stable_body=False, silently killing the status and length gates before any payload was sent. Fixed to sample the URL's existing param value N times (fallback "1"). SQLi (11/2) and XSS (12/1) verified unchanged; traversal went 12/1 -> 36/7, path_traversal now fires (F-005), but 5 spurious category-labeled groups also appeared. See SESSION HANDOFF. UNCOMMITTED, untested, not committed.
 
 Last updated: 2026-09-27
 Project root: C:\Users\M5 E60\janissary-project\janissary
@@ -219,6 +219,66 @@ Tests:
 - tests/unit/test_agent.py - 15
 
 Suite: 303 tests passing. Ruff clean. Phase 3 complete.
+
+---
+
+## SESSION HANDOFF — 2026-09-27 (late)
+
+### What happened
+Bench accuracy re-check. Re-ran all three benches against benchapp.py (port 5001). SQLi and XSS reproduced exactly. Traversal had been producing ZERO traversal findings — investigation found this was a real scanner bug, not a bench artefact.
+
+### The bug (fixed, uncommitted)
+`src/janissary/engine/scanner.py`, `collect_baseline`:
+
+OLD: rotated through `["1","test","index","home","default"]`, one value per sample.
+NEW: reads the existing value for `param` from the target URL, samples that value `N` times. Falls back to `"1"` if the URL has no value for `param`.
+
+Why it mattered: on `/traversal`, benign values `1`/`test`/... all 500 (file not found). So baseline `modal_status=500` -> `_check_status` bails (`base >= 400`), and every baseline body differed -> `is_stable_body=False` -> `_check_length` bails. Both gates dead before any payload was sent. `/sqli` escaped this because unknown input yields a stable empty result set at 200.
+
+Also added: a warning line in `scan()` when baseline modal_status >= 400.
+
+### Verification
+- SQLi `?q=test`: 11 findings / 2 groups / 29 requests — UNCHANGED. baseline stable=True.
+- XSS `?name=test`: 12 findings / 1 group / 29 requests — UNCHANGED.
+- Traversal `?f=readme.txt`: WAS 12/1 (no traversal), NOW 36/7. F-005 traversal:path_traversal fires with traversal_passwd + traversal_encoded.
+
+### Structural issue found (NOT fixed — next session's call)
+`_check_status` and `_check_length` in detection/analyzer.py are category-agnostic; findings inherit the payload's `category`. So on `/traversal` (which 500s for any non-matching file), EVERY payload class produced a status_change group:
+- F-002 sqli:sql_injection  (spurious — not SQLi)
+- F-003 xss:status_change    (spurious — not XSS)
+- F-004 xss:length_anomaly   (spurious)
+- F-005 traversal:path_traversal (accidentally right, same reason as F-002)
+- F-006 cmdi:command_injection (spurious)
+- F-007 cmdi:length_anomaly  (spurious)
+
+F-002 and F-005 are the SAME observation attributed to two categories. On SQLi this is masked by the `db_error` corroborator. Traversal has no corroborator, so status_change alone carries the whole claim. This is misattribution, not strictly a false positive. Design conversation, do not hotfix.
+
+### Other findings from this session (all deferred)
+- Pacer backs off to `final_delay=30.0s` on app-level 500s. A 500 is not a WAF block. Reproducible. `recon/pacer.py` + how scanner records status.
+- ~2.0s floor on every request to localhost. Unexplained (Flask on loopback should be <10ms). Present in every bench run. Not investigated.
+- `docs/launch-plan.md` numbers are STALE: says "23 findings / 3 groups" and "1 group with 8 evidence rows". Actual SQLi = 11/2 with 10 evidence rows in F-001. Update AFTER the structural issue is settled, not before.
+- Stray file: `tests/unit/test_git_history.py.p1.1b.bak`.
+- CI (`.github/workflows/ci.yml`) only runs `ruff check .` and `pytest -q`. mypy, bandit, pip-audit are LOCAL-ONLY despite WORKFLOW.md claiming all five gates green.
+- HEAD `8ced0f4` is 3 commits ahead of tag `v7.1.0`. Latest commits are docs/chore/tools only. CI on HEAD has NOT been verified in this session.
+
+### Files touched this session
+- `src/janissary/engine/scanner.py` — collect_baseline rewrite + baseline warning. UNCOMMITTED.
+- `bench-*-rerun.json`, `bench-*-fixed.json` — local outputs, gitignored.
+- `_patch_scanner.py`, `_patch_workflow_hdr.py`, `_patch_workflow.py` — one-shot patch scripts. Delete before commit.
+- `WORKFLOW.md` — this handoff.
+
+### To resume
+Read this section. Then:
+1. Run `git status` and `git diff src/janissary/engine/scanner.py` to see the uncommitted fix.
+2. Add regression tests for the baseline behaviour (see below) BEFORE committing.
+3. Commit the baseline fix + tests.
+4. Decide on the structural misattribution issue.
+5. Then PyPI/launch (browser-blocked, unchanged).
+
+### Regression tests to add (not yet written)
+- `collect_baseline` sends the SAME param value N times when the URL carries a value for that param (assert via mock session).
+- `collect_baseline` falls back to "1" when the URL has no value for param.
+- A scan against a mock endpoint that 500s on unknown input yields `status_change` findings for its declared payload categories.
 
 ---
 
