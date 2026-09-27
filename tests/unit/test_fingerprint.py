@@ -34,6 +34,7 @@ def _session_from_map(mapping):
             val = mapping[url]
             if val is None:
                 import requests
+
                 raise requests.RequestException("boom")
             return val
         return FakeResp(status=404)
@@ -45,6 +46,7 @@ def _session_from_map(mapping):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def test_extract_title():
     assert _extract_title("<html><title>Hi</title></html>") == "Hi"
@@ -60,9 +62,12 @@ def test_extract_generator():
 
 
 def test_match_tech_server():
-    assert "nginx" in _match_tech("nginx/1.25", __import__(
-        "janissary.recon.fingerprint", fromlist=["SERVER_SIGNATURES"]
-    ).SERVER_SIGNATURES)
+    assert "nginx" in _match_tech(
+        "nginx/1.25",
+        __import__(
+            "janissary.recon.fingerprint", fromlist=["SERVER_SIGNATURES"]
+        ).SERVER_SIGNATURES,
+    )
 
 
 def test_classify_cookie_wordpress():
@@ -82,11 +87,12 @@ def test_favicon_hash_stable():
 # Fingerprinter.run
 # ---------------------------------------------------------------------------
 
+
 def test_fingerprint_wordpress_via_cookies_and_paths():
     home = FakeResp(
         status=200,
-        text='<html><title>WP</title>'
-             '<meta name="generator" content="WordPress 6.4"></html>',
+        text="<html><title>WP</title>"
+        '<meta name="generator" content="WordPress 6.4"></html>',
         headers={"Server": "nginx/1.25"},
         cookies={"wordpress_logged_in_abc": "x", "wp-settings-1": "y"},
     )
@@ -137,20 +143,24 @@ def test_fingerprint_unreachable():
 def test_fingerprint_favicon():
     home = FakeResp(status=200, text="<html></html>")
     fav = FakeResp(status=200, content=b"\x00\x01\x02")
-    session = _session_from_map({
-        "http://t/": home,
-        "http://t/favicon.ico": fav,
-    })
+    session = _session_from_map(
+        {
+            "http://t/": home,
+            "http://t/favicon.ico": fav,
+        }
+    )
     fp = fingerprint("http://t/", session=session, probe_cms_paths=False)
     assert fp.favicon_hash is not None
 
 
 def test_fingerprint_favicon_missing():
     home = FakeResp(status=200, text="<html></html>")
-    session = _session_from_map({
-        "http://t/": home,
-        "http://t/favicon.ico": FakeResp(status=404),
-    })
+    session = _session_from_map(
+        {
+            "http://t/": home,
+            "http://t/favicon.ico": FakeResp(status=404),
+        }
+    )
     fp = fingerprint("http://t/", session=session, probe_cms_paths=False)
     assert fp.favicon_hash is None
 
@@ -169,8 +179,9 @@ def test_fingerprinter_class_paths_disabled():
         text='<meta name="generator" content="Ghost 5">',
     )
     session = _session_from_map({"http://t/": home})
-    f = Fingerprinter("http://t/", session=session, probe_cms_paths=False,
-                      probe_favicon=False)
+    f = Fingerprinter(
+        "http://t/", session=session, probe_cms_paths=False, probe_favicon=False
+    )
     fp = f.run()
     assert fp.meta_generator == "Ghost 5"
     assert fp.cms == "ghost"

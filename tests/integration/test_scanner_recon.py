@@ -78,6 +78,7 @@ def test_scanner_reports_pacer_stats():
 
 def test_scanner_aborts_on_preflight_failure():
     import requests
+
     session = MagicMock()
     session.get.side_effect = requests.RequestException("no route")
     sc = Scanner(

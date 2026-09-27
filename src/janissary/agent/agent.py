@@ -29,6 +29,7 @@ from .platform_kb import known_platforms, plan_for
 # Result type
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AgentRun:
     target: str
@@ -56,6 +57,7 @@ class AgentRun:
             "abort_reason": self.abort_reason,
         }
 
+
 # ---------------------------------------------------------------------------
 # Adapters
 # ---------------------------------------------------------------------------
@@ -63,13 +65,16 @@ class AgentRun:
 # A module adapter takes (target, context) and returns a list of Finding.
 ModuleAdapter = Callable[[str, dict], list[Finding]]
 
+
 def _noop_adapter(target: str, context: dict) -> list[Finding]:
     """Default adapter: do nothing, produce nothing."""
     return []
 
+
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
+
 
 class Agent:
     def __init__(

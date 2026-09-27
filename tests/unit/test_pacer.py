@@ -31,16 +31,18 @@ def test_pacer_waf_profile_raises_starting_delay():
 
 
 def test_backoff_on_block():
-    p = AdaptivePacer(config=PacerConfig(base_delay=0.5, min_delay=0.5),
-                      sleep=_no_sleep)
+    p = AdaptivePacer(
+        config=PacerConfig(base_delay=0.5, min_delay=0.5), sleep=_no_sleep
+    )
     start = p.delay
     p.record(403)
     assert p.delay > start
 
 
 def test_hard_backoff_after_repeated_blocks():
-    p = AdaptivePacer(config=PacerConfig(base_delay=0.1, min_delay=0.1),
-                      sleep=_no_sleep)
+    p = AdaptivePacer(
+        config=PacerConfig(base_delay=0.1, min_delay=0.1), sleep=_no_sleep
+    )
     p.record(403)
     mid = p.delay
     p.record(403)
@@ -67,8 +69,9 @@ def test_recovery_after_clean_streak():
 
 
 def test_network_error_is_treated_as_backoff():
-    p = AdaptivePacer(config=PacerConfig(base_delay=0.5, min_delay=0.5),
-                      sleep=_no_sleep)
+    p = AdaptivePacer(
+        config=PacerConfig(base_delay=0.5, min_delay=0.5), sleep=_no_sleep
+    )
     before = p.delay
     p.record(None)
     assert p.delay > before
@@ -95,8 +98,9 @@ def test_wait_calls_sleep():
 
 
 def test_stats_reports_events():
-    p = AdaptivePacer(config=PacerConfig(base_delay=0.1, min_delay=0.1),
-                      sleep=_no_sleep)
+    p = AdaptivePacer(
+        config=PacerConfig(base_delay=0.1, min_delay=0.1), sleep=_no_sleep
+    )
     p.record(200)
     p.record(403)
     stats = p.stats()

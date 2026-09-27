@@ -54,6 +54,7 @@ DEFAULT_USER_AGENT = (
 # URL BUILDING
 # -------------------------------------------------------------------
 
+
 def build_url(base: str, param: str, value: str) -> str:
     """Inject `param=value` into the URL, preserving other parameters."""
     parsed = urlparse(base)
@@ -71,6 +72,7 @@ def build_url(base: str, param: str, value: str) -> str:
         )
     )
 
+
 def repair_url(url: str) -> str:
     """Collapse spaces around the path/query split."""
     if not url:
@@ -81,9 +83,11 @@ def repair_url(url: str) -> str:
         return head.replace(" ", "") + "?" + tail
     return url.replace(" ", "")
 
+
 # -------------------------------------------------------------------
 # RESULT TYPES
 # -------------------------------------------------------------------
+
 
 @dataclass
 class ScanFinding:
@@ -100,6 +104,7 @@ class ScanFinding:
     reflection_context: str | None = None
     response_content_type: str = ""
 
+
 @dataclass
 class ScanSummary:
     target: str
@@ -115,9 +120,11 @@ class ScanSummary:
     waf: dict | None = None
     pacer: dict | None = None
 
+
 # -------------------------------------------------------------------
 # SCANNER
 # -------------------------------------------------------------------
+
 
 class Scanner:
     """Minimal scanner: baseline, dispatch, analyze."""
@@ -241,8 +248,7 @@ class Scanner:
             if profile.detected:
                 vendor = profile.vendor or "unknown"
                 print(
-                    f"    WAF detected: {vendor} "
-                    f"(confidence {profile.confidence:.2f})"
+                    f"    WAF detected: {vendor} (confidence {profile.confidence:.2f})"
                 )
             else:
                 print("    No WAF signatures observed")

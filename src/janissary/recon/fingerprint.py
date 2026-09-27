@@ -135,6 +135,7 @@ SERVER_VERSION_RE = re.compile(r"/[\d.]+")
 # Result type
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Fingerprint:
     target: str
@@ -170,11 +171,13 @@ class Fingerprint:
             "notes": list(self.notes),
         }
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+
 
 def _extract_title(text: str) -> str | None:
     m = TITLE_RE.search(text or "")
@@ -182,11 +185,13 @@ def _extract_title(text: str) -> str | None:
         return None
     return m.group(1).strip()[:200] or None
 
+
 def _extract_generator(text: str) -> str | None:
     m = GENERATOR_RE.search(text or "")
     if not m:
         return None
     return m.group(1).strip() or None
+
 
 def _match_tech(value: str, table: dict[str, tuple[str, ...]]) -> list[str]:
     if not value:
@@ -194,18 +199,22 @@ def _match_tech(value: str, table: dict[str, tuple[str, ...]]) -> list[str]:
     low = value.lower()
     return [name for name, needles in table.items() if any(n in low for n in needles)]
 
+
 def _classify_cookie(name: str) -> str | None:
     for prefix, tech in COOKIE_SIGNATURES.items():
         if name == prefix or name.startswith(prefix):
             return tech
     return None
 
+
 def _favicon_hash(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()[:32]
+
 
 # ---------------------------------------------------------------------------
 # Fingerprinter
 # ---------------------------------------------------------------------------
+
 
 class Fingerprinter:
     def __init__(
@@ -317,9 +326,7 @@ class Fingerprinter:
 
     # ---------------------------------------------------------------
 
-    def _probe_cms_paths(
-        self, fp: Fingerprint, cms_votes: dict[str, int]
-    ) -> None:
+    def _probe_cms_paths(self, fp: Fingerprint, cms_votes: dict[str, int]) -> None:
         for cms, paths in CMS_PATHS.items():
             hits = 0
             for path in paths:
@@ -344,9 +351,11 @@ class Fingerprinter:
             return
         fp.favicon_hash = _favicon_hash(data)
 
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
+
 
 def fingerprint(
     target: str,

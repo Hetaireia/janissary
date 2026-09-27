@@ -32,6 +32,7 @@ def _jsonl(**kwargs) -> str:
 # Confirmation gate
 # ---------------------------------------------------------------------------
 
+
 def test_requires_attack_confirm():
     with pytest.raises(n.AttackConfirmationRequired):
         n.NucleiRunner(
@@ -74,6 +75,7 @@ def test_requires_nuclei_binary():
 # ---------------------------------------------------------------------------
 # Command construction
 # ---------------------------------------------------------------------------
+
 
 def test_build_command_minimal():
     r = n.NucleiRunner(
@@ -132,6 +134,7 @@ def test_timeout_clamped():
 # Line parsing
 # ---------------------------------------------------------------------------
 
+
 def test_parse_blank_line_returns_none():
     assert n.parse_nuclei_line("") is None
     assert n.parse_nuclei_line("   ") is None
@@ -176,21 +179,25 @@ def test_parse_full_finding():
 
 
 def test_parse_tags_from_string():
-    line = _jsonl(**{
-        "template-id": "x",
-        "info": {"name": "n", "severity": "low", "tags": "a, b"},
-        "matched-at": "http://t/",
-    })
+    line = _jsonl(
+        **{
+            "template-id": "x",
+            "info": {"name": "n", "severity": "low", "tags": "a, b"},
+            "matched-at": "http://t/",
+        }
+    )
     f = n.parse_nuclei_line(line)
     assert f.tags == ["a", "b"]
 
 
 def test_parse_reference_from_string():
-    line = _jsonl(**{
-        "template-id": "x",
-        "info": {"name": "n", "severity": "low", "reference": "https://x"},
-        "matched-at": "http://t/",
-    })
+    line = _jsonl(
+        **{
+            "template-id": "x",
+            "info": {"name": "n", "severity": "low", "reference": "https://x"},
+            "matched-at": "http://t/",
+        }
+    )
     f = n.parse_nuclei_line(line)
     assert f.reference == ["https://x"]
 
@@ -199,19 +206,26 @@ def test_parse_reference_from_string():
 # run()
 # ---------------------------------------------------------------------------
 
+
 def test_run_parses_findings():
-    stdout = "\n".join([
-        _jsonl(**{
-            "template-id": "a",
-            "info": {"name": "A", "severity": "high"},
-            "matched-at": "http://t/1",
-        }),
-        _jsonl(**{
-            "template-id": "b",
-            "info": {"name": "B", "severity": "low"},
-            "matched-at": "http://t/2",
-        }),
-    ])
+    stdout = "\n".join(
+        [
+            _jsonl(
+                **{
+                    "template-id": "a",
+                    "info": {"name": "A", "severity": "high"},
+                    "matched-at": "http://t/1",
+                }
+            ),
+            _jsonl(
+                **{
+                    "template-id": "b",
+                    "info": {"name": "B", "severity": "low"},
+                    "matched-at": "http://t/2",
+                }
+            ),
+        ]
+    )
 
     r = n.NucleiRunner(
         target="http://t/",
@@ -232,16 +246,20 @@ def test_run_parses_findings():
 
 
 def test_run_ignores_non_finding_lines():
-    stdout = "\n".join([
-        "",  # blank
-        "not json",  # garbage
-        _jsonl(info={"name": "n"}),  # no template-id
-        _jsonl(**{
-            "template-id": "ok",
-            "info": {"name": "n", "severity": "info"},
-            "matched-at": "http://t/",
-        }),
-    ])
+    stdout = "\n".join(
+        [
+            "",  # blank
+            "not json",  # garbage
+            _jsonl(info={"name": "n"}),  # no template-id
+            _jsonl(
+                **{
+                    "template-id": "ok",
+                    "info": {"name": "n", "severity": "info"},
+                    "matched-at": "http://t/",
+                }
+            ),
+        ]
+    )
     r = n.NucleiRunner(
         target="http://t/",
         templates=["/x.yaml"],
@@ -256,11 +274,13 @@ def test_run_ignores_non_finding_lines():
 
 def test_run_nuclei_exit_1_is_not_aborted():
     """Nuclei returns 1 when it finds something — that is not an error."""
-    stdout = _jsonl(**{
-        "template-id": "x",
-        "info": {"name": "n", "severity": "high"},
-        "matched-at": "http://t/",
-    })
+    stdout = _jsonl(
+        **{
+            "template-id": "x",
+            "info": {"name": "n", "severity": "high"},
+            "matched-at": "http://t/",
+        }
+    )
     r = n.NucleiRunner(
         target="http://t/",
         templates=["/x.yaml"],
@@ -321,12 +341,15 @@ def test_run_file_not_found_aborts():
 # Serialisation
 # ---------------------------------------------------------------------------
 
+
 def test_run_to_dict_roundtrip():
-    stdout = _jsonl(**{
-        "template-id": "x",
-        "info": {"name": "n", "severity": "high"},
-        "matched-at": "http://t/",
-    })
+    stdout = _jsonl(
+        **{
+            "template-id": "x",
+            "info": {"name": "n", "severity": "high"},
+            "matched-at": "http://t/",
+        }
+    )
     r = n.NucleiRunner(
         target="http://t/",
         templates=["/x.yaml"],

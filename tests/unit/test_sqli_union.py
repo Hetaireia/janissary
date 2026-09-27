@@ -13,6 +13,7 @@ from janissary.attack import sqli_union as s
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class FakeResp:
     def __init__(self, status=200, text="", headers=None):
         self.status_code = status
@@ -65,8 +66,8 @@ def _payload_aware_session(version="5.7.42-MariaDB", db="appdb"):
         ):
             return FakeResp(
                 text=f"<html>users{s.GROUP_CONCAT_SEPARATOR}"
-                     f"orders{s.GROUP_CONCAT_SEPARATOR}"
-                     f"products</html>"
+                f"orders{s.GROUP_CONCAT_SEPARATOR}"
+                f"products</html>"
             )
 
         # 3. Database listing.
@@ -77,8 +78,8 @@ def _payload_aware_session(version="5.7.42-MariaDB", db="appdb"):
         ):
             return FakeResp(
                 text=f"<html>appdb{s.GROUP_CONCAT_SEPARATOR}"
-                     f"mysql{s.GROUP_CONCAT_SEPARATOR}"
-                     f"information_schema</html>"
+                f"mysql{s.GROUP_CONCAT_SEPARATOR}"
+                f"information_schema</html>"
             )
 
         # 4. Version probe.
@@ -86,11 +87,7 @@ def _payload_aware_session(version="5.7.42-MariaDB", db="appdb"):
             return FakeResp(text=f"<html>{version}</html>")
 
         # 5. Current database.
-        if (
-            "database()" in raw
-            or "current_database()" in raw
-            or "db_name()" in raw
-        ):
+        if "database()" in raw or "current_database()" in raw or "db_name()" in raw:
             return FakeResp(text=f"<html>{db}</html>")
 
         # 6. Anything else.
@@ -102,6 +99,7 @@ def _payload_aware_session(version="5.7.42-MariaDB", db="appdb"):
 # ---------------------------------------------------------------------------
 # Confirmation gate
 # ---------------------------------------------------------------------------
+
 
 def test_requires_attack_confirm():
     with pytest.raises(s.AttackConfirmationRequired):
@@ -122,18 +120,15 @@ def test_confirm_allows_construction():
 
 def test_column_bounds():
     with pytest.raises(ValueError):
-        s.UnionExtractor(
-            target="http://t/", param="q", columns=0, attack_confirm=True
-        )
+        s.UnionExtractor(target="http://t/", param="q", columns=0, attack_confirm=True)
     with pytest.raises(ValueError):
-        s.UnionExtractor(
-            target="http://t/", param="q", columns=99, attack_confirm=True
-        )
+        s.UnionExtractor(target="http://t/", param="q", columns=99, attack_confirm=True)
 
 
 # ---------------------------------------------------------------------------
 # Payload construction
 # ---------------------------------------------------------------------------
+
 
 def test_build_union_payload_single_column():
     p = s.build_union_payload(1, 1, "'x'")
@@ -161,6 +156,7 @@ def test_build_union_payload_dbms_terminator():
 # DBMS detection
 # ---------------------------------------------------------------------------
 
+
 def test_detect_dbms_mysql():
     assert s.detect_dbms("5.7.42-MariaDB") == "mysql"
 
@@ -185,6 +181,7 @@ def test_detect_dbms_unknown():
 # Concatenation splitter
 # ---------------------------------------------------------------------------
 
+
 def test_split_concat_empty():
     assert s.split_concat("") == []
 
@@ -202,6 +199,7 @@ def test_split_concat_strips_whitespace():
 # ---------------------------------------------------------------------------
 # Column discovery
 # ---------------------------------------------------------------------------
+
 
 def test_find_reflecting_column_position_two():
     """Sentinel reflects only when it is in column 2."""
@@ -242,6 +240,7 @@ def test_find_reflecting_column_none_raises():
 # ---------------------------------------------------------------------------
 # Full extraction flow
 # ---------------------------------------------------------------------------
+
 
 def test_full_extraction_mysql():
     ex = s.UnionExtractor(
@@ -328,6 +327,7 @@ def test_extraction_handles_transport_error():
 # Result serialisation
 # ---------------------------------------------------------------------------
 
+
 def test_result_to_dict_roundtrip():
     ex = s.UnionExtractor(
         target="http://t/?q=1",
@@ -348,6 +348,7 @@ def test_result_to_dict_roundtrip():
 # ---------------------------------------------------------------------------
 # Limits
 # ---------------------------------------------------------------------------
+
 
 def test_max_rows_clamped():
     ex = s.UnionExtractor(
@@ -374,6 +375,7 @@ def test_max_bytes_clamped():
 # ---------------------------------------------------------------------------
 # Pacer integration
 # ---------------------------------------------------------------------------
+
 
 def test_pacer_is_used_when_supplied():
     calls: list = []

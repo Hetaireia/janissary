@@ -30,6 +30,7 @@ def _session_returning(responses):
 # Signature helpers
 # ---------------------------------------------------------------------------
 
+
 def test_header_vendor_cloudflare():
     assert _header_vendor({"CF-RAY": "abc123"}) == "cloudflare"
 
@@ -49,6 +50,7 @@ def test_body_vendor_none():
 # ---------------------------------------------------------------------------
 # Detector
 # ---------------------------------------------------------------------------
+
 
 def test_detector_flags_vendor_from_headers():
     headers = {"CF-RAY": "abc", "Server": "cloudflare"}

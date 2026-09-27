@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 # Surface definitions
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Surface:
     """One attack surface a platform exposes."""
@@ -34,6 +35,7 @@ class Surface:
             "paths": list(self.paths),
             "notes": self.notes,
         }
+
 
 # ---------------------------------------------------------------------------
 # Knowledge base
@@ -161,9 +163,11 @@ PLATFORMS: dict[str, list[Surface]] = {
 # Lookup API
 # ---------------------------------------------------------------------------
 
+
 def surfaces_for(platform: str) -> list[Surface]:
     """Return the surfaces for a platform, or [] if unknown."""
     return list(PLATFORMS.get((platform or "").lower(), []))
+
 
 def modules_for(platform: str) -> list[str]:
     """Return the unique module names for a platform, in stable order."""
@@ -173,8 +177,10 @@ def modules_for(platform: str) -> list[str]:
             seen.append(s.module)
     return seen
 
+
 def known_platforms() -> list[str]:
     return sorted(PLATFORMS.keys())
+
 
 def plan_for(platforms: list[str]) -> list[str]:
     """Given a list of detected platforms, return the modules to run.

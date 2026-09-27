@@ -14,6 +14,7 @@ from janissary import legal
 # Marker round-trip
 # ---------------------------------------------------------------------------
 
+
 def test_marker_path_under_home():
     p = legal.marker_path()
     assert p.name == legal.MARKER_FILENAME
@@ -57,6 +58,7 @@ def test_corrupt_marker_treated_as_missing(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # Gate behaviour
 # ---------------------------------------------------------------------------
+
 
 def test_non_gated_command_returns_immediately(tmp_path: Path):
     # "creds" is not in GATED_COMMANDS; must not raise or prompt.
@@ -131,6 +133,7 @@ def test_tty_prompt_rejects_case_mismatch(tmp_path: Path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Terms content invariants
 # ---------------------------------------------------------------------------
+
 
 def test_terms_text_non_empty():
     assert len(legal.TERMS_TEXT) > 500

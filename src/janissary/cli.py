@@ -23,6 +23,7 @@ from janissary.engine.scanner import Scanner, ScanSummary
 
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
+
 def _summary_to_dict(summary: ScanSummary) -> dict:
     return {
         "target": summary.target,
@@ -56,9 +57,11 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         ],
     }
 
+
 def _print_banner() -> None:
     print("JANISSARY — differential DAST")
     print("=" * 60)
+
 
 def _print_summary(summary: ScanSummary) -> None:
     print()
@@ -71,10 +74,7 @@ def _print_summary(summary: ScanSummary) -> None:
     print(f"  Total requests:  {summary.total_requests}")
     group_n = len(summary.groups)
     plural = "" if group_n == 1 else "s"
-    print(
-        f"  Findings:        {summary.finding_count} "
-        f"in {group_n} group{plural}"
-    )
+    print(f"  Findings:        {summary.finding_count} in {group_n} group{plural}")
 
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
@@ -115,13 +115,12 @@ def _print_summary(summary: ScanSummary) -> None:
         for i, g in enumerate(summary.groups, start=1):
             print(
                 f"    F-{i:03d}  {g.severity.upper():8} "
-                                f"{g.category + ':' if g.category else ''}{g.root_cause}"
+                f"{g.category + ':' if g.category else ''}{g.root_cause}"
                 f"  (param={g.param})"
             )
             for e in g.evidence:
                 print(
-                    f"           - [{e.payload_name}] "
-                    f"{e.finding_type}: {e.detail[:80]}"
+                    f"           - [{e.payload_name}] {e.finding_type}: {e.detail[:80]}"
                 )
 
     if summary.findings:
@@ -133,9 +132,11 @@ def _print_summary(summary: ScanSummary) -> None:
         for sev in sorted(by_sev, key=lambda s: SEV_ORDER.get(s, 99)):
             print(f"    {sev.upper():10} {by_sev[sev]}")
 
+
 # -------------------------------------------------------------------
 # SUBCOMMANDS
 # -------------------------------------------------------------------
+
 
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
@@ -202,6 +203,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         return 1
     return 0
 
+
 def cmd_creds(args: argparse.Namespace) -> int:
     from janissary.credentials.export import export_credentials
     from janissary.credentials.git_history import scan_git_history
@@ -209,8 +211,7 @@ def cmd_creds(args: argparse.Namespace) -> int:
 
     if getattr(args, "scan_git", False):
         if not args.path:
-            print("[!] --scan-git requires a repository path",
-                  file=sys.stderr)
+            print("[!] --scan-git requires a repository path", file=sys.stderr)
             return 64
         try:
             findings = scan_git_history(
@@ -244,6 +245,7 @@ def cmd_creds(args: argparse.Namespace) -> int:
         export_credentials(findings, args.export)
     return 0 if not findings else 1
 
+
 def cmd_fingerprint(args: argparse.Namespace) -> int:
     from janissary.recon.fingerprint import fingerprint as run_fingerprint
 
@@ -266,8 +268,7 @@ def cmd_fingerprint(args: argparse.Namespace) -> int:
         print(f"  Reachable:      {fp.reachable} (HTTP {fp.status})")
         print(f"  Server:         {fp.server or '-'}")
         print(f"  X-Powered-By:   {fp.powered_by or '-'}")
-        print(f"  CMS:            {fp.cms or '-'} "
-              f"(confidence {fp.cms_confidence:.2f})")
+        print(f"  CMS:            {fp.cms or '-'} (confidence {fp.cms_confidence:.2f})")
         print(f"  Technologies:   {', '.join(fp.technologies) or '-'}")
         print(f"  Meta generator: {fp.meta_generator or '-'}")
         print(f"  Favicon hash:   {fp.favicon_hash or '-'}")
@@ -289,6 +290,7 @@ def cmd_fingerprint(args: argparse.Namespace) -> int:
         print(f"[*] Results exported to {args.export}")
 
     return 0 if fp.reachable else 2
+
 
 def cmd_graphql(args: argparse.Namespace) -> int:
     from janissary.integrations.graphql import (
@@ -459,8 +461,7 @@ def cmd_admin(args: argparse.Namespace) -> int:
         return 2
 
     if not args.quiet:
-        print(f"[*] Probed {profile.paths_probed} paths, "
-              f"{len(profile.hits)} hit(s)")
+        print(f"[*] Probed {profile.paths_probed} paths, {len(profile.hits)} hit(s)")
         for h in profile.hits:
             marker = "LOGIN" if h.is_login_form else "     "
             loc = f" -> {h.location}" if h.location else ""
@@ -529,8 +530,7 @@ def cmd_attack_sqli_union(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         print(
-            "    This is a separate gate from the Terms of Use. "
-            "Both are required.",
+            "    This is a separate gate from the Terms of Use. Both are required.",
             file=sys.stderr,
         )
         return 64
@@ -622,8 +622,7 @@ def cmd_attack_nuclei(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         print(
-            "    This is a separate gate from the Terms of Use. "
-            "Both are required.",
+            "    This is a separate gate from the Terms of Use. Both are required.",
             file=sys.stderr,
         )
         return 64
@@ -720,8 +719,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         print(
-            "    This is a separate gate from the Terms of Use. "
-            "Both are required.",
+            "    This is a separate gate from the Terms of Use. Both are required.",
             file=sys.stderr,
         )
         return 64
@@ -740,15 +738,11 @@ def cmd_agent(args: argparse.Namespace) -> int:
 
         from janissary.recon.waf import WAFDetector
 
-        fp = run_fingerprint(
-            target, timeout=args.timeout, proxies=proxies
-        )
+        fp = run_fingerprint(target, timeout=args.timeout, proxies=proxies)
         # Attach a WAF profile so the agent can report it.
         try:
             session = _rq.Session()
-            det = WAFDetector(
-                session=session, timeout=args.timeout, proxies=proxies
-            )
+            det = WAFDetector(session=session, timeout=args.timeout, proxies=proxies)
             fp.waf = det.detect(target)
         except Exception:
             fp.waf = None
@@ -773,9 +767,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
 
     extra_platforms = None
     if args.platforms:
-        extra_platforms = [
-            p.strip() for p in args.platforms.split(",") if p.strip()
-        ]
+        extra_platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
 
     result = agent.run(args.url, extra_platforms=extra_platforms)
 
@@ -803,6 +795,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
 
     if args.export:
         import json as _json
+
         with open(args.export, "w", encoding="utf-8") as fh:
             _json.dump(
                 {
@@ -862,9 +855,11 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2)
 
+
 # -------------------------------------------------------------------
 # PARSER
 # -------------------------------------------------------------------
+
 
 class _ArgumentParser(argparse.ArgumentParser):
     """Argparse subclass that exits with 64 (EX_USAGE) on errors."""
@@ -872,6 +867,7 @@ class _ArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         self.print_usage(sys.stderr)
         self.exit(64, f"{self.prog}: error: {message}\n")
+
 
 def build_parser() -> argparse.ArgumentParser:
     p = _ArgumentParser(
@@ -894,7 +890,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--baseline-count", type=int, default=10)
     scan.add_argument("--stealth", action="store_true")
     scan.add_argument(
-        "--no-waf", action="store_true",
+        "--no-waf",
+        action="store_true",
         help="skip WAF detection probe phase",
     )
     scan.add_argument(
@@ -915,16 +912,26 @@ def build_parser() -> argparse.ArgumentParser:
     # -- creds ----------------------------------------------------
     creds = sub.add_parser("creds", help="scan for leaked credentials")
     creds.add_argument("path", help="directory to scan (or repo with --scan-git)")
-    creds.add_argument("--scan-git", action="store_true",
-                       help="scan git history instead of the working tree")
-    creds.add_argument("--max-commits", type=int, default=None,
-                       help="cap the number of commits scanned")
-    creds.add_argument("--env-only", action="store_true",
-                       help="scan only .env and config files")
-    creds.add_argument("--no-entropy", action="store_true",
-                       help="disable Shannon entropy fallback")
-    creds.add_argument("--export", default=None,
-                       help="write findings to a .json or .csv file")
+    creds.add_argument(
+        "--scan-git",
+        action="store_true",
+        help="scan git history instead of the working tree",
+    )
+    creds.add_argument(
+        "--max-commits",
+        type=int,
+        default=None,
+        help="cap the number of commits scanned",
+    )
+    creds.add_argument(
+        "--env-only", action="store_true", help="scan only .env and config files"
+    )
+    creds.add_argument(
+        "--no-entropy", action="store_true", help="disable Shannon entropy fallback"
+    )
+    creds.add_argument(
+        "--export", default=None, help="write findings to a .json or .csv file"
+    )
     creds.add_argument("--quiet", action="store_true")
     creds.set_defaults(func=cmd_creds)
 
@@ -932,35 +939,49 @@ def build_parser() -> argparse.ArgumentParser:
     fp = sub.add_parser("fingerprint", help="fingerprint a target")
     fp.add_argument("url", help="target URL")
     fp.add_argument("--timeout", type=float, default=10.0)
-    fp.add_argument("--proxy", default=None,
-                    help="HTTP proxy URL (e.g. http://127.0.0.1:8080)")
-    fp.add_argument("--no-cms-paths", action="store_true",
-                    help="skip CMS path probes")
-    fp.add_argument("--no-favicon", action="store_true",
-                    help="skip favicon hash")
-    fp.add_argument("--export", default=None,
-                    help="write the fingerprint to a .json file")
+    fp.add_argument(
+        "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
+    )
+    fp.add_argument("--no-cms-paths", action="store_true", help="skip CMS path probes")
+    fp.add_argument("--no-favicon", action="store_true", help="skip favicon hash")
+    fp.add_argument(
+        "--export", default=None, help="write the fingerprint to a .json file"
+    )
     fp.add_argument("--quiet", action="store_true")
     fp.set_defaults(func=cmd_fingerprint)
 
     # -- graphql --------------------------------------------------
     gql = sub.add_parser("graphql", help="recon a GraphQL endpoint")
     gql.add_argument("url", help="target base URL or endpoint")
-    gql.add_argument("--endpoint-path", default=None,
-                     help="explicit endpoint path (e.g. /graphql)")
+    gql.add_argument(
+        "--endpoint-path", default=None, help="explicit endpoint path (e.g. /graphql)"
+    )
     gql.add_argument("--timeout", type=float, default=10.0)
-    gql.add_argument("--proxy", default=None,
-                     help="HTTP proxy URL (e.g. http://127.0.0.1:8080)")
-    gql.add_argument("--enumerate-fields", action="store_true",
-                     help="try to enumerate fields via error suggestions")
-    gql.add_argument("--depth-probe", action="store_true",
-                     help="find the maximum accepted query depth")
-    gql.add_argument("--alias-probe", action="store_true",
-                     help="find the maximum accepted alias count")
-    gql.add_argument("--fuzz-args", default=None, metavar="FIELD:ARG",
-                     help="fuzz FIELD(ARG: <payload>) with the built-in set")
-    gql.add_argument("--export", default=None,
-                     help="write the profile to a .json file")
+    gql.add_argument(
+        "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
+    )
+    gql.add_argument(
+        "--enumerate-fields",
+        action="store_true",
+        help="try to enumerate fields via error suggestions",
+    )
+    gql.add_argument(
+        "--depth-probe",
+        action="store_true",
+        help="find the maximum accepted query depth",
+    )
+    gql.add_argument(
+        "--alias-probe",
+        action="store_true",
+        help="find the maximum accepted alias count",
+    )
+    gql.add_argument(
+        "--fuzz-args",
+        default=None,
+        metavar="FIELD:ARG",
+        help="fuzz FIELD(ARG: <payload>) with the built-in set",
+    )
+    gql.add_argument("--export", default=None, help="write the profile to a .json file")
     gql.add_argument("--quiet", action="store_true")
     gql.set_defaults(func=cmd_graphql)
 
@@ -968,14 +989,20 @@ def build_parser() -> argparse.ArgumentParser:
     ws = sub.add_parser("ws", help="recon a WebSocket endpoint")
     ws.add_argument("url", help="WebSocket URL (ws:// or wss://)")
     ws.add_argument("--timeout", type=float, default=10.0)
-    ws.add_argument("--origin", default=None,
-                    help="Origin header to send on the baseline connect")
-    ws.add_argument("--evil-origin", default="http://evil.example.com",
-                    help="Origin to try for cross-site WebSocket hijacking")
-    ws.add_argument("--payload", default="<script>alert(1)</script>",
-                    help="payload for the echo probe")
-    ws.add_argument("--export", default=None,
-                    help="write the profile to a .json file")
+    ws.add_argument(
+        "--origin", default=None, help="Origin header to send on the baseline connect"
+    )
+    ws.add_argument(
+        "--evil-origin",
+        default="http://evil.example.com",
+        help="Origin to try for cross-site WebSocket hijacking",
+    )
+    ws.add_argument(
+        "--payload",
+        default="<script>alert(1)</script>",
+        help="payload for the echo probe",
+    )
+    ws.add_argument("--export", default=None, help="write the profile to a .json file")
     ws.add_argument("--quiet", action="store_true")
     ws.set_defaults(func=cmd_websocket)
 
@@ -983,10 +1010,10 @@ def build_parser() -> argparse.ArgumentParser:
     adm = sub.add_parser("admin", help="probe for admin panels")
     adm.add_argument("url", help="target base URL")
     adm.add_argument("--timeout", type=float, default=10.0)
-    adm.add_argument("--proxy", default=None,
-                     help="HTTP proxy URL (e.g. http://127.0.0.1:8080)")
-    adm.add_argument("--export", default=None,
-                     help="write the profile to a .json file")
+    adm.add_argument(
+        "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
+    )
+    adm.add_argument("--export", default=None, help="write the profile to a .json file")
     adm.add_argument("--quiet", action="store_true")
     adm.set_defaults(func=cmd_admin)
 
@@ -1010,23 +1037,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     agent.add_argument("url", help="target base URL")
     agent.add_argument(
-        "--store", default="janissary_findings.json",
+        "--store",
+        default="janissary_findings.json",
         help="path to the findings store (default: janissary_findings.json)",
     )
     agent.add_argument(
-        "--platforms", default=None,
-        help="comma-separated list of platforms to force "
-             "(e.g. wordpress,graphql)",
+        "--platforms",
+        default=None,
+        help="comma-separated list of platforms to force (e.g. wordpress,graphql)",
     )
     agent.add_argument(
-        "--attack-confirm", action="store_true",
+        "--attack-confirm",
+        action="store_true",
         help="required: confirm you are authorised to test this target",
     )
     agent.add_argument("--timeout", type=float, default=10.0)
-    agent.add_argument("--proxy", default=None,
-                       help="HTTP proxy URL (e.g. http://127.0.0.1:8080)")
-    agent.add_argument("--export", default=None,
-                       help="write the full run to a .json file")
+    agent.add_argument(
+        "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
+    )
+    agent.add_argument(
+        "--export", default=None, help="write the full run to a .json file"
+    )
     agent.add_argument("--quiet", action="store_true")
     agent.set_defaults(func=cmd_agent)
 
@@ -1040,22 +1071,24 @@ def build_parser() -> argparse.ArgumentParser:
         "sqli-union", help="extract data via UNION-based SQL injection"
     )
     union.add_argument("url", help="target URL")
-    union.add_argument("--param", required=True,
-                       help="vulnerable parameter name")
-    union.add_argument("--columns", type=int, required=True,
-                       help="number of columns in the query (1-32)")
+    union.add_argument("--param", required=True, help="vulnerable parameter name")
+    union.add_argument(
+        "--columns",
+        type=int,
+        required=True,
+        help="number of columns in the query (1-32)",
+    )
     union.add_argument(
         "--attack-confirm",
         action="store_true",
-        help="required: confirm you are authorised to extract data from "
-             "this target",
+        help="required: confirm you are authorised to extract data from this target",
     )
     union.add_argument("--timeout", type=float, default=10.0)
     union.add_argument("--max-rows", type=int, default=25)
-    union.add_argument("--proxy", default=None,
-                       help="HTTP proxy URL (e.g. http://127.0.0.1:8080)")
-    union.add_argument("--export", default=None,
-                       help="write results to a .json file")
+    union.add_argument(
+        "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
+    )
+    union.add_argument("--export", default=None, help="write results to a .json file")
     union.add_argument("--quiet", action="store_true")
     union.set_defaults(func=cmd_attack_sqli_union)
 
@@ -1064,29 +1097,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     nuclei.add_argument("url", help="target URL")
     nuclei.add_argument(
-        "--templates", required=True,
+        "--templates",
+        required=True,
         help="comma-separated list of template paths or directories",
     )
-    nuclei.add_argument("--severity", default=None,
-                        help="filter by severity (e.g. high,critical)")
-    nuclei.add_argument("--tags", default=None,
-                        help="filter by tags (e.g. cve,rce)")
     nuclei.add_argument(
-        "--attack-confirm", action="store_true",
+        "--severity", default=None, help="filter by severity (e.g. high,critical)"
+    )
+    nuclei.add_argument("--tags", default=None, help="filter by tags (e.g. cve,rce)")
+    nuclei.add_argument(
+        "--attack-confirm",
+        action="store_true",
         help="required: confirm you are authorised to scan this target",
     )
     nuclei.add_argument("--timeout", type=float, default=300.0)
     nuclei.add_argument("--rate-limit", type=int, default=50)
-    nuclei.add_argument("--export", default=None,
-                        help="write results to a .json file")
+    nuclei.add_argument("--export", default=None, help="write results to a .json file")
     nuclei.add_argument("--quiet", action="store_true")
     nuclei.set_defaults(func=cmd_attack_nuclei)
 
     return p
 
+
 # -------------------------------------------------------------------
 # ENTRY POINT
 # -------------------------------------------------------------------
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
@@ -1103,6 +1139,7 @@ def main(argv: list[str] | None = None) -> int:
     require_acceptance(args.command)
 
     return args.func(args)
+
 
 if __name__ == "__main__":
     sys.exit(main())

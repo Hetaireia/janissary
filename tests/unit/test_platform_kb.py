@@ -56,9 +56,7 @@ def test_plan_for_empty():
 
 
 def test_surface_to_dict_roundtrip():
-    s = kb.Surface(
-        name="x", module="scan", params=["a"], paths=["/x"], notes="n"
-    )
+    s = kb.Surface(name="x", module="scan", params=["a"], paths=["/x"], notes="n")
     d = s.to_dict()
     assert d["name"] == "x"
     assert d["module"] == "scan"

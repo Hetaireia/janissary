@@ -6,6 +6,7 @@ Two findings belong to the same group when they share the same
 parameter, the same category, and the same root cause (derived from
 finding_type). The group's severity is the highest among its evidence.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -28,11 +29,13 @@ _ROOT_CAUSE_MAP: dict[tuple[str, str], str] = {
 }
 
 # finding_type values that all mean "the endpoint reflected our input".
-_REFLECTION_TYPES: frozenset[str] = frozenset({
-    "payload_reflected",
-    "reflected_xss",
-    "reflection_context",
-})
+_REFLECTION_TYPES: frozenset[str] = frozenset(
+    {
+        "payload_reflected",
+        "reflected_xss",
+        "reflection_context",
+    }
+)
 
 # Root causes where the bug is not category-specific: the same
 # finding applies regardless of which payload class triggered it.
@@ -41,10 +44,12 @@ _CROSS_CATEGORY_ROOTS: frozenset[str] = frozenset({"reflection"})
 
 _SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
+
 def classify_root_cause(category: str, finding_type: str) -> str:
     if finding_type in _REFLECTION_TYPES:
         return "reflection"
     return _ROOT_CAUSE_MAP.get((category, finding_type), finding_type)
+
 
 @dataclass
 class FindingGroup:
@@ -91,6 +96,7 @@ class FindingGroup:
                 for e in self.evidence
             ],
         }
+
 
 def group_findings(findings: list) -> list[FindingGroup]:
     """Group findings by (param, category, root_cause).

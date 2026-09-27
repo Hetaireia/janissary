@@ -39,9 +39,7 @@ GITLEAKS_RULES: list[dict] = [
     {
         "id": "aws-access-token",
         "description": "AWS Access Key",
-        "regex": re.compile(
-            r"\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\b"
-        ),
+        "regex": re.compile(r"\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\b"),
         "secret_group": 1,
         "entropy": 3.0,
         "allowlist": [re.compile(r".+EXAMPLE$")],
@@ -115,9 +113,7 @@ GITLEAKS_RULES: list[dict] = [
     {
         "id": "sendgrid-key",
         "description": "SendGrid API Key",
-        "regex": re.compile(
-            r"\b(SG\.[a-zA-Z0-9_\-]{22}\.[a-zA-Z0-9_\-]{43})\b"
-        ),
+        "regex": re.compile(r"\b(SG\.[a-zA-Z0-9_\-]{22}\.[a-zA-Z0-9_\-]{43})\b"),
         "secret_group": 1,
         "entropy": 0.0,
         "allowlist": [],
@@ -310,9 +306,7 @@ KEYHUNTER_PATTERNS: list[dict] = [
     {
         "id": "openai-unique",
         "description": "OpenAI key (unique Base64 segment)",
-        "regex": re.compile(
-            r"\b(sk-[a-zA-Z0-9]{20,}T3BlbkFJ[a-zA-Z0-9]{20,})\b"
-        ),
+        "regex": re.compile(r"\b(sk-[a-zA-Z0-9]{20,}T3BlbkFJ[a-zA-Z0-9]{20,})\b"),
         "secret_group": 1,
         "entropy": 3.5,
         "allowlist": [],

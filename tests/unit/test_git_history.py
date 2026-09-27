@@ -74,7 +74,10 @@ def _git_run(
     assert last is not None
     if check and last.returncode != 0:
         raise subprocess.CalledProcessError(
-            last.returncode, args, last.stdout, last.stderr,
+            last.returncode,
+            args,
+            last.stdout,
+            last.stderr,
         )
     return last
 
@@ -97,9 +100,15 @@ def _commit(path: Path, message: str) -> None:
     _git_run(
         [
             "git",
-            "-c", "user.email=janissary@example.test",
-            "-c", "user.name=janissary-test",
-            "commit", "-q", "-m", message, "--allow-empty",
+            "-c",
+            "user.email=janissary@example.test",
+            "-c",
+            "user.name=janissary-test",
+            "commit",
+            "-q",
+            "-m",
+            message,
+            "--allow-empty",
         ],
         cwd=path,
     )
@@ -122,7 +131,8 @@ def leaky_repo(tmp_path: Path) -> Path:
     _commit(repo, "initial commit")
 
     (repo / "config.env").write_text(
-        f"GITHUB_TOKEN={FAKE_TOKEN}\n", encoding="utf-8",
+        f"GITHUB_TOKEN={FAKE_TOKEN}\n",
+        encoding="utf-8",
     )
     _commit(repo, "add config with token (oops)")
 
@@ -135,6 +145,7 @@ def leaky_repo(tmp_path: Path) -> Path:
 # -------------------------------------------------------------------
 # PATH VALIDATION
 # -------------------------------------------------------------------
+
 
 def test_validate_accepts_real_repo(clean_repo: Path):
     p = _validate_repo_path(str(clean_repo))
@@ -196,6 +207,7 @@ def test_shell_metacharacters_in_path_are_harmless(tmp_path: Path):
 # COMMIT ENUMERATION
 # -------------------------------------------------------------------
 
+
 def test_list_commits_returns_them_newest_first(leaky_repo: Path):
     commits = list_commits(leaky_repo)
     assert len(commits) == 3
@@ -211,6 +223,7 @@ def test_list_commits_respects_max_commits(leaky_repo: Path):
 # -------------------------------------------------------------------
 # PER-COMMIT SCAN
 # -------------------------------------------------------------------
+
 
 def test_scan_commit_finds_token(leaky_repo: Path):
     commits = list_commits(leaky_repo)
@@ -230,12 +243,12 @@ def test_scan_commit_clean_is_empty(clean_repo: Path):
 # END-TO-END
 # -------------------------------------------------------------------
 
+
 def test_scan_history_finds_deleted_token(leaky_repo: Path):
     """The token is gone from the working tree but present in history."""
     assert not (leaky_repo / "config.env").exists()
 
-    findings = scan_git_history(str(leaky_repo), enable_entropy=False,
-                                quiet=True)
+    findings = scan_git_history(str(leaky_repo), enable_entropy=False, quiet=True)
     tokens = [f for f in findings if f["token_type"] == "github-pat"]
     assert len(tokens) == 1
     f = tokens[0]
@@ -247,14 +260,16 @@ def test_scan_history_finds_deleted_token(leaky_repo: Path):
 
 
 def test_scan_history_clean_repo_is_empty(clean_repo: Path):
-    findings = scan_git_history(str(clean_repo), enable_entropy=False,
-                                quiet=True)
+    findings = scan_git_history(str(clean_repo), enable_entropy=False, quiet=True)
     assert findings == []
 
 
 def test_scan_history_respects_max_commits(leaky_repo: Path):
     findings = scan_git_history(
-        str(leaky_repo), max_commits=1, enable_entropy=False, quiet=True,
+        str(leaky_repo),
+        max_commits=1,
+        enable_entropy=False,
+        quiet=True,
     )
     assert [f for f in findings if f["token_type"] == "github-pat"] == []
 
@@ -262,7 +277,8 @@ def test_scan_history_respects_max_commits(leaky_repo: Path):
 def test_scan_history_allow_root_guard(tmp_path: Path):
     repo = _init_repo(tmp_path / "repos" / "leaky")
     (repo / "cfg.env").write_text(
-        f"GITHUB_TOKEN={FAKE_TOKEN}\n", encoding="utf-8",
+        f"GITHUB_TOKEN={FAKE_TOKEN}\n",
+        encoding="utf-8",
     )
     _commit(repo, "leak")
 
@@ -273,7 +289,9 @@ def test_scan_history_allow_root_guard(tmp_path: Path):
         scan_git_history(str(repo), allow_root=str(allowed), quiet=True)
 
     findings = scan_git_history(
-        str(repo), allow_root=str(tmp_path), enable_entropy=False,
+        str(repo),
+        allow_root=str(tmp_path),
+        enable_entropy=False,
         quiet=True,
     )
     assert any(f["token_type"] == "github-pat" for f in findings)

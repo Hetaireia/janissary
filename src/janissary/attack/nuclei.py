@@ -37,18 +37,23 @@ DEFAULT_RATE_LIMIT = 50
 # Errors
 # ---------------------------------------------------------------------------
 
+
 class AttackConfirmationRequired(Exception):  # noqa: N818
     """Raised when the runner is constructed without confirmation."""
+
 
 class NucleiNotFound(Exception):  # noqa: N818
     """Raised when the nuclei binary is not on PATH."""
 
+
 class NucleiError(Exception):
     """Raised when the nuclei binary returns a non-zero exit status."""
+
 
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class NucleiFinding:
@@ -75,6 +80,7 @@ class NucleiFinding:
             "tags": list(self.tags),
             "reference": list(self.reference),
         }
+
 
 @dataclass
 class NucleiRun:
@@ -103,9 +109,11 @@ class NucleiRun:
             "abort_reason": self.abort_reason,
         }
 
+
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_nuclei_line(line: str) -> NucleiFinding | None:
     """Parse one JSONL line from nuclei into a NucleiFinding.
@@ -148,9 +156,11 @@ def parse_nuclei_line(line: str) -> NucleiFinding | None:
         raw=obj,
     )
 
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
+
 
 class NucleiRunner:
     def __init__(
@@ -199,11 +209,13 @@ class NucleiRunner:
     def build_command(self) -> list[str]:
         cmd = [
             self.nuclei_path,
-            "-target", self.target,
+            "-target",
+            self.target,
             "-jsonl",
             "-silent",
             "-no-color",
-            "-rate-limit", str(self.rate_limit),
+            "-rate-limit",
+            str(self.rate_limit),
         ]
         for t in self.templates:
             cmd += ["-t", t]

@@ -38,12 +38,14 @@ def _store() -> FindingStore:
 def _adapter_returning(findings):
     def fn(target, context):
         return list(findings)
+
     return fn
 
 
 # ---------------------------------------------------------------------------
 # Construction
 # ---------------------------------------------------------------------------
+
 
 def test_register_adapter():
     a = Agent(_store())
@@ -58,6 +60,7 @@ def test_known_platforms_passthrough():
 # ---------------------------------------------------------------------------
 # Fingerprint handling
 # ---------------------------------------------------------------------------
+
 
 def test_run_no_fingerprinter_no_adapters_aborts():
     a = Agent(_store())
@@ -123,6 +126,7 @@ def test_extra_platforms_merged():
 # Module dispatch
 # ---------------------------------------------------------------------------
 
+
 def test_adapters_are_invoked_and_findings_recorded():
     store = _store()
     f1 = _finding(discriminator="q")
@@ -158,7 +162,10 @@ def test_adapter_exception_recorded_not_fatal():
 
     a = Agent(
         _store(),
-        adapters={"scan": bad, "admin": _adapter_returning([_finding(discriminator="id")])},
+        adapters={
+            "scan": bad,
+            "admin": _adapter_returning([_finding(discriminator="id")]),
+        },
         fingerprinter=lambda target: FakeFP(cms="wordpress"),
     )
     result = a.run("http://t/")
@@ -198,6 +205,7 @@ def test_max_modules_limits_plan():
 # Serialisation
 # ---------------------------------------------------------------------------
 
+
 def test_run_to_dict_roundtrip():
     a = Agent(
         _store(),
@@ -215,6 +223,7 @@ def test_run_to_dict_roundtrip():
 # ---------------------------------------------------------------------------
 # Persistence integration
 # ---------------------------------------------------------------------------
+
 
 def test_run_writes_through_to_disk(tmp_path: Path):
     p = tmp_path / "findings.json"

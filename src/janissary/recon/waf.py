@@ -70,6 +70,7 @@ BLOCK_STATUSES = frozenset({403, 406, 418, 429, 501, 503})
 # Result types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class WAFProbeResult:
     name: str
@@ -111,6 +112,7 @@ class WAFProfile:
 # ---------------------------------------------------------------------------
 # Signature matching helpers
 # ---------------------------------------------------------------------------
+
 
 def _header_vendor(headers: dict) -> str | None:
     lowered = {k.lower(): (v or "").lower() for k, v in headers.items()}
@@ -243,9 +245,7 @@ class WAFDetector:
             )
         elif blocked_count == 1:
             profile.confidence = 0.2
-            profile.notes.append(
-                "one probe was blocked; may be a transient rate limit"
-            )
+            profile.notes.append("one probe was blocked; may be a transient rate limit")
         else:
             profile.notes.append("no WAF signatures observed")
 
