@@ -1,0 +1,5 @@
+OWASP Benchmark Java
+repo: https://github.com/OWASP-Benchmark/BenchmarkJava
+sha:  20cbf3d11123347e47ed89541e6942836def53f7
+date: 2026-09-28
+pinned by: janissary benchmark pre-registration (see ../../BENCHMARK.md)
