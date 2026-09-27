@@ -1,6 +1,6 @@
 # JANISSARY
 
-**The differential DAST scanner.**
+**Differential DAST for teams who need results they can trust.**
 
 > ### Authorised use only
 >
