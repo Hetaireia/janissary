@@ -1,9 +1,9 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: PHASE 4 COMPLETE - READY TO LAUNCH
-## NEXT: Execute docs/launch-plan.md (Show HN, r/netsec, blog cross-post)
-## LAST COMPLETED: P4.5 — Pre-flight verification: README sample synced to bench data (11/2 groups, port 5001, /sqli), blog line 77 corrected, install line switched to source install, 314 tests pass, CI green on a58bb0c
+## STATUS: PHASE 4 IN PROGRESS - v7.1.0 TAGGED, LAUNCH PENDING
+## NEXT: Execute docs/launch-plan.md (Show HN, r/netsec, blog cross-post) — milestone M6, target 16-OCT-2026
+## LAST COMPLETED: Security hardening + release. XXE fix in XML-RPC parser (defusedxml), bandit gate closed (0 Medium / 0 High), ruff format pass across 36 files, v7.1.0 tagged and pushed. CI green on a688bec, 314 tests pass.
 
-Last updated: 2026-09-26
+Last updated: 2026-09-27
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
@@ -233,6 +233,8 @@ COMPLETE:
 - History rewritten: ascension doc and tracker removed from all commits, force-pushed.
 - pyproject metadata fixed: URLs to Hetaireia, author Hetaireia, SPDX license.
 - Build artifacts clean: janissary-7.1.0.tar.gz + wheel, twine check PASSED.
+- Bandit gate closed: XXE fix via defusedxml, 0 Medium / 0 High. All five gates green (ruff, mypy, pytest, bandit, pip-audit).
+- v7.1.0 tagged (annotated) and pushed. CI green on a688bec across py3.10-3.14.
 
 BLOCKED ON (browser, your end):
 - TestPyPI + PyPI accounts, 2FA, API tokens.
