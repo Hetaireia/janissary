@@ -345,3 +345,100 @@ def test_multiple_gates_can_fire_together():
     assert "db_error" in types
     assert "status_change" in types
     assert "length_anomaly" in types
+
+
+# ===================================================================
+# OUTPUT REGION (command_output / sql_result_rows)
+# ===================================================================
+
+CMD_HEADER = "Here is the standard output of the command:<br>"
+STDERR = "Here is the std err of the command (if any):<br>"
+
+SQL_HEADER = "Your results are:<br>"
+
+
+def test_command_output_fires_on_real_uid_leak():
+    baseline = make_baseline(["<html>no cmd header here</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "cmd_semicolon_id", ";id", "cmdi")
+    body = (
+        "<html><body><p>"
+        + CMD_HEADER
+        + "uid=0 gid=0(root) groups=0(root)<br><br>"
+        + STDERR
+        + "</p></body></html>"
+    )
+    findings = a.analyze(snap(text=body))
+    types = [f["type"] for f in findings]
+    assert "command_output" in types
+    f = next(f for f in findings if f["type"] == "command_output")
+    assert f["severity"] == "critical"
+    assert "uid=0" in f["evidence"]
+
+
+def test_command_output_does_not_fire_on_empty_region():
+    baseline = make_baseline(["<html>plain</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "cmd_semicolon_id", ";id", "cmdi")
+    body = "<html><body><p>" + CMD_HEADER + "<br>" + STDERR + "</p></body></html>"
+    findings = a.analyze(snap(text=body))
+    assert "command_output" not in [f["type"] for f in findings]
+
+
+def test_command_output_does_not_fire_when_baseline_has_content():
+    dirty_baseline = (
+        "<html><body><p>" + CMD_HEADER + "always present<br>" + STDERR + "</p></body></html>"
+    )
+    baseline = make_baseline([dirty_baseline] * 5)
+    a = DifferentialAnalyzer(baseline, "cmd_semicolon_id", ";id", "cmdi")
+    findings = a.analyze(snap(text=dirty_baseline))
+    assert "command_output" not in [f["type"] for f in findings]
+
+
+def test_command_output_does_not_fire_on_reflected_header():
+    baseline = make_baseline(["<html>clean</html>"] * 5)
+    payload = "x" + CMD_HEADER + "uid=0"
+    a = DifferentialAnalyzer(baseline, "cmd_semicolon_id", payload, "cmdi")
+    body = "<html><body>" + payload + "</body></html>"
+    findings = a.analyze(snap(text=body))
+    assert "command_output" not in [f["type"] for f in findings]
+
+
+def test_sql_result_rows_fires_on_real_rows():
+    baseline = make_baseline(["<html><body><p>Your results are:<br></p></body></html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    body = (
+        "<html><body><p>Your results are:<br>"
+        "0User01P455w0rd<br>1User02B3nchM3rk<br>2User03a$c11<br>3foobar<br>"
+        "</p></body></html>"
+    )
+    findings = a.analyze(snap(text=body))
+    types = [f["type"] for f in findings]
+    assert "sql_result_rows" in types
+    f = next(f for f in findings if f["type"] == "sql_result_rows")
+    assert f["severity"] == "critical"
+    assert "User01" in f["evidence"]
+
+
+def test_sql_result_rows_does_not_fire_on_empty_region():
+    baseline = make_baseline(["<html><body><p>Your results are:<br></p></body></html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    body = "<html><body><p>Your results are:<br></p></body></html>"
+    findings = a.analyze(snap(text=body))
+    assert "sql_result_rows" not in [f["type"] for f in findings]
+
+
+def test_sql_result_rows_does_not_fire_when_baseline_has_rows():
+    dirty = (
+        "<html><body><p>Your results are:<br>0User01<br></p></body></html>"
+    )
+    baseline = make_baseline([dirty] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    findings = a.analyze(snap(text=dirty))
+    assert "sql_result_rows" not in [f["type"] for f in findings]
+
+
+def test_output_region_ignores_clean_response():
+    baseline = make_baseline(["<html>nothing</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    findings = a.analyze(snap(text="<html>nothing</html>"))
+    assert "command_output" not in [f["type"] for f in findings]
+    assert "sql_result_rows" not in [f["type"] for f in findings]
