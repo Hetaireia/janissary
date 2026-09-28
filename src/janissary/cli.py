@@ -210,6 +210,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         proxies=proxies,
         detect_waf=not args.no_waf,
         session=auth_session,
+        inject_in=args.inject_in,
     )
 
     if not args.quiet:
@@ -981,6 +982,13 @@ def build_parser() -> argparse.ArgumentParser:
         "-p", "--params", default=None, help="comma-separated parameter names"
     )
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
+    scan.add_argument(
+        "--inject-in",
+        choices=["auto", "query", "body", "cookie"],
+        default="auto",
+        help="where to place the payload "
+        "(default: auto = query for GET, body for POST)",
+    )
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)
     scan.add_argument("--baseline-count", type=int, default=10)
