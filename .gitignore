@@ -87,3 +87,6 @@ benchdata/
 /banners_raw.txt
 /ansi_shadow.txt
 /tools/_update_workflow.py
+
+# pytest local tempdir (see pyproject.toml basetemp)
+.pytest_tmp/
