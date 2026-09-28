@@ -307,6 +307,7 @@ class DifferentialAnalyzer:
     MIN_SLEEP_FLOOR = 3.0
     LENGTH_RATIO_HIGH = 3.0
     LENGTH_RATIO_LOW = 0.1
+    MIN_REFLECTION_PAYLOAD_LEN = 3
     CONTEXT_WINDOW = 60
     BAND_SLACK = 500
 
@@ -365,10 +366,15 @@ class DifferentialAnalyzer:
     def _check_reflection(self, snapshot: ResponseSnapshot) -> list[dict]:
         if not self.payload_value or len(self.payload_value) > 200:
             return []
-        body = snapshot.body
         payload = self.payload_value
 
-        idx_raw = body.find(payload)
+        # Gate A: single-char payloads like `'`/`"` appear in every
+        # HTML/JSON page; matching them is not evidence of reflection.
+        if len(payload) < self.MIN_REFLECTION_PAYLOAD_LEN:
+            return []
+
+        # Gate B: the payload must not already appear in the baseline.
+        # Otherwise the "reflection" is just the page's own content.
         escaped = (
             payload.replace("&", "&amp;")
             .replace("<", "&lt;")
@@ -376,6 +382,13 @@ class DifferentialAnalyzer:
             .replace('"', "&quot;")
             .replace("'", "&#39;")
         )
+        for s in self.baseline.snapshots:
+            if payload in s.body or escaped in s.body:
+                return []
+
+        body = snapshot.body
+
+        idx_raw = body.find(payload)
         idx_escaped = body.find(escaped)
 
         if idx_raw < 0 and idx_escaped < 0:
