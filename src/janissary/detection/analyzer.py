@@ -167,6 +167,35 @@ DB_ERROR_PATTERNS = {
 
 
 # ===================================================================
+# OUTPUT-REGION MARKERS (OWASP Benchmark evidence shape)
+# ===================================================================
+# The scaffolding is static; the evidence is what sits between the
+# header and the terminator. We do not emit on the header alone.
+
+_CMD_OUTPUT_HEADER = re.compile(
+    r"Here is the standard output of the command:\s*<br\s*/?>", re.I
+)
+_CMD_STDERR_HEADER = re.compile(r"Here is the std err of the command", re.I)
+
+_SQL_RESULTS_HEADER = re.compile(r"Your results are:\s*<br\s*/?>", re.I)
+_SQL_RESULTS_END = re.compile(r"</p>", re.I)
+
+
+def _strip_tags(s: str) -> str:
+    return re.sub(r"<[^>]+>", "", s or "")
+
+
+def _region_after(body: str, header_match, stops) -> str:
+    start = header_match.end()
+    end = len(body)
+    for pat in stops:
+        m = pat.search(body, start)
+        if m and m.start() < end:
+            end = m.start()
+    return body[start:end]
+
+
+# ===================================================================
 # SLEEP FLOOR
 # ===================================================================
 
@@ -330,6 +359,7 @@ class DifferentialAnalyzer:
         findings.extend(self._check_timing(snapshot))
         findings.extend(self._check_status(snapshot))
         findings.extend(self._check_length(snapshot))
+        findings.extend(self._check_output_region(snapshot))
         return findings
 
     # -- Gate 1: DB error ------------------------------------------
@@ -360,6 +390,64 @@ class DifferentialAnalyzer:
                     }
                 ]
         return []
+
+    # -- Gate 1b: Labelled output region ---------------------------
+
+    def _check_output_region(self, snapshot: ResponseSnapshot) -> list[dict]:
+        """Detect non-empty content between a static OWASP-Benchmark
+        output header and its terminator.
+
+        The header alone is boilerplate. The header PLUS non-empty
+        region content, absent from every baseline sample, is evidence
+        of command execution or SQL row disclosure.
+        """
+        regions = (
+            (
+                "command_output",
+                "critical",
+                _CMD_OUTPUT_HEADER,
+                [_CMD_STDERR_HEADER],
+                "Command output present in response body",
+            ),
+            (
+                "sql_result_rows",
+                "critical",
+                _SQL_RESULTS_HEADER,
+                [_SQL_RESULTS_END],
+                "SQL result rows present in response body",
+            ),
+        )
+        for ftype, sev, header, stops, detail in regions:
+            if header.search(self.payload_value):
+                continue
+            m = header.search(snapshot.body)
+            if not m:
+                continue
+            baseline_dirty = False
+            for s in self.baseline.snapshots:
+                bm = header.search(s.body)
+                if not bm:
+                    continue
+                if _strip_tags(_region_after(s.body, bm, stops)).strip():
+                    baseline_dirty = True
+                    break
+            if baseline_dirty:
+                continue
+            region = _region_after(snapshot.body, m, stops)
+            stripped = _strip_tags(region).strip()
+            if not stripped:
+                continue
+            return [
+                {
+                    "type": ftype,
+                    "severity": sev,
+                    "detail": detail,
+                    "reflection_context": region[:300],
+                    "evidence": stripped[:200],
+                }
+            ]
+        return []
+
 
     # -- Gate 2: Reflection ----------------------------------------
 
