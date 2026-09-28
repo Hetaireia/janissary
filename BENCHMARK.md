@@ -221,4 +221,43 @@ implied. No hypothesis, metric, target, tool pin, or statistical test changed.
 
 ---
 
+### Amendment 2 — 2026-09-28
+
+**What changed:** the Track A target image is built by a custom
+Dockerfile (`benchmark/track_a/Dockerfile.owasp-benchmark`) rather than
+the upstream `VMs/Dockerfile`, and the app runs on HTTP/8080 rather than
+HTTPS/8443.
+
+**Why:**
+
+1. The upstream Dockerfile clones `BenchmarkJava` from GitHub at build
+   time, which does not respect the pre-registration pin. Our Dockerfile
+   copies the pinned local checkout.
+2. Upstream runtime uses `cargo:run`, whose 300s deploy-timeout watchdog
+   kills Tomcat before the 2,740-servlet WAR finishes deploying. Our
+   entrypoint starts Tomcat directly via `catalina.sh run`.
+3. Upstream JVM args include `-Xdebug -Djava.compiler=NONE`, which
+   disables JIT and makes startup pathological. We omit them.
+4. HTTPS at the WSL2 boundary is unreliable on Windows; HTTP/8080 is
+   deterministic.
+
+**Mirror change:** `pom.xml`'s `tomcat.url` is sed-replaced from
+`downloads.apache.org` to `archive.apache.org`. The former rotates old
+patch versions off within days; v9.0.120 already 404s. The latter keeps
+every historical version. No version change: still Tomcat 9.0.120.
+
+**Effect on methodology:** none. The pinned git SHA plus one deterministic
+mirror sed fully determine the build artifact. Bug classes, ground truth,
+metrics, hypotheses, and statistical tests unchanged. Whether the app is
+served over HTTP or HTTPS does not affect what the DAST tools detect.
+
+**Implementation:** the config the upstream `cargo:run` step would have
+installed (`src/config/local/server.xml`, `src/config/local/context.xml`)
+is copied into `$CATALINA_HOME/conf` by the entrypoint, with the connector
+rewritten from HTTPS/8443/127.0.0.1 to HTTP/8080/0.0.0.0. HSQLDB is
+started directly (not via Maven antrun, which exits on task completion)
+and waited on before Tomcat boots.
+
+---
+
 *(No further amendments as of 2026-09-28.)*

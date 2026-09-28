@@ -1,15 +1,15 @@
 # Custom Dockerfile for OWASP Benchmark, pinned to our target-version.txt
-# commit. The upstream VMs/Dockerfile clones BenchmarkJava from GitHub at
-# build time, which does not respect our pre-registration pin.
+# commit. See benchmark/track_a/target-version.txt for the SHA.
 #
-# Build (from the sibling checkout as context):
-#   docker build `
-#     -f benchmark/track_a/Dockerfile.owasp-benchmark `
-#     -t janissary/owasp-benchmark:20cbf3d `
-#     "C:\Users\M5 E60\janissary-project\owasp-benchmark"
+# Why we don't use the upstream VMs/Dockerfile:
+#   1. It clones BenchmarkJava from GitHub at build time, ignoring our pin.
+#   2. Its runtime uses cargo:run, whose 300s deploy-timeout watchdog kills
+#      Tomcat before the 2,740-servlet WAR finishes deploying.
+#   3. Its -Xdebug -Djava.compiler=NONE JVM args disable JIT, making startup
+#      pathological.
 #
-# Run:
-#   docker run --rm -p 8443:8443 janissary/owasp-benchmark:20cbf3d
+# Instead: cargo:install extracts Tomcat (no deploy), we copy the WAR into
+# webapps, and start Tomcat directly via catalina.sh run. No watchdog.
 
 FROM eclipse-temurin:17-jdk-jammy
 
@@ -18,20 +18,92 @@ RUN apt-get update && \
         git maven wget ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# BenchmarkUtils is an external Maven dependency that BenchmarkJava needs.
-# It is not part of our pinned checkout, so we clone it fresh. Record its
-# SHA in target-version.txt after the first build for full reproducibility.
 RUN git clone --depth 1 https://github.com/OWASP-Benchmark/BenchmarkUtils.git /owasp/BenchmarkUtils
 WORKDIR /owasp/BenchmarkUtils
 RUN mvn -q install -DskipTests
 
-# Copy our pinned BenchmarkJava checkout from the build context.
 COPY . /owasp/BenchmarkJava
 WORKDIR /owasp/BenchmarkJava
 RUN git config --global --add safe.directory /owasp/BenchmarkJava || true
-RUN mvn -q clean package cargo:install -DskipTests
 
-EXPOSE 8443
+# Mirror-only change: downloads.apache.org rotates old patch versions off
+# within days; v9.0.120 already 404s. archive.apache.org keeps everything.
+# Pinned SHA + this sed fully determine the build.
+RUN sed -i 's|https://downloads.apache.org/tomcat/|https://archive.apache.org/dist/tomcat/|' pom.xml \
+    && grep -q 'archive.apache.org' pom.xml
 
-# runBenchmark.sh starts Tomcat on 8443 (HTTPS, self-signed cert).
-CMD ["./runBenchmark.sh"]
+# Build WAR + install Tomcat (extract only; no deploy, no watchdog).
+# The install phase places Tomcat at target/cargo/installs/apache-tomcat-9.0.120/apache-tomcat-9.0.120
+RUN mvn -q clean package cargo:install -Pdeploy -DskipTests
+
+ENV CATALINA_HOME=/owasp/BenchmarkJava/target/cargo/installs/apache-tomcat-9.0.120/apache-tomcat-9.0.120
+ENV JAVA_OPTS="-Xms1G -Xmx4G --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED -Djava.awt.headless=true"
+
+EXPOSE 8080
+
+# Entrypoint (inlined so the build context remains the OWASP checkout).
+RUN cat > /entrypoint.sh <<'ENTRY' && chmod +x /entrypoint.sh
+#!/bin/bash
+set -e
+
+cd /owasp/BenchmarkJava
+
+WAR=target/benchmark.war
+if [ ! -f "$WAR" ]; then
+  echo "[entrypoint] missing $WAR" >&2
+  exit 1
+fi
+
+rm -rf "$CATALINA_HOME/webapps/benchmark" "$CATALINA_HOME/webapps/benchmark.war"
+
+# Cargo's zip extraction does not preserve the +x bit on shell scripts.
+chmod +x "$CATALINA_HOME/bin/"*.sh 2>/dev/null || true
+
+echo "[entrypoint] starting HSQLDB in background"
+HSQLDB_JAR=/root/.m2/repository/org/hsqldb/hsqldb/2.7.4/hsqldb-2.7.4.jar
+if [ ! -f "$HSQLDB_JAR" ]; then
+  echo "[entrypoint] missing $HSQLDB_JAR" >&2
+  exit 1
+fi
+mkdir -p /owasp/BenchmarkJava/target/db
+nohup java -cp "$HSQLDB_JAR" org.hsqldb.Server \
+  --database.0 file:/owasp/BenchmarkJava/target/db/benchmarkDataBase \
+  --dbname.0 benchmarkDataBase \
+  --port 9001 > /tmp/hsqldb.log 2>&1 &
+HSQLDB_PID=$!
+echo "[entrypoint] HSQLDB PID=$HSQLDB_PID"
+
+echo "[entrypoint] waiting for HSQLDB to bind :9001"
+for i in $(seq 1 30); do
+  if (exec 3<>/dev/tcp/localhost/9001) 2>/dev/null; then
+    exec 3<&- 3>&-
+    echo "[entrypoint] HSQLDB up after ${i}s"
+    break
+  fi
+  sleep 1
+done
+
+echo "[entrypoint] initialising schema (via pom antrun task)"
+mvn -q antrun:run@database-init -DskipTests
+
+echo "[entrypoint] installing Tomcat config from src/config/local/"
+cp src/config/local/server.xml  "$CATALINA_HOME/conf/server.xml"
+cp src/config/local/context.xml "$CATALINA_HOME/conf/context.xml"
+
+# The shipped server.xml binds HTTPS on 127.0.0.1:8443. We want plain
+# HTTP on 0.0.0.0:8080 so the container port mapping works and clients
+# outside the container can reach Tomcat.
+sed -i 's|address="127.0.0.1" SSLEnabled="true"|address="0.0.0.0" SSLEnabled="false"|' "$CATALINA_HOME/conf/server.xml"
+sed -i 's|port="8443"|port="8080"|g'                                                 "$CATALINA_HOME/conf/server.xml"
+sed -i 's|scheme="https" secure="true" sslProtocol="TLS"|scheme="http" secure="false"|' "$CATALINA_HOME/conf/server.xml"
+grep -q 'port="8080"' "$CATALINA_HOME/conf/server.xml"
+
+echo "[entrypoint] copying WAR to $CATALINA_HOME/webapps/"
+cp "$WAR" "$CATALINA_HOME/webapps/benchmark.war"
+
+echo "[entrypoint] starting Tomcat 9.0.120 on port 8080 (JIT enabled)"
+echo "[entrypoint] first boot takes 2-5 min: 2740 servlets to deploy"
+exec "$CATALINA_HOME/bin/catalina.sh" run
+ENTRY
+
+ENTRYPOINT ["/entrypoint.sh"]
