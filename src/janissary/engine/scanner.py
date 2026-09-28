@@ -77,7 +77,9 @@ def _say(*args, **kwargs) -> None:
 # unknown input, every payload class produces the same observation, so
 # attaching the payload's category would attribute one fact to several
 # categories (F-002 through F-007 on /traversal). Dropped as standalone
-# findings. See WORKFLOW.md, "Structural misattribution".
+# findings *when the baseline is noisy or non-2xx*. On a stable 2xx
+# baseline a large length delta is real signal and is emitted. See
+# WORKFLOW.md, "Structural misattribution".
 CORROBORATOR_ONLY_TYPES = frozenset({
     "status_change",
     "length_anomaly",
@@ -177,6 +179,7 @@ class Scanner:
         session: requests.Session | None = None,
         detect_waf: bool = True,
         pacer_config: PacerConfig | None = None,
+        inject_in: str = "auto",
     ):
         self.target = repair_url(target)
         self.params = params
@@ -189,6 +192,9 @@ class Scanner:
         self.session = session or requests.Session()
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
+        self.inject_in = inject_in.lower()
+        if self.inject_in not in {"auto", "query", "body", "cookie"}:
+            raise ValueError(f"invalid inject_in: {inject_in!r}")
 
         cfg = pacer_config or PacerConfig(base_delay=delay)
         if cfg.min_delay < delay:
@@ -212,7 +218,21 @@ class Scanner:
         return headers
 
     def _request(self, url: str, param: str, value: str) -> requests.Response | None:
-        if self.method == "POST":
+        if self.inject_in == "cookie":
+            kwargs = {
+                "headers": self._headers(),
+                "cookies": {param: value},
+                "timeout": self.timeout,
+                "allow_redirects": False,
+                "proxies": self.proxies,
+            }
+            if self.method == "POST":
+                return self.session.post(self.target, **kwargs)
+            return self.session.get(self.target, **kwargs)
+
+        if self.inject_in == "body" or (
+            self.inject_in == "auto" and self.method == "POST"
+        ):
             return self.session.post(
                 self.target,
                 headers=self._headers(),
@@ -390,8 +410,28 @@ class Scanner:
                 for f in raw_findings:
                     if f.get("severity") == "info":
                         continue
-                    if f.get("type") in CORROBORATOR_ONLY_TYPES:
-                        continue
+                    ftype = f.get("type")
+                    if ftype in CORROBORATOR_ONLY_TYPES:
+                        # These are corroborators: on a target where
+                        # any unexpected input changes the status code
+                        # (the original /traversal case), the resulting
+                        # status_change and any length delta are
+                        # category-agnostic and must not be labeled.
+                        #
+                        # Narrow exception: `length_anomaly` on a
+                        # stable 2xx baseline whose response status is
+                        # *unchanged* is real signal -- the payload
+                        # changed the body but not the status class, so
+                        # it did not merely break the endpoint. All
+                        # other corroborators stay filtered.
+                        emit = (
+                            ftype == "length_anomaly"
+                            and baseline.is_stable_body
+                            and 200 <= baseline.modal_status < 400
+                            and 200 <= snapshot.status < 400
+                        )
+                        if not emit:
+                            continue
                     request_obj = getattr(r, "request", None)
                     finding = ScanFinding(
                         param=param,

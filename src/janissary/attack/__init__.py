@@ -45,3 +45,4 @@ __all__ = [
     "parse_nuclei_line",
     "split_concat",
 ]
+
