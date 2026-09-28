@@ -69,9 +69,8 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
 [tool.pytest.ini_options]
-testpaths = addopts = "--basetemp=.pytest_tmp"
-["tests"]
-addopts = "-v --strict-markers --tb=short"
+testpaths = ["tests"]
+addopts = "--basetemp=.pytest_tmp -v --strict-markers --tb=short"
 
 
 # Per-module overrides for the modules ported from the v7.0 prototype.
