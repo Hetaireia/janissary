@@ -261,3 +261,81 @@ and waited on before Tomcat boots.
 ---
 
 *(No further amendments as of 2026-09-28.)*
+---
+
+### Amendment 3 — 2026-09-28
+
+**What changed:** the Track A harness now reads a per-case injection-vector
+map (`benchmark/track_a/case_vectors.csv`) instead of assuming every case
+reads a URL query parameter, and the scanner gained the injection modes
+required by that map (`--inject-in cookie`, `header`, `param-name`).
+Amendment 3 also records the first full Track A result.
+
+**Why:** OWASP Benchmark cases do not share a single input vector. An
+inventory of the pinned source tree (`BenchmarkJava @ 20cbf3d`,
+`src/main/java/org/owasp/benchmark/testcode`) shows the payload is read
+from cookies in 664 cases, a named request header in 432, the parameter
+name in 221, a non-standard header in 89, a fixed header such as Referer
+in 87, and query/body parameters in the remainder. Scanning the whole
+corpus with a single vector produces a near-zero true-positive rate
+regardless of analyzer quality, which is what the earlier "0 findings on
+BenchmarkTest00001" investigation turned out to be.
+
+`case_vectors.csv` is generated deterministically from the pinned source
+by `benchmark/track_a/extract_vectors.py`; it is committed as a
+methodology artifact, not as data derived from run output. Cases whose
+vector the scanner does not support (89 `header_any` cases requiring
+header-name-safe payloads, 4 session/URI/stream cases) are recorded in
+each run's `skipped.jsonl` and scored as "not attempted": absent from
+both numerator and denominator of every metric below, consistent with the
+pre-registration commitment to falsifiable claims.
+
+**Result - full corpus, 3 runs, 2026-09-28 (tool version 7.3.0):**
+
+| run  | TP  | FP  | TN   | FN  | precision | recall | F1    |
+|------|-----|-----|------|-----|-----------|--------|-------|
+| 1    | 592 | 116 | 1209 | 823 | 0.836     | 0.418  | 0.558 |
+| 2    | 585 | 121 | 1204 | 830 | 0.829     | 0.413  | 0.552 |
+| 3    | 584 | 117 | 1208 | 831 | 0.833     | 0.413  | 0.552 |
+| mean | 587 | 118 | 1207 | 828 | 0.833     | 0.415  | 0.554 |
+
+population stdev: precision 0.003, recall 0.003, F1 0.003.
+
+**Result - in-scope subset, declared post-hoc.** JANISSARY is a
+parameter-injection scanner. It does not analyze random-number quality
+(`weakrand`), cookie flags (`securecookie`), XPath injection (`xpathi`),
+or LDAP injection (`ldapi`), and it does not perform hash-algorithm or
+crypto-implementation analysis (`hash`, `crypto`). Those six categories
+account for 461 of the 828 mean FNs. Restricting to the categories
+JANISSARY targets (`sqli`, `xss`, `cmdi`, `pathtraver`, `trustbound`;
+1,604 cases total):
+
+| run  | TP  | FP | TN  | FN  | precision | recall | F1    |
+|------|-----|----|-----|-----|-----------|--------|-------|
+| mean | 498 | 48 | 696 | 362 | 0.912     | 0.579  | 0.708 |
+
+This subset is a **post-hoc** breakdown, reported for interpretive
+clarity. The pre-registered headline for Track A remains the full-corpus
+number: **precision 0.833, recall 0.415, F1 0.554**. Any downstream
+citation must state both, and must name the in-scope category set.
+
+**On the scan-target interaction.** Two JANISSARY changes were made during
+this session and are documented here so a reviewer can see what moved
+between the "0 findings" state and the numbers above:
+
+1. `analyzer._check_reflection` now requires payload length >= 3 and
+   requires the payload not to appear in any baseline sample. Previously
+   a single quote or double quote, present in every HTML page, was
+   reported as a low-severity reflection on every case. This is a
+   correctness fix; it removes roughly 170 false positives on the pilot
+   without removing any verified true positive.
+
+2. An earlier change to allow `length_anomaly` findings through on
+   stable-2xx baselines was reverted after the full run showed it
+   mislabeling ~200 safe XSS cases as sqli/cmdi/traversal. `length` and
+   `status` deltas remain corroborators and are dropped unconditionally,
+   as pre-registered.
+
+Neither change alters the ground-truth labels, the case-vector map, the
+metric definitions, or the statistical test. Both were committed before
+the runs whose numbers appear above.
