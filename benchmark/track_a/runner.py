@@ -53,6 +53,7 @@ BENCH_ROOT = HERE.parent
 
 
 def load_cases(csv_path: Path) -> list[dict]:
+    """Read case_vectors.csv (from _extract_vectors.py)."""
     rows: list[dict] = []
     with csv_path.open("r", encoding="utf-8", newline="") as fh:
         reader = csv.DictReader(fh)
@@ -64,6 +65,9 @@ def load_cases(csv_path: Path) -> list[dict]:
                 {
                     "testname": name,
                     "category": (r.get("category") or "").strip(),
+                    "urlpath": (r.get("urlpath") or f"/{name}").strip(),
+                    "mode": (r.get("mode") or "param").strip(),
+                    "header_name": (r.get("header_name") or "").strip(),
                     "vulnerable": (r.get("vulnerable") or "").strip().lower()
                     in ("true", "1", "yes"),
                     "param": (r.get("param") or name).strip(),
@@ -72,9 +76,29 @@ def load_cases(csv_path: Path) -> list[dict]:
     return rows
 
 
-def case_url(base: str, testname: str) -> str:
+# Maps case_vectors.csv `mode` -> (inject_in, param_arg, http_method).
+# Modes not in this table are skipped and recorded in skipped.jsonl.
+def _dispatch(c: dict) -> tuple[str, str, str] | None:
+    mode = c["mode"]
+    name = c["testname"]
+    if mode == "param":
+        return ("body", name, "POST")
+    if mode == "cookie":
+        return ("cookie", name, "POST")
+    if mode == "header_self":
+        return ("header", name, "POST")
+    if mode == "header_other":
+        return ("header", c["header_name"] or "Referer", "POST")
+    if mode == "param_name":
+        return ("param-name", name, "POST")
+    # header_any needs header-name-safe payloads; not supported in run 1.
+    # out_of_scope_* / unclassified: declared in BENCHMARK.md.
+    return None
+
+
+def case_url(base: str, case: dict) -> str:
     base = base.rstrip("/")
-    return f"{base}/{testname}"
+    return f"{base}{case['urlpath']}"
 
 
 def tool_version(tool: str, env: dict) -> str:
@@ -117,15 +141,27 @@ def load_env(path: Path | None) -> dict:
 def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     findings = run_dir / "findings.jsonl"
     findings.write_text("", encoding="utf-8")
+    skipped_path = run_dir / "skipped.jsonl"
+    skipped_path.write_text("", encoding="utf-8")
     cmd_template = env.get("JANISSARY_BIN", "janissary")
     timeout = float(env.get("JANISSARY_TIMEOUT", "30"))
     failures = 0
     for c in cases:
-        url = case_url(base, c["testname"])
+        disp = _dispatch(c)
+        if disp is None:
+            with skipped_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({
+                    "testname": c["testname"], "mode": c["mode"],
+                }) + "\n")
+            continue
+        inject_in, param_arg, method = disp
+        url = case_url(base, c)
         cmd = [
             cmd_template, "scan",
             "-u", url,
-            "-p", c["param"],
+            "-p", param_arg,
+            "--method", method,
+            "--inject-in", inject_in,
             "--jsonl",
             "--quiet",
             "--baseline-count", "5",
@@ -146,7 +182,7 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
 def run_nuclei(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     urls_file = run_dir / "urls.txt"
     urls_file.write_text(
-        "\n".join(case_url(base, c["testname"]) for c in cases) + "\n",
+        "\n".join(case_url(base, c) for c in cases) + "\n",
         encoding="utf-8",
     )
     out_file = run_dir / "findings.jsonl"

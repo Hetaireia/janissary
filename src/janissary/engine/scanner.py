@@ -193,7 +193,9 @@ class Scanner:
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
         self.inject_in = inject_in.lower()
-        if self.inject_in not in {"auto", "query", "body", "cookie"}:
+        if self.inject_in not in {
+            "auto", "query", "body", "cookie", "header", "param-name",
+        }:
             raise ValueError(f"invalid inject_in: {inject_in!r}")
 
         cfg = pacer_config or PacerConfig(base_delay=delay)
@@ -218,6 +220,41 @@ class Scanner:
         return headers
 
     def _request(self, url: str, param: str, value: str) -> requests.Response | None:
+        if self.inject_in == "param-name":
+            # OWASP Benchmark "getParameterNames" cases: the payload is
+            # delivered as the parameter *name*, whose value is the
+            # testname. Over POST send it in the form body; over GET
+            # append it as a query pair.
+            if self.method == "POST":
+                return self.session.post(
+                    self.target,
+                    headers=self._headers(),
+                    data={value: param},
+                    timeout=self.timeout,
+                    allow_redirects=False,
+                    proxies=self.proxies,
+                )
+            return self.session.get(
+                build_url(self.target, value, param),
+                headers=self._headers(),
+                timeout=self.timeout,
+                allow_redirects=False,
+                proxies=self.proxies,
+            )
+
+        if self.inject_in == "header":
+            hdrs = self._headers()
+            hdrs[param] = value
+            kwargs = {
+                "headers": hdrs,
+                "timeout": self.timeout,
+                "allow_redirects": False,
+                "proxies": self.proxies,
+            }
+            if self.method == "POST":
+                return self.session.post(self.target, **kwargs)
+            return self.session.get(self.target, **kwargs)
+
         if self.inject_in == "cookie":
             kwargs = {
                 "headers": self._headers(),
@@ -269,17 +306,19 @@ class Scanner:
     # ---------------------------------------------------------------
 
     def preflight(self) -> tuple[bool, str]:
-        """One request to confirm the endpoint responds."""
+        """One request to confirm the endpoint responds.
+
+        Uses the configured injection vector with a benign value so
+        that targets which require a cookie/header to reach the sink
+        are not rejected before scanning begins.
+        """
+        param = self.params[0] if self.params else "q"
         try:
-            r = self.session.get(
-                self.target,
-                headers=self._headers(),
-                timeout=self.timeout,
-                allow_redirects=False,
-                proxies=self.proxies,
-            )
+            r = self._request(self.target, param, "1")
         except requests.RequestException as e:
             return False, f"request error: {e}"
+        if r is None:
+            return False, "no response"
         if r.status_code >= 400:
             return False, f"HTTP {r.status_code}"
         if not (r.text or "").strip():
