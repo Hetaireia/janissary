@@ -143,6 +143,8 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
     findings.write_text("", encoding="utf-8")
     skipped_path = run_dir / "skipped.jsonl"
     skipped_path.write_text("", encoding="utf-8")
+    timeouts_path = run_dir / "timeouts.jsonl"
+    timeouts_path.write_text("", encoding="utf-8")
     cmd_template = env.get("JANISSARY_BIN", "janissary")
     timeout = float(env.get("JANISSARY_TIMEOUT", "30"))
     failures = 0
@@ -166,10 +168,22 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             "--quiet",
             "--baseline-count", "5",
         ]
-        out = subprocess.run(
-            cmd, capture_output=True, text=True,
-            timeout=timeout, check=False,
-        )
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, text=True,
+                timeout=timeout, check=False,
+            )
+        except subprocess.TimeoutExpired:
+            # A single slow target must not abort the whole corpus run.
+            # Record and continue; analyze.py will treat this case as
+            # silent (no findings emitted).
+            with timeouts_path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps({
+                    "testname": c["testname"], "mode": c["mode"],
+                    "timeout_s": timeout,
+                }) + "\n")
+            failures += 1
+            continue
         with findings.open("a", encoding="utf-8") as fh:
             for line in (out.stdout or "").splitlines():
                 if line.strip():
