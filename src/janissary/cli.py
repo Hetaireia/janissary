@@ -984,7 +984,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(
         "--inject-in",
-        choices=["auto", "query", "body", "cookie"],
+        choices=["auto", "query", "body", "cookie", "header", "param-name"],
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST)",
