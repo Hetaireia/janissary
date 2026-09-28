@@ -20,9 +20,15 @@ For each ground-truth case:
     * vulnerable=False and tool silent -> TN
 
 A tool "fired" on case C if at least one of its findings maps to C's
-testname. Duplicate findings on the same case do not change the case's
-classification - that is deliberate. Precision at the finding level
-would reward a tool for repeating itself.
+testname AND is at or above --min-severity. Duplicate findings on the
+same case do not change the case's classification - that is deliberate.
+Precision at the finding level would reward a tool for repeating itself.
+
+The default --min-severity=medium reflects OWASP Benchmark practice: the
+low severity band is populated by one-character payload reflections that
+are indistinguishable from ordinary page content. Low-severity findings
+remain in findings.jsonl and are reported separately; they are excluded
+from the headline confusion matrix.
 
 Metrics (per run)
 -----------------
@@ -78,13 +84,19 @@ from benchmark.common.run_utils import load_jsonl  # noqa: E402
 
 TOOLS = ("janissary", "zap", "nuclei")
 
+SEVERITY_ORDER = ("low", "medium", "high", "critical")
+
 
 # ---------------------------------------------------------------------
 # run loading
 # ---------------------------------------------------------------------
 
 
-def load_run(run_dir: Path, labels: dict[str, Label]) -> dict:
+def load_run(
+    run_dir: Path,
+    labels: dict[str, Label],
+    min_severity: str = "medium",
+) -> dict:
     """Return the per-case classification for one run directory."""
     manifest_path = run_dir / "manifest.json"
     if not manifest_path.exists():
@@ -95,11 +107,15 @@ def load_run(run_dir: Path, labels: dict[str, Label]) -> dict:
     findings = load_jsonl(run_dir / "findings.jsonl")
     fired_cases: set[str] = set()
     orphans = 0
+    min_idx = SEVERITY_ORDER.index(min_severity)
     for f in findings:
         url = f.get("url") or f.get("matched-at") or f.get("matched_at") or ""
         name = testname_from_url(url)
         if name is None or name not in labels:
             orphans += 1
+            continue
+        sev = (f.get("severity") or "low").lower()
+        if sev not in SEVERITY_ORDER or SEVERITY_ORDER.index(sev) < min_idx:
             continue
         fired_cases.add(name)
 
@@ -336,6 +352,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--cases-csv", type=Path, required=True)
     p.add_argument("--runs-dir", type=Path, required=True)
     p.add_argument("--out", type=Path, default=None)
+    p.add_argument(
+        "--min-severity",
+        choices=list(SEVERITY_ORDER),
+        default="low",
+        help="minimum finding severity counted as a case fire "
+        "(default: low, matching the OWASP Benchmark convention that any "
+        "finding fires; pass medium for a high-precision sensitivity check)",
+    )
     args = p.parse_args(argv)
 
     labels = load_labels(args.cases_csv)
@@ -347,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     by_tool: dict[str, list[dict]] = defaultdict(list)
     for run_dir in runs:
         try:
-            row = load_run(run_dir, labels)
+            row = load_run(run_dir, labels, args.min_severity)
         except FileNotFoundError as exc:
             print(f"[analyze] skipping {run_dir}: {exc}", file=sys.stderr)
             continue
@@ -362,6 +386,7 @@ def main(argv: list[str] | None = None) -> int:
         "cases_csv": str(args.cases_csv),
         "runs_dir": str(args.runs_dir),
         "case_count": len(labels),
+        "min_severity": args.min_severity,
         "tools": {},
     }
     for tool in TOOLS:

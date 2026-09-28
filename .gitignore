@@ -90,3 +90,7 @@ benchdata/
 
 # pytest local tempdir (see pyproject.toml basetemp)
 .pytest_tmp/
+
+# benchmark run outputs (regenerable)
+benchmark/track-a/
+benchmark/track-a
