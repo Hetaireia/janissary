@@ -449,28 +449,17 @@ class Scanner:
                 for f in raw_findings:
                     if f.get("severity") == "info":
                         continue
-                    ftype = f.get("type")
-                    if ftype in CORROBORATOR_ONLY_TYPES:
-                        # These are corroborators: on a target where
-                        # any unexpected input changes the status code
-                        # (the original /traversal case), the resulting
-                        # status_change and any length delta are
-                        # category-agnostic and must not be labeled.
-                        #
-                        # Narrow exception: `length_anomaly` on a
-                        # stable 2xx baseline whose response status is
-                        # *unchanged* is real signal -- the payload
-                        # changed the body but not the status class, so
-                        # it did not merely break the endpoint. All
-                        # other corroborators stay filtered.
-                        emit = (
-                            ftype == "length_anomaly"
-                            and baseline.is_stable_body
-                            and 200 <= baseline.modal_status < 400
-                            and 200 <= snapshot.status < 400
-                        )
-                        if not emit:
-                            continue
+                    if f.get("type") in CORROBORATOR_ONLY_TYPES:
+                        # Corroborators are dropped unconditionally.
+                        # A length delta or status change on a target
+                        # that reflects input is not diagnostic of any
+                        # category; labeling it with the payload's
+                        # category is the structural misattribution
+                        # described above. Real detection for these
+                        # categories needs content-signature gates
+                        # (db_error, response contains passwd-like
+                        # content), not length/status proxies.
+                        continue
                     request_obj = getattr(r, "request", None)
                     finding = ScanFinding(
                         param=param,
