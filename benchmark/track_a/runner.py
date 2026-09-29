@@ -138,6 +138,57 @@ def load_env(path: Path | None) -> dict:
 # ---------------------------------------------------------------------
 
 
+def _run_subprocess_tree(
+    cmd: list[str], timeout: float
+) -> tuple[int | None, str, str, bool]:
+    """Run a subprocess with a timeout that kills the whole process tree.
+
+    subprocess.run(capture_output=True, timeout=N) kills only the direct
+    child on timeout. On Windows, janissary.exe is a shim that spawns
+    python.exe as a grandchild; the grandchild inherits the stdout pipe,
+    and communicate()'s second (untimed) drain blocks forever waiting for
+    it to close. We instead Popen, put the child in its own process group,
+    and on timeout use taskkill /T (Windows) or killpg (POSIX) to
+    terminate the tree.
+
+    Returns (returncode, stdout, stderr, timed_out). returncode is None
+    when timed out.
+    """
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        creationflags = 0
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=creationflags,
+    )
+    try:
+        out, err = proc.communicate(timeout=timeout)
+        return proc.returncode, out or "", err or "", False
+    except subprocess.TimeoutExpired:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True,
+            )
+        else:
+            import os, signal
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except Exception:
+                proc.kill()
+        try:
+            out, err = proc.communicate(timeout=5)
+        except Exception:
+            out, err = "", ""
+        return None, out or "", err or "", True
+
+
+
 def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     findings = run_dir / "findings.jsonl"
     findings.write_text("", encoding="utf-8")
@@ -168,12 +219,8 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             "--quiet",
             "--baseline-count", "5",
         ]
-        try:
-            out = subprocess.run(
-                cmd, capture_output=True, text=True,
-                timeout=timeout, check=False,
-            )
-        except subprocess.TimeoutExpired:
+        rc, out_s, _err_s, timed_out = _run_subprocess_tree(cmd, timeout)
+        if timed_out:
             # A single slow target must not abort the whole corpus run.
             # Record and continue; analyze.py will treat this case as
             # silent (no findings emitted).
@@ -185,10 +232,10 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             failures += 1
             continue
         with findings.open("a", encoding="utf-8") as fh:
-            for line in (out.stdout or "").splitlines():
+            for line in out_s.splitlines():
                 if line.strip():
                     fh.write(line + "\n")
-        if out.returncode not in (0, 1):
+        if rc not in (0, 1):
             failures += 1
     return 1 if failures else 0
 
