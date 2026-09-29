@@ -659,3 +659,76 @@ class DifferentialAnalyzer:
                 }
             ]
         return []
+
+
+# ===================================================================
+# PATHTRAVER EXISTENCE ORACLE
+# ===================================================================
+# The OWASP Benchmark pathtraver cases do not leak file content.
+# They leak EXISTENCE: "And file already exists." for a path that
+# resolves, "But file doesn't exist yet." for one that does not.
+# The oracle is the divergence between the two responses, not the
+# presence of either string alone.
+
+_PATHTRAVER_EXISTS = re.compile(r"file already exists", re.I)
+_PATHTRAVER_NOEXIST = re.compile(
+    r"file (?:doesn't|does not) exist yet", re.I
+)
+
+
+def _pathtraver_signal(body: str):
+    """Return 'exists', 'noexist', or None (absent or ambiguous)."""
+    has_e = bool(_PATHTRAVER_EXISTS.search(body or ""))
+    has_n = bool(_PATHTRAVER_NOEXIST.search(body or ""))
+    if has_e and not has_n:
+        return "exists"
+    if has_n and not has_e:
+        return "noexist"
+    return None
+
+
+def check_pathtraver_oracle(
+    baseline,
+    snapshot_exists,
+    snapshot_noexist,
+    payload_exists,
+    payload_noexist,
+):
+    """Paired differential on the pathtraver existence oracle.
+
+    Fires critical when response A and response B diverge on the
+    existence signal -- one says 'exists', the other says 'noexist'.
+    Silent when both agree, when either is ambiguous, or when the
+    signals leak from the payload or the baseline.
+    """
+    for pv in (payload_exists, payload_noexist):
+        if (
+            _PATHTRAVER_EXISTS.search(pv or "")
+            or _PATHTRAVER_NOEXIST.search(pv or "")
+        ):
+            return []
+
+    for s in baseline.snapshots:
+        if (
+            _PATHTRAVER_EXISTS.search(s.body)
+            or _PATHTRAVER_NOEXIST.search(s.body)
+        ):
+            return []
+
+    sig_a = _pathtraver_signal(snapshot_exists.body)
+    sig_b = _pathtraver_signal(snapshot_noexist.body)
+    if sig_a is None or sig_b is None or sig_a == sig_b:
+        return []
+
+    return [
+        {
+            "type": "pathtraver_existence_oracle",
+            "severity": "critical",
+            "detail": (
+                "Path existence oracle: existing-path payload reported "
+                "'" + sig_a + "', nonexistent-path payload reported '"
+                + sig_b + "'"
+            ),
+            "evidence": sig_a + "|" + sig_b,
+        }
+    ]
