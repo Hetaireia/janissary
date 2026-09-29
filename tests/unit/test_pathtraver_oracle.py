@@ -146,3 +146,12 @@ def test_silent_when_payload_echoes_oracle():
         pb=PAYLOAD_NOEXIST,
     )
     assert findings == []
+
+
+def test_fires_when_baseline_reports_noexist():
+    """The app's benign default is 'file doesn't exist yet'. That is
+    the control state, not baseline poison. Only an EXISTS string in
+    the baseline invalidates the oracle."""
+    baseline = make_baseline([NOEXIST_BODY, NOEXIST_BODY])
+    findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=NOEXIST_BODY))
+    assert len(findings) == 1

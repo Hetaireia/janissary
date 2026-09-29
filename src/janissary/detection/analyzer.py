@@ -708,11 +708,11 @@ def check_pathtraver_oracle(
         ):
             return []
 
+    # Only the EXISTS string in baseline is poison. The NOEXIST
+    # string is the app's benign default when no file is requested
+    # and is the control state the differential depends on.
     for s in baseline.snapshots:
-        if (
-            _PATHTRAVER_EXISTS.search(s.body)
-            or _PATHTRAVER_NOEXIST.search(s.body)
-        ):
+        if _PATHTRAVER_EXISTS.search(s.body):
             return []
 
     sig_a = _pathtraver_signal(snapshot_exists.body)
