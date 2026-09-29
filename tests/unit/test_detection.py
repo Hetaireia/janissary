@@ -442,3 +442,31 @@ def test_output_region_ignores_clean_response():
     findings = a.analyze(snap(text="<html>nothing</html>"))
     assert "command_output" not in [f["type"] for f in findings]
     assert "sql_result_rows" not in [f["type"] for f in findings]
+
+
+def test_cmdi_reflection_is_suppressed():
+    """A cmdi payload appearing in the body is not command execution."""
+    baseline = make_baseline(["<html>clean</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "cmdi_bare_whoami", "whoami", "cmdi")
+    body = "<html>please run whoami to see the current user</html>"
+    findings = a.analyze(snap(text=body))
+    assert "payload_reflected" not in [f["type"] for f in findings]
+
+
+def test_sqli_reflection_still_fires():
+    """Non-cmdi categories keep the reflection finding."""
+    baseline = make_baseline(["<html>clean</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    body = "<html>search for: ' OR '1'='1</html>"
+    findings = a.analyze(snap(text=body))
+    assert "payload_reflected" in [f["type"] for f in findings]
+
+
+
+def test_sqli_reflection_still_fires():
+    """Non-cmdi categories keep the reflection finding."""
+    baseline = make_baseline(["<html>clean</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
+    body = "<html>search for: ' OR '1'='1</html>"
+    findings = a.analyze(snap(text=body))
+    assert "payload_reflected" in [f["type"] for f in findings]
