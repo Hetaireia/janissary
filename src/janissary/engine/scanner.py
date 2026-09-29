@@ -55,7 +55,6 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     # stdout that _check_output_region recognizes.
     ("cmdi_bare_id", "id", "cmdi", "critical"),
     ("cmdi_bare_uname", "uname -a", "cmdi", "critical"),
-    ("cmdi_bare_whoami", "whoami", "cmdi", "critical"),
     ("cmdi_bare_passwd", "cat /etc/passwd", "cmdi", "critical"),
 ]
 
