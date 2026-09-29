@@ -527,6 +527,20 @@ class DifferentialAnalyzer:
                 }
             ]
 
+        # cmdi reflection is not evidence of command execution. Command
+        # execution is detected via _check_output_region. A bare echo of a
+        # common string like 'whoami' or 'id' on any page that happens to
+        # contain it generates false positives across every category, and
+        # is not exploitable. Suppress cmdi reflection entirely.
+        if self.payload_category == "cmdi":
+            return []
+
+        # cmdi reflection is not evidence of command execution. Command
+        # execution is detected via _check_output_region. A bare echo of a
+        # common string like 'whoami' or 'id' on any page that happens to
+        # contain it generates false positives across every category, and
+        # is not exploitable. Suppress cmdi reflection entirely.
+
         return [
             {
                 "type": "payload_reflected",
