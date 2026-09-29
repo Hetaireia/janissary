@@ -339,3 +339,79 @@ between the "0 findings" state and the numbers above:
 Neither change alters the ground-truth labels, the case-vector map, the
 metric definitions, or the statistical test. Both were committed before
 the runs whose numbers appear above.
+
+---
+
+### Amendment 4 — 2026-09-29
+
+**What changed:** the Track A baseline for tool version 7.3.0 is restated.
+The number recorded in Amendment 3 (**F1 0.554**) is withdrawn. The
+corrected full-corpus baseline is:
+
+| run dir                              | TP  | FP  | FN   | TN   | P     | R     | F1    | FPR   |
+|--------------------------------------|-----|-----|------|------|-------|-------|-------|-------|
+| 20260929T141102Z-janissary-r1        | 401 | 25  | 1014 | 1300 | 0.941 | 0.283 | 0.436 | 0.019 |
+
+Single run, full 2,740-case corpus, `min-severity=low`.
+
+**Why:** the Amendment 3 numbers, and every intermediate number computed
+during the 2026-09-29 session up to F1 0.636, were inflated by a scoring
+artifact in the OWASP Benchmark scorer that interacts with a scanner
+defect.
+
+The OWASP Benchmark scoring rule credits **any** finding emitted against
+a case's URL to that case's category. It does not inspect which payload
+produced the finding. JANISSARY's cmdi payloads (`; sleep 5`, `uname -a`,
+`whoami`) reflect on targets that echo query input. On a `pathtraver`,
+`trustbound`, `sqli`, or `xss` case whose servlet reflects the parameter
+into the response body, a cmdi payload's reflection was emitted as a
+finding, and the scorer counted it as a detection of that case's
+category. Those were not detections. They were reflections.
+
+The magnitude of the artifact:
+
+|                              | TP  | FP  | P     | R     | F1    |
+|------------------------------|-----|-----|-------|-------|-------|
+| before suppression (124024)  | 647 | 120 | 0.844 | 0.457 | 0.593 |
+| after suppression  (141102)  | 401 | 25  | 0.941 | 0.283 | 0.436 |
+
+The F1 drop is the removal of **246 TP that were never real**. The
+precision gain is the removal of 91 FP from the same mechanism.
+
+**What changed in the scanner (committed before the honest run):**
+
+1. `cf10841` — suppress cmdi reflection across all categories. A cmdi
+   payload that reflects into the response body without producing
+   command-output evidence no longer emits a finding. Detection of
+   `cmdi` now requires the `command_output` region signature (stdout
+   between the benchmark's command-output header and its terminator).
+2. `65656fd` — drop `cmdi_bare_whoami`. The `whoami` payload was the
+   worst offender: the string `whoami` is short, common in reflected
+   content, and produced no command-output region on the benchmark
+   target because the servlet does not execute it in the reflected
+   paths.
+
+**Effect on methodology:** the ground-truth labels, case-vector map,
+metric definitions, corpus, and statistical test are unchanged. The
+pre-registered hypotheses in the body of this document are unchanged.
+What changed is the recorded value of the baseline those hypotheses are
+tested against. The 0.554 figure must not be cited; it measured scanner
+reflections, not scanner detections.
+
+**Consequence for the pre-registered targets:** the handoff target of
+F1 >= 0.70 with P >= 0.90 is not reachable by cleanup from this
+baseline. The precision gate (0.90) is already met at 0.941. The gap is
+entirely recall. Work from 2026-09-29 onward focuses on recall, category
+by category, with the precision gate held.
+
+**Note on Amendment 3's in-scope subset.** The post-hoc in-scope subset
+(F1 0.708) is withdrawn for the same reason and must be recomputed on
+the corrected baseline before it is cited. It has not been recomputed
+as of this amendment.
+
+**On the timing of this amendment.** The three detector commits that
+follow (`0d8a28b`, `42420c4`, `f4dbdf3`) landed before this amendment was
+written. They do not produce a headline number: they were exercised only
+on the 502-case targeted set, whose result is not published here. The
+next full-corpus run — the one this amendment is written in advance of —
+is the first number that will cite the corrected baseline.
