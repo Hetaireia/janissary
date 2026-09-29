@@ -11,6 +11,7 @@ from .analyzer import (
     DifferentialAnalyzer,
     ResponseSnapshot,
     body_fingerprint,
+    check_pathtraver_oracle,
     normalize_body,
 )
 
@@ -21,5 +22,6 @@ __all__ = [
     "DifferentialAnalyzer",
     "ResponseSnapshot",
     "body_fingerprint",
+    "check_pathtraver_oracle",
     "normalize_body",
 ]

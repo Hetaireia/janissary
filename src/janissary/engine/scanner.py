@@ -8,6 +8,7 @@ later passes.
 
 from __future__ import annotations
 
+import secrets
 import sys
 import time
 from dataclasses import dataclass, field
@@ -19,6 +20,7 @@ from janissary.detection import (
     Baseline,
     DifferentialAnalyzer,
     ResponseSnapshot,
+    check_pathtraver_oracle,
 )
 from janissary.output.raw_http import (
     serialize_request,
@@ -212,6 +214,7 @@ class Scanner:
             cfg.min_delay = delay
         self.pacer_config = cfg
 
+        self._traversal_nonce = secrets.token_hex(6)
         self.waf_profile: WAFProfile | None = None
         self._pacer: AdaptivePacer | None = None
 
@@ -417,6 +420,7 @@ class Scanner:
 
         for param in self.params:
             baseline = self.collect_baseline(param)
+            traversal_snap = None
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
                 "samples": len(baseline.snapshots),
@@ -447,6 +451,8 @@ class Scanner:
                     continue
 
                 snapshot = ResponseSnapshot.from_response(r)
+                if name == "traversal_passwd":
+                    traversal_snap = snapshot
                 analyzer = DifferentialAnalyzer(
                     baseline=baseline,
                     payload_name=name,
@@ -496,6 +502,57 @@ class Scanner:
                             f"{finding.severity.upper()}: {finding.finding_type} "
                             f"| {finding.detail[:80]}"
                         )
+
+            # Paired-probe: pathtraver existence oracle.
+            if traversal_snap is not None:
+                noexist_path = (
+                    "../../../etc/passwd_janissary_noexist_"
+                    + self._traversal_nonce
+                )
+                try:
+                    r2 = self._paced_request(self.target, param, noexist_path)
+                except requests.RequestException:
+                    r2 = None
+                summary.total_requests += 1
+                if r2 is not None:
+                    snap2 = ResponseSnapshot.from_response(r2)
+                    oracle = check_pathtraver_oracle(
+                        baseline=baseline,
+                        snapshot_exists=traversal_snap,
+                        snapshot_noexist=snap2,
+                        payload_exists="../../../etc/passwd",
+                        payload_noexist=noexist_path,
+                    )
+                    for f in oracle:
+                        req_obj = getattr(r2, "request", None)
+                        finding = ScanFinding(
+                            param=param,
+                            payload_name="traversal_noexist_probe",
+                            payload_value=noexist_path,
+                            category="traversal",
+                            severity=f.get("severity", "critical"),
+                            finding_type=f.get(
+                                "type", "pathtraver_existence_oracle"
+                            ),
+                            detail=f.get("detail", ""),
+                            response_status=r2.status_code,
+                            response_length=len(r2.text or ""),
+                            response_time=snap2.elapsed,
+                            response_content_type=snap2.content_type,
+                            url=getattr(req_obj, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(req_obj),
+                            raw_response=serialize_response(r2),
+                        )
+                        summary.findings.append(finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {finding.payload_name} -> "
+                                f"{finding.severity.upper()}: "
+                                f"{finding.finding_type} "
+                                f"| {finding.detail[:80]}"
+                            )
 
                 # Group findings by root cause so the summary reports bugs,
         # not raw evidence rows.
