@@ -687,6 +687,19 @@ def _pathtraver_signal(body: str):
     return None
 
 
+# CEILING (measured 2026-09-29, pinned OWASP target). The 72
+# targeted pathtraver cases split three ways:
+#   4/72  existence divergence present, oracle fires.
+#   22/72 'Access to file:' scaffold present, exists-check is a
+#         fixed string ('already exists' on both an existing and
+#         a guaranteed-nonexistent path). No divergence possible.
+#   46/72 write-sink scaffold ('Now ready to write to file:').
+#         Response echoes the resolved path identically on the
+#         existing-path and nonexistent-path payloads. No outcome
+#         observable beyond the echo, on either status or body.
+# The oracle is structurally capped at ~4/72 of the pathtraver
+# category on this target. Closing the remainder needs a
+# different evidence model, not a tuning of this one.
 def check_pathtraver_oracle(
     baseline,
     snapshot_exists,

@@ -415,3 +415,80 @@ written. They do not produce a headline number: they were exercised only
 on the 502-case targeted set, whose result is not published here. The
 next full-corpus run — the one this amendment is written in advance of —
 is the first number that will cite the corrected baseline.
+
+---
+
+### Amendment 5 — 2026-09-29
+
+**What changed:** the pathtraver existence-oracle detector is recorded as
+shipped, and its structural ceiling on the pinned target is documented.
+
+**Detector:** two-payload differential. One request with a traversal
+payload to a path known to exist (`../../../etc/passwd`), one to a
+guaranteed-nonexistent path (`../../../etc/passwd_janissary_noexist_<nonce>`).
+The target's pathtraver servlets, on the subset that actually stat the
+file, respond `And file already exists.` for the first and
+`But file doesn't exist yet.` for the second. Divergence between the two
+responses is the evidence. Gates: neither oracle string may appear in
+either payload; the EXISTS string may not appear in any baseline sample.
+The NOEXIST string in baseline is the app's benign default and is not
+treated as poison.
+
+Committed as `0d8a28b` (analyzer), `42420c4` (scanner wiring), `f4dbdf3`
+(baseline-gate correction). 12 unit tests.
+
+**Measured effect — targeted 502-case vulnerable set.** Net +4 true
+positives, all in the `pathtraver` category, zero false positives. The
+targeted run also reproduced the `cf10841` suppression effect: 22
+cmdi-reflection-inflated true positives disappeared, confirming the
+suppression is real and the pre-suppression targeted counts were
+contaminated.
+
+**Measured ceiling — why the gain is only +4.** A direct probe of all 72
+targeted pathtraver cases, with three payloads each (benign, traversal to
+an existing path, traversal to a nonexistent path), shows three distinct
+response shapes:
+
+| shape                                     | cases | oracle possible |
+|-------------------------------------------|-------|-----------------|
+| existence divergence present              | 4     | yes             |
+| `Access to file:` scaffold, fixed verdict | 22    | no              |
+| `Now ready to write to file:` echo only   | 46    | no              |
+
+- **4/72** stat the file and report the result. The oracle fires. All four
+  are detected, none are false positives.
+- **22/72** print `Access to file: <path> created. And file already
+  exists.` on *every* payload, including the guaranteed-nonexistent one.
+  The exists-check is a fixed string in these code paths, not a stat. No
+  divergence is possible.
+- **46/72** print `Now ready to write to file: <path>`. The resolved path
+  is echoed, but identically on the existing-path and nonexistent-path
+  payloads, with no outcome reported on either status code or body. There
+  is no observable.
+
+The detector is therefore capped at approximately **4 of 72** targeted
+pathtraver cases on this target. The cap is structural — it reflects the
+set of response shapes the benchmark's pathtraver servlets produce, not a
+deficiency in the detector. Closing the remaining 68 requires a different
+evidence model (see below), not further tuning of this one.
+
+**Rejected alternative.** A path-escape detector for the 46 write-sink
+cases — fire when the resolved path leaves the application base directory
+— was considered and not built. The write-sink servlets print the
+resolved path on both the safe and the vulnerable code path, so the
+observable (path contains `..`, or path outside base) is present on safe
+cases as well. The detector would reproduce the reflection-class
+misattribution removed in Amendment 4. It is also not self-contained:
+distinguishing `..` from a legitimate relative path needs a base
+reference the per-case scanner does not have.
+
+**Effect on methodology:** none. Ground-truth labels, case-vector map,
+metric definitions, corpus, and statistical test unchanged. The four
+true positives are real and the zero false positives hold. The next
+full-corpus run will show whether the +4 scales.
+
+**Strategic consequence.** With the pathtraver ceiling established, the
+recall gap is dominated by categories this detector does not address.
+Targeted FN buckets: sqli 117, cmdi 80, xss 68, trustbound 43,
+pathtraver 65. Work from here proceeds to those categories, in that
+order, with the precision gate held at its current level.
