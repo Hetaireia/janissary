@@ -282,8 +282,14 @@ class Scanner:
         if self.inject_in == "body" or (
             self.inject_in == "auto" and self.method == "POST"
         ):
+            # Amendment 7: dual-vector. Send the payload in the query
+            # string as well as the form body. Servlets reading
+            # getParameter() see the body; servlets reading
+            # getQueryString() see the query. Previously the body
+            # path sent only the body, and getQueryString() servlets
+            # were unreachable.
             return self.session.post(
-                self.target,
+                build_url(self.target, param, value),
                 headers=self._headers(),
                 data={param: value},
                 timeout=self.timeout,
