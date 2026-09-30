@@ -492,3 +492,45 @@ recall gap is dominated by categories this detector does not address.
 Targeted FN buckets: sqli 117, cmdi 80, xss 68, trustbound 43,
 pathtraver 65. Work from here proceeds to those categories, in that
 order, with the precision gate held at its current level.
+
+---
+
+### Amendment 6 — 2026-09-30
+
+**What changed:** the first full-corpus Track A result on the corrected
+baseline (Amendment 4) is recorded. This is the headline number as of
+this amendment.
+
+**Result — full corpus, 1 run, 2026-09-30 (tool version 7.3.0):**
+
+| run dir                        | TP  | FP | FN   | TN   | P     | R     | F1    | FPR   |
+|--------------------------------|-----|----|------|------|-------|-------|-------|-------|
+| 20260929T141102Z (baseline)    | 401 | 25 | 1014 | 1300 | 0.941 | 0.283 | 0.436 | 0.019 |
+| 20260930T042245Z (this run)    | 414 | 24 | 1001 | 1301 | 0.945 | 0.293 | 0.447 | 0.019 |
+
+Scored like-for-like: all 2740 cases, no skip-exclusion. The `skipped`
+set (93 `header_any` and session/URI/stream cases) is counted as
+not-fired, matching the baseline methodology.
+
+Delta: TP +13, FP -1, FN -13, F1 +0.011.
+
+**What changed between the two runs:** one detector, the pathtraver
+existence oracle (Amendment 5). It was measured at +4 targeted true
+positives, zero false positives.
+
+**Honest note on the +13.** The oracle's measured scope is +4, not +13.
+The extra 9 true positives are not attributed to the oracle and are not
+explained by any code change since the baseline run. Run-to-run variance
+on the full corpus has not been characterized (the baseline is a single
+run); ±9 on 2740 cases is consistent with the variance observed on the
+targeted set (±5 on 502). No claim is made that the oracle produced more
+than the +4 it was measured at. A same-code rerun would settle the
+question and has not been performed.
+
+**Effect on methodology:** none. The headline is precision 0.945,
+recall 0.293, F1 0.447 on the full OWASP Benchmark corpus. The
+pre-registered target (F1 >= 0.70, P >= 0.90) remains unmet; precision
+is above gate, recall is the gap.
+
+**Amendment 3's headline (F1 0.554) remains withdrawn** (Amendment 4).
+This amendment supersedes it as the number of record.
