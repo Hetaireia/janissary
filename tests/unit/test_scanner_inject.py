@@ -277,3 +277,25 @@ def test_scan_suppresses_corroborators_on_erroring_baseline(monkeypatch):
 
     assert not summary.findings, [f.finding_type for f in summary.findings]
 
+
+def test_body_mode_post_also_puts_payload_in_query():
+    """Amendment 7: POST body injection must also populate the query
+    string, so servlets reading getQueryString() receive the payload.
+    The body must still carry it for getParameter() servlets."""
+    s = _scanner("POST", "body")
+    calls = _record_session(s)
+    s._request(s.target, "p", "PAY")
+    verb, kw = calls[0]
+    assert verb == "POST"
+    assert kw["data"] == {"p": "PAY"}
+    assert "p=PAY" in kw["url"]
+
+
+def test_auto_post_also_puts_payload_in_query():
+    s = _scanner("POST", "auto")
+    calls = _record_session(s)
+    s._request(s.target, "p", "PAY")
+    verb, kw = calls[0]
+    assert verb == "POST"
+    assert kw["data"] == {"p": "PAY"}
+    assert "p=PAY" in kw["url"]

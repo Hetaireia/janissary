@@ -534,3 +534,71 @@ is above gate, recall is the gap.
 
 **Amendment 3's headline (F1 0.554) remains withdrawn** (Amendment 4).
 This amendment supersedes it as the number of record.
+
+---
+
+### Amendment 7 — 2026-09-30
+
+**What changed:** the Track A harness dispatch for `mode=param` cases
+now delivers the payload in the URL query string in addition to the POST
+form body. This is a harness bug fix, not a scanner change.
+
+**Why:** `_dispatch` in `benchmark/track_a/runner.py` maps
+`mode=param` to `("body", testname, "POST")`. The scanner's `body`
+injection path sends the payload only in the POST form body. Roughly 194
+in-scope OWASP Benchmark servlets read the payload via
+`HttpServletRequest.getQueryString()` rather than `getParameter()`.
+`getQueryString()` returns only the raw URL query and does **not** see
+the form body. Those servlets respond
+`getQueryString() couldn't find expected parameter '<name>' in query string.`
+on every request, regardless of payload, and the vulnerability in them is
+never exercised.
+
+A sweep of all 2,740 corpus cases with a benign POST body injection
+found 295 cases whose servlet reports the `getQueryString` error. Of
+these, 194 are in the in-scope categories (sqli, cmdi, pathtraver, xss,
+trustbound). Those cases were silently unscannable — not missed by the
+analyzer, never reached by the payload.
+
+**Scope of the defect.** The defect is per-servlet, not per-category.
+Within `sqli-01`, `BenchmarkTest00512` reads `getParameter()` and is
+reached by body injection today; `BenchmarkTest00837` reads
+`getQueryString()` and is not. The extractor that produced
+`case_vectors.csv` classified both as `mode=param`. The classification
+is correct at the level of "the payload is a request parameter"; it is
+silent on which accessor the servlet uses.
+
+**Fix.** The `body` injection path posts to `build_url(target, param,
+value)` instead of `target`, so the payload appears in both the query
+string and the form body of the same request. Servlets reading either
+accessor receive it. Verified that currently-firing body-reader cases
+(`BenchmarkTest00008`, `BenchmarkTest00512`, `BenchmarkTest02277`) still
+produce their differential under the dual-vector request, so the fix is
+additive.
+
+**Measured candidate gain before the fix — upper bound, not a result.**
+Of the in-scope cases not currently firing, a raw query-string
+injection produces a response differential in approximately 65 cases
+(sqli ~55, cmdi ~8, pathtraver ~2) after URL-decoding the response body
+to remove the echo confound. This is a raw HTTP differential, not
+scanner output: the scanner's baseline, region, and reflection gates
+have not been applied, and the number is expected to fall. It is
+recorded here as the pre-fix scope, not as a claim.
+
+Two categories were excluded from that count: xss (60 vulnerable / 24
+safe) and trustbound (49 vulnerable / 0 safe) both show the payload
+HTML-escaped in the response, i.e. reflection, the class removed in
+Amendment 4. They are not counted.
+
+**Effect on methodology:** none. Ground-truth labels, case-vector map,
+corpus, metric definitions, and statistical test unchanged. This changes
+which requests the harness sends, not how findings are scored. The
+`mode=param` classification in `case_vectors.csv` is unchanged; the
+dual-vector request is a superset of the previous single-vector request.
+
+**What this does not fix.** Cases whose servlet reads neither
+`getParameter()` nor `getQueryString()` (e.g. the 89 `header_any` cases
+already in `skipped.jsonl`) remain unscanned. The 295-case sweep count
+includes non-in-scope categories (crypto, hash, weakrand, securecookie,
+ldapi, xpathi) that JANISSARY does not claim to detect; those are out of
+scope as documented in BENCHMARK.md.
