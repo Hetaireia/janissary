@@ -288,6 +288,13 @@ on `1a32eb0` across py3.10-3.14. This is the first verified CI run since
   evidence and the scanner still stamps the probe's category at emit time.
   The refactor -- evidence self-classifies, scanner can only emit a category
   the evidence justifies -- is scheduled post-launch.
+
+- **Enumerate, don't recall.** Identifiers (amendment numbers, commit
+  hashes, case counts, line numbers) must be read from the artifact,
+  never asserted from memory. If a document uses a numbering scheme,
+  list every existing value first, then compute the next one. The same
+  discipline the tool applies to categories -- no claim without the
+  artifact to back it -- applies to the docs and to this file.
 - **`docs/launch-plan.md` numbers are STALE.** Says "23 findings / 3 groups"
   and "1 group with 8 evidence rows." Actual SQLi = 11/2 with 10 evidence
   rows in F-001. Update AFTER the misattribution is settled, not before.
