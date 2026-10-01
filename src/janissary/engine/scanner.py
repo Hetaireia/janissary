@@ -548,6 +548,15 @@ class Scanner:
                 elif name == "sql_or_1eq1":
                     sqli_or_snap = snapshot
                     sqli_or_resp = r
+                # The trustbound marker is a purpose-built oracle
+                # probe, not an attack string. Running the generic
+                # analyzer on it labels any reflecting target with the
+                # marker tuple's category, producing cross-category FPs
+                # on crypto/hash/xss/securecookie. The oracle above is
+                # the only consumer of this payload.
+                if name == "trustbound_marker":
+                    continue
+
                 analyzer = DifferentialAnalyzer(
                     baseline=baseline,
                     payload_name=name,
