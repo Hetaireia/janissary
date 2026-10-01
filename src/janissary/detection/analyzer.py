@@ -842,3 +842,48 @@ def check_weakrand_oracle(baseline, snapshot):
         }
     ]
 
+# ===================================================================
+# TRUSTBOUND SESSION-SINK ORACLE
+# ===================================================================
+# Trustbound vulnerable cases echo the *injected* value into a
+# session-save message: "Item: 'userid' with value: '<INJECTED>' saved
+# in session." Non-vulnerable cases emit the same message with a
+# hardcoded benign value, so the phrase alone fires ~31 FPs; the
+# injected marker alone fires ~110 FPs (crypto/hash/xss also reflect).
+# Both together: measured 54 TP / 0 FP on the pinned target.
+#
+# Requires a per-scan high-entropy marker as the payload value. The
+# scanner supplies it; the oracle gates on marker AND sink phrase.
+
+_TRUSTBOUND_SINK = re.compile(r"saved in session", re.I)
+
+
+def check_trustbound_oracle(baseline, snapshot, marker):
+    """Body-signature oracle: injected marker echoed into session sink.
+
+    Fires when the response body contains the injected marker AND the
+    session-sink phrase. Silent if the marker appears in the baseline
+    (unconditional echo) or if the phrase is absent.
+    """
+    if not marker:
+        return []
+    body = snapshot.body or ""
+    if marker not in body:
+        return []
+    if not _TRUSTBOUND_SINK.search(body):
+        return []
+    for s in baseline.snapshots:
+        if marker in (s.body or ""):
+            return []
+    idx = body.find(marker)
+    ctx = body[max(0, idx - 60) : idx + len(marker) + 30]
+    ctx = ctx.replace("\r", " ").replace("\n", " ")
+    return [
+        {
+            "type": "trustbound_session_oracle",
+            "severity": "high",
+            "detail": "Injected value echoed into session sink: " + ctx,
+            "evidence": ctx,
+        }
+    ]
+
