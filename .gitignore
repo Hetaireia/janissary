@@ -94,3 +94,10 @@ benchdata/
 # benchmark run outputs (regenerable)
 benchmark/track-a/
 benchmark/track-a
+# Session scratch (untracked working files, do not commit)
+_*.py
+_*.md
+_*.html
+*.log
+_score_*/
+benchmark/track-a/runs/
