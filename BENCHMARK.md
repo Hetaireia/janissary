@@ -687,7 +687,38 @@ labeled as such. A published headline requires 3 runs and reports mean
 +/- stdev. Amendment 6 and this amendment are intermediate; the final
 number will carry the 3-run protocol.
 
-**Consequence for the target.** The pre-registered target (F1 >= 0.70,
-P >= 0.90) remains unmet. Precision is at gate. The recall gap is now
-0.351 -> ~0.554, approximately +314 TP. The largest available pool is
-sqli (est. 300 remaining); work proceeds there next.
+**Consequence for the target (superseded 2026-10-01).** As of this
+amendment the target was unmet. It has since been met: single-run
+F1 0.724, P 0.967 on commit e5c95f1 (see "Track A — JANISSARY measured
+results" below). The 3-run headline required by the reporting rule is now
+recorded below.
+
+## Track A — JANISSARY measured results (3-run headline)
+
+Commit:  e5c95f1
+Corpus:  case_vectors.csv (2740 cases)
+Protocol: 3 runs, fresh target container per run (BENCHMARK.md line 69)
+
+| run | TP  | FP | FN  | TN   | P     | R     | F1    |
+|-----|-----|----|-----|------|-------|-------|-------|
+| r1  | 818 | 28 | 597 | 1297 | 0.967 | 0.578 | 0.724 |
+| r2  | 821 | 27 | 594 | 1298 | 0.968 | 0.580 | 0.726 |
+| r3  | 816 | 29 | 599 | 1296 | 0.966 | 0.577 | 0.722 |
+
+Headline (mean +/- stdev):
+  Precision = 0.967 +/- 0.001
+  Recall    = 0.578 +/- 0.002
+  F1        = 0.724 +/- 0.002
+
+Pre-registered target (F1 >= 0.70, P >= 0.90): MET.
+
+Run dirs:
+  benchmark/track-a/runs/20261001T114132Z-janissary-r1
+  benchmark/track-a/runs/20261001T130850Z-janissary-r1
+  benchmark/track-a/runs/20261001T140548Z-janissary-r1
+
+Recall ceiling: hash-00/01/02 (129 FN) are byte-identical between
+vulnerable and non-vulnerable bodies -- no black-box signal exists.
+93 cases structurally skipped by the harness (89 header_any,
+3 out_of_scope_stream, 1 out_of_scope_uri). All FP are xss-detector
+precision on non-vulnerable xss cases (27-29 per run).
