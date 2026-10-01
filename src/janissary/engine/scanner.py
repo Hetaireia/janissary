@@ -614,6 +614,22 @@ class Scanner:
                         # (db_error, response contains passwd-like
                         # content), not length/status proxies.
                         continue
+                    if (
+                        f.get("type") == "payload_reflected"
+                        and category != "xss"
+                    ):
+                        # Reflection on a non-xss probe is not evidence
+                        # of that probe's category. The endpoint echoed
+                        # our input; it did not execute SQL, read a file,
+                        # or run a command. Stamping the probe's category
+                        # on the echo is structural misattribution and
+                        # produces false sqli/traversal findings on any
+                        # target that reflects a header or parameter.
+                        # xss is the one category where an unescaped echo
+                        # *is* the bug, and it is emitted above as
+                        # reflected_xss, not payload_reflected, so this
+                        # gate never suppresses it.
+                        continue
                     request_obj = getattr(r, "request", None)
                     finding = ScanFinding(
                         param=param,

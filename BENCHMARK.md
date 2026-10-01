@@ -722,3 +722,30 @@ vulnerable and non-vulnerable bodies -- no black-box signal exists.
 93 cases structurally skipped by the harness (89 header_any,
 3 out_of_scope_stream, 1 out_of_scope_uri). All FP are xss-detector
 precision on non-vulnerable xss cases (27-29 per run).
+
+### Amendment 4 -- 2026-10-02
+
+**Correction to the e5c95f1 headline.** The claim *"All FP are
+xss-detector precision on non-vulnerable xss cases"* is wrong. There is
+no xss-detector false positive. All 28-29 FPs are `sqli` and `traversal`
+findings stamped on non-vulnerable **xss** paths by the reflection path:
+the endpoint echoes the probe payload (HTML-encoded), `_check_reflection`
+returns `payload_reflected`, and the scanner stamps the probe's category.
+Console output was correct (`reflection LOW`); the JSONL artifact was not.
+
+**A second misattribution, uncounted by the scorer.** The postgresql
+`db_error` pattern `unterminated quoted string` matched bash's
+`sh: 1: Syntax error: Unterminated quoted string` on 249 command-injection
+findings. The scorer is path-based and class-agnostic, so those paths
+scored as TPs; on a real target they would be "SQL injection" findings
+whose evidence is a shell error.
+
+**Both fixed** (reflection gate at the scanner emit loop; PG pattern
+anchored to `at or near`). Regression tests added for both sides of the
+reflection gate.
+
+**Expected effect on the headline:** FP -> ~0, P -> ~1.000. Recall drops
+by the mislabeled-TP count (those findings were never real detections of
+their stated class), so F1 lands near the 0.70 pre-registered target.
+New canonical number pending re-run; this amendment will be updated with
+the run dirs once complete.
