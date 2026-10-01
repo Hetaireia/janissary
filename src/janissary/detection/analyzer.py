@@ -887,3 +887,71 @@ def check_trustbound_oracle(baseline, snapshot, marker):
         }
     ]
 
+
+# ===================================================================
+# SECURECOOKIE SET-COOKIE ORACLE
+# ===================================================================
+# The OWASP Benchmark securecookie cases set a cookie echoing the
+# injected marker. The vulnerable shape sets it WITHOUT the Secure
+# attribute; the non-vulnerable shape sets the SAME cookie WITH
+# Secure. Reflection alone is not diagnostic (both shapes reflect
+# the marker); the Secure attribute is the discriminator.
+#
+# Measured on the pinned target (POST, matching the runner):
+#   22-29 vuln cases reflect-without-Secure, 0 non-vuln cases do.
+# The same marker payload that drives the trustbound oracle feeds
+# this one; no additional request is issued.
+
+
+
+def _iter_set_cookies(response):
+    """Return the response's Set-Cookie headers as a list of strings.
+
+    requests exposes multi-valued headers only on ``response.raw.headers``
+    (urllib3 HTTPHeaderDict); ``response.headers`` is a CaseInsensitiveDict
+    and has no ``get_all``. Prefer the raw object, fall back to any
+    headers object that does expose ``get_all``, and finally to a single
+    ``.get`` lookup. Silent (returns []) when nothing usable is found.
+    """
+    raw = getattr(response, "raw", None)
+    hdrs = getattr(raw, "headers", None) if raw is not None else None
+    if hdrs is None or not hasattr(hdrs, "get_all"):
+        hdrs = getattr(response, "headers", None)
+    if hdrs is None:
+        return []
+    if hasattr(hdrs, "get_all"):
+        return list(hdrs.get_all("Set-Cookie") or [])
+    sc = hdrs.get("Set-Cookie")
+    return [sc] if sc else []
+
+
+def check_securecookie_oracle(baseline, response, marker):
+    """Set-Cookie oracle: reflected marker in a cookie lacking Secure.
+
+    Fires when the response sets a cookie whose value contains the
+    injected marker AND that cookie lacks the Secure attribute.
+    Silent when the reflected cookie carries Secure (non-vulnerable
+    shape) or when no reflected cookie is present.
+    """
+    if not marker:
+        return []
+    cookies = _iter_set_cookies(response)
+    for c in cookies:
+        if marker not in c:
+            continue
+        attrs = [a.strip().lower() for a in c.split(";")[1:]]
+        if "secure" in attrs:
+            continue  # reflected but Secured -> non-vulnerable shape
+        return [
+            {
+                "type": "securecookie_flag_oracle",
+                "severity": "medium",
+                "detail": (
+                    "Cookie echoed the injected marker without the "
+                    "Secure attribute: " + c[:120]
+                ),
+                "evidence": c,
+            }
+        ]
+    return []
+

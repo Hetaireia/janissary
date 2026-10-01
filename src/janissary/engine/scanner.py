@@ -21,6 +21,7 @@ from janissary.detection import (
     DifferentialAnalyzer,
     ResponseSnapshot,
     check_pathtraver_oracle,
+    check_securecookie_oracle,
     check_sqli_quote_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,
@@ -502,6 +503,40 @@ class Scanner:
                                 f"{tb_finding.severity.upper()}: "
                                 f"{tb_finding.finding_type} "
                                 f"| {tb_finding.detail[:80]}"
+                            )
+
+                    # Securecookie Set-Cookie oracle: same marker
+                    # payload, checks whether the reflected cookie
+                    # lacks the Secure attribute. Reuses the trustbound
+                    # response -- no additional request issued.
+                    sc_findings = check_securecookie_oracle(baseline, r, value)
+                    for f in sc_findings:
+                        sc_req = getattr(r, "request", None)
+                        sc_finding = ScanFinding(
+                            param=param,
+                            payload_name="securecookie_flag_oracle",
+                            payload_value=value,
+                            category="securecookie",
+                            severity=f.get("severity", "medium"),
+                            finding_type=f.get("type", "securecookie_flag_oracle"),
+                            detail=f.get("detail", ""),
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(sc_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(sc_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(sc_finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {sc_finding.payload_name} -> "
+                                f"{sc_finding.severity.upper()}: "
+                                f"{sc_finding.finding_type} "
+                                f"| {sc_finding.detail[:80]}"
                             )
 
                 # Weakrand RNG-class oracle: single-response body
