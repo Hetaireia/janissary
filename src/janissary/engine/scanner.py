@@ -22,6 +22,7 @@ from janissary.detection import (
     ResponseSnapshot,
     check_pathtraver_oracle,
     check_sqli_quote_oracle,
+    check_weakrand_oracle,
 )
 from janissary.output.raw_http import (
     serialize_request,
@@ -432,6 +433,7 @@ class Scanner:
             sqli_or_snap = None
             sqli_quote_resp = None
             sqli_or_resp = None
+            weakrand_seen = False
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
                 "samples": len(baseline.snapshots),
@@ -462,6 +464,43 @@ class Scanner:
                     continue
 
                 snapshot = ResponseSnapshot.from_response(r)
+
+                # Weakrand RNG-class oracle: single-response body
+                # signature. Checked on every payload response; fires
+                # at most once per parameter.
+                if not weakrand_seen:
+                    wr_findings = check_weakrand_oracle(baseline, snapshot)
+                    for f in wr_findings:
+                        wr_req = getattr(r, "request", None)
+                        wr_finding = ScanFinding(
+                            param=param,
+                            payload_name="weakrand_rng_oracle",
+                            payload_value=value,
+                            category="weakrand",
+                            severity=f.get("severity", "high"),
+                            finding_type=f.get("type", "weakrand_rng_oracle"),
+                            detail=f.get("detail", ""),
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(wr_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(wr_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(wr_finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {wr_finding.payload_name} -> "
+                                f"{wr_finding.severity.upper()}: "
+                                f"{wr_finding.finding_type} "
+                                f"| {wr_finding.detail[:80]}"
+                            )
+                    if wr_findings:
+                        weakrand_seen = True
+
                 if name == "traversal_passwd":
                     traversal_snap = snapshot
                 elif name == "sql_single_quote":

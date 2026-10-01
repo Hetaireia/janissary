@@ -13,6 +13,7 @@ from .analyzer import (
     body_fingerprint,
     check_pathtraver_oracle,
     check_sqli_quote_oracle,
+    check_weakrand_oracle,
     normalize_body,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "body_fingerprint",
     "check_pathtraver_oracle",
     "check_sqli_quote_oracle",
+    "check_weakrand_oracle",
     "normalize_body",
 ]

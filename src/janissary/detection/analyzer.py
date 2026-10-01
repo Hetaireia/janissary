@@ -783,3 +783,59 @@ def check_sqli_quote_oracle(baseline, quote_snapshot, or_snapshot):
             "reflection_context": None,
         }
     ]
+
+# ===================================================================
+# WEAKRAND RNG-CLASS ORACLE
+# ===================================================================
+# The OWASP Benchmark weakrand cases leak the RNG class they used
+# straight into the response body:
+#   vulnerable     : "Weak Randomness Test java.util.Random.nextX() executed"
+#                    "Weak Randomness Test java.lang.Math.random() executed"
+#   non-vulnerable : "Weak Randomness Test java.security.SecureRandom... executed"
+# Measured on the pinned target: 173 of 218 vulnerable weakrand cases
+# emit the weak marker; 0 of 275 non-vulnerable cases do. Silent when
+# the baseline already leaks the weak marker, so an unconditional
+# static leak cannot fire the oracle.
+
+_WEAKRAND_VULN_PATTERNS = (
+    re.compile(r"Weak Randomness Test java\.util\.Random\.", re.I),
+    re.compile(r"Weak Randomness Test java\.lang\.Math\.random\(\)", re.I),
+)
+_WEAKRAND_SAFE_PATTERN = re.compile(r"java\.security\.SecureRandom", re.I)
+
+
+def check_weakrand_oracle(baseline, snapshot):
+    """Body-signature oracle: weak RNG class leaked into response.
+
+    Fires when the response body references a weak RNG class and does
+    not reference the secure equivalent. Silent if the baseline already
+    leaks the weak marker (unconditional leak -> not injection driven).
+    """
+    body = snapshot.body or ""
+    hit = None
+    for pat in _WEAKRAND_VULN_PATTERNS:
+        m = pat.search(body)
+        if m:
+            hit = m
+            break
+    if hit is None:
+        return []
+    if _WEAKRAND_SAFE_PATTERN.search(body):
+        return []
+    for s in baseline.snapshots:
+        for pat in _WEAKRAND_VULN_PATTERNS:
+            if pat.search(s.body or ""):
+                return []
+    start = max(0, hit.start())
+    return [
+        {
+            "type": "weakrand_rng_oracle",
+            "severity": "high",
+            "detail": (
+                "Response leaked weak RNG class reference: "
+                + body[start : start + 90].replace("\r", " ").replace("\n", " ")
+            ),
+            "evidence": body[start : start + 90],
+        }
+    ]
+
