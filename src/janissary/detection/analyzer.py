@@ -139,7 +139,12 @@ DB_ERROR_PATTERNS = {
         re.compile(r"PG::SyntaxError"),
         re.compile(r"ERROR:\s+syntax error at or near", re.I),
         re.compile(r"org\.postgresql\.util\.PSQLException"),
-        re.compile(r"unterminated quoted string", re.I),
+        # PG emits "unterminated quoted string at or near ...";
+        # bash emits "Unterminated quoted string" with no qualifier.
+        # The anchor is what separates a real database error from a
+        # shell complaining about our own unbalanced quote, which
+        # would otherwise mislabel command-injection cases as sqli.
+        re.compile(r"unterminated quoted string at or near", re.I),
     ],
     "mssql": [
         re.compile(r"Microsoft OLE DB Provider for SQL Server", re.I),

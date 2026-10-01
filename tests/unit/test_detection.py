@@ -463,16 +463,6 @@ def test_sqli_reflection_still_fires():
     assert "payload_reflected" in [f["type"] for f in findings]
 
 
-
-def test_sqli_reflection_still_fires():
-    """Non-cmdi categories keep the reflection finding."""
-    baseline = make_baseline(["<html>clean</html>"] * 5)
-    a = DifferentialAnalyzer(baseline, "sql_or", "' OR '1'='1", "sqli")
-    body = "<html>search for: ' OR '1'='1</html>"
-    findings = a.analyze(snap(text=body))
-    assert "payload_reflected" in [f["type"] for f in findings]
-
-
 # ===================================================================
 
 

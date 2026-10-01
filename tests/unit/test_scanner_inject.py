@@ -278,6 +278,52 @@ def test_scan_suppresses_corroborators_on_erroring_baseline(monkeypatch):
     assert not summary.findings, [f.finding_type for f in summary.findings]
 
 
+def _resp_html(body: str, status_code: int = 200) -> MagicMock:
+    """Response with text/html content-type so the xss reflection branch
+    takes the reflected_xss path rather than the non-html info path."""
+    r = _resp(status_code, body.encode("utf-8"))
+    r.headers = {"content-type": "text/html"}
+    return r
+
+
+def test_scan_suppresses_sqli_reflection_on_echoing_target(monkeypatch):
+    """A target that echoes the probe payload must not produce a
+    payload_reflected finding under a non-xss category. The endpoint
+    echoed our input; it did not execute SQL or read a file. Before
+    this gate, every reflecting header/param became a false sqli and
+    traversal finding in the JSONL artifact."""
+    s = _scanner("POST", "cookie")
+    monkeypatch.setattr(s, "preflight", lambda: (True, ""))
+
+    def paced(url, param, value):
+        if value == "1":
+            return _resp_html("<html><body>baseline</body></html>")
+        return _resp_html(f"<html><body>echo: {value}</body></html>")
+
+    monkeypatch.setattr(s, "_paced_request", paced)
+    summary = s.scan(quiet=True)
+    reflected = [f for f in summary.findings if f.finding_type == "payload_reflected"]
+    assert not reflected, [(f.category, f.finding_type) for f in reflected]
+
+
+def test_scan_keeps_xss_reflection_on_echoing_target(monkeypatch):
+    """The reflection gate must not over-suppress: an xss probe against
+    the same echoing target is exactly the case where a raw echo IS the
+    bug. reflected_xss must still be emitted."""
+    s = _scanner("POST", "cookie")
+    monkeypatch.setattr(s, "preflight", lambda: (True, ""))
+
+    def paced(url, param, value):
+        if value == "1":
+            return _resp_html("<html><body>baseline</body></html>")
+        return _resp_html(f"<html><body>echo: {value}</body></html>")
+
+    monkeypatch.setattr(s, "_paced_request", paced)
+    summary = s.scan(quiet=True)
+    xss = [f for f in summary.findings if f.finding_type == "reflected_xss"]
+    assert xss, [f.finding_type for f in summary.findings]
+
+
 def test_body_mode_post_also_puts_payload_in_query():
     """Amendment 7: POST body injection must also populate the query
     string, so servlets reading getQueryString() receive the payload.

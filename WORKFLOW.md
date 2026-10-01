@@ -261,15 +261,33 @@ on `1a32eb0` across py3.10-3.14. This is the first verified CI run since
 
 #### Still open
 
-- **Structural misattribution (design decision).** `_check_status` and
-  `_check_length` in `detection/analyzer.py` are category-agnostic; findings
-  inherit the payload's `category`. On `/traversal` (which 500s for any
-  non-matching file) this emits spurious `sqli` / `xss` / `cmdi`
-  `status_change` findings. Documented as
-  `test_500_on_unknown_input_does_not_misattribute_categories` with
-  `@pytest.mark.xfail(strict=True)`. That test flips to a hard failure the
-  day the misattribution is fixed -- that is the signal to remove the marker.
-  Do not hotfix; this is a design conversation.
+- **Structural misattribution -- three instances, all closed.** A finding
+  may carry a category only if the response contains a category-specific
+  artifact. Generic facts about an endpoint ("it echoes," "the status
+  changed," "the length moved," "the time moved") are not category-specific
+  and must not be stamped with the probe's category. Three leaks of this
+  class have been found and fixed:
+
+  1. `_check_status` / `_check_length` emitted category-labeled findings on
+     any target that 500s for unknown input. Closed by the scanner's
+     `CORROBORATOR_ONLY_TYPES` filter. Regression test:
+     `test_500_on_unknown_input_does_not_misattribute_categories`.
+
+  2. `payload_reflected` on non-xss probes stamped the probe's category on
+     any echoing endpoint. Closed by a scanner-side gate; xss still emits
+     `reflected_xss` because there a raw echo *is* the bug. Regression
+     tests: `test_scan_suppresses_sqli_reflection_on_echoing_target` and
+     `test_scan_keeps_xss_reflection_on_echoing_target`.
+
+  3. The postgresql `db_error` pattern `unterminated quoted string` matched
+     bash's `sh: 1: Syntax error: Unterminated quoted string`, mislabeling
+     249 command-injection findings as sqli. Anchored to `at or near`, which
+     real PG errors carry and shell errors do not.
+
+  Not yet enforced structurally: the analyzer still returns category-free
+  evidence and the scanner still stamps the probe's category at emit time.
+  The refactor -- evidence self-classifies, scanner can only emit a category
+  the evidence justifies -- is scheduled post-launch.
 - **`docs/launch-plan.md` numbers are STALE.** Says "23 findings / 3 groups"
   and "1 group with 8 evidence rows." Actual SQLi = 11/2 with 10 evidence
   rows in F-001. Update AFTER the misattribution is settled, not before.
@@ -293,9 +311,10 @@ over a Windows-only interpreter bug.
 #### To resume
 
 1. `git log --oneline -6` -- confirm `1a32eb0` is HEAD and CI is green.
-2. Decide on the structural misattribution. The xfail test is the driving
-   signal. Read the previous handoff (this file's git history) for the
-   original analysis of F-002 through F-007.
+2. Structural misattribution: three instances closed (see "Still open"
+   above). Post-launch work: enforce it structurally so the scanner can
+   only emit a category the evidence justifies. Read the git history of
+   this file for the original F-002 through F-007 analysis.
 3. Update `docs/launch-plan.md` numbers once (2) is settled.
 4. Add mypy/bandit/pip-audit to CI as a separate commit.
 5. PyPI/launch (browser-blocked, unchanged).
