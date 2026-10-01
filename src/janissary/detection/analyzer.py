@@ -808,8 +808,15 @@ def check_weakrand_oracle(baseline, snapshot):
     """Body-signature oracle: weak RNG class leaked into response.
 
     Fires when the response body references a weak RNG class and does
-    not reference the secure equivalent. Silent if the baseline already
-    leaks the weak marker (unconditional leak -> not injection driven).
+    not reference the secure equivalent.
+
+    Note on baseline: on the pinned target the weak marker is emitted
+    by the RNG branch unconditionally -- the benign baseline body
+    contains it too, because the vulnerable code path always runs.
+    The vulnerability is *which* RNG class runs, not whether the
+    marker appears, so baseline-leak suppression would swallow every
+    finding. The baseline argument is retained for interface parity
+    with the other oracles and is intentionally unused for gating.
     """
     body = snapshot.body or ""
     hit = None
@@ -822,10 +829,6 @@ def check_weakrand_oracle(baseline, snapshot):
         return []
     if _WEAKRAND_SAFE_PATTERN.search(body):
         return []
-    for s in baseline.snapshots:
-        for pat in _WEAKRAND_VULN_PATTERNS:
-            if pat.search(s.body or ""):
-                return []
     start = max(0, hit.start())
     return [
         {

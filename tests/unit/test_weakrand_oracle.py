@@ -94,11 +94,17 @@ def test_silent_when_both_markers_present():
     assert check_weakrand_oracle(baseline, snap(text=BOTH)) == []
 
 
-def test_silent_when_baseline_already_leaks_weak_marker():
-    # Unconditional leak: the app prints the weak marker regardless of
-    # input. Not injection-driven; must not fire.
+def test_fires_when_baseline_also_leaks_weak_marker():
+    # On the pinned target the weak marker is emitted unconditionally:
+    # the benign baseline body contains it too. The vulnerability is
+    # which RNG class runs, not whether the marker appears, so the
+    # oracle must still fire. Baseline-leak suppression was removed
+    # after Session 8 measured 0 weakrand findings against a target
+    # whose baseline carries the marker.
     baseline = make_baseline([VULN_RANDOM])
-    assert check_weakrand_oracle(baseline, snap(text=VULN_RANDOM)) == []
+    findings = check_weakrand_oracle(baseline, snap(text=VULN_RANDOM))
+    assert len(findings) == 1
+    assert findings[0]["type"] == "weakrand_rng_oracle"
 
 
 def test_fires_when_baseline_is_empty():
