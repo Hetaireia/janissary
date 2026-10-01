@@ -745,3 +745,41 @@ def check_pathtraver_oracle(
             "evidence": sig_a + "|" + sig_b,
         }
     ]
+
+
+# ===================================================================
+# SQLI BARE-QUOTE ORACLE
+# ===================================================================
+# A genuinely injectable query breaks on the unbalanced bare quote
+# (syntax error -> 5xx) and is repaired by the balanced compound
+# payload (' OR '1'='1 -> 2xx). A servlet that errors on any unknown
+# input 5xxs on both, and is not flagged. Measured on the pinned
+# target: 101 of 245 vulnerable sqli cases show this divergence;
+# 0 of 110 sampled safe cases do.
+
+
+def check_sqli_quote_oracle(baseline, quote_snapshot, or_snapshot):
+    """Paired differential: bare quote 5xx AND balanced payload 2xx.
+
+    Requires a clean baseline (modal < 400, no sample >= 500).
+    """
+    base = baseline.modal_status
+    if base == 0 or base >= 400:
+        return []
+    if any(s.status >= 500 for s in baseline.snapshots):
+        return []
+    if quote_snapshot.status < 500:
+        return []
+    if or_snapshot.status >= 500:
+        return []
+    return [
+        {
+            "type": "sqli_quote_oracle",
+            "severity": "critical",
+            "detail": (
+                f"Bare quote returned {quote_snapshot.status}; balanced "
+                f"payload returned {or_snapshot.status} (baseline {base})"
+            ),
+            "reflection_context": None,
+        }
+    ]
