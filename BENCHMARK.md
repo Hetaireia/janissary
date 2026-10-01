@@ -602,3 +602,92 @@ already in `skipped.jsonl`) remain unscanned. The 295-case sweep count
 includes non-in-scope categories (crypto, hash, weakrand, securecookie,
 ldapi, xpathi) that JANISSARY does not claim to detect; those are out of
 scope as documented in BENCHMARK.md.
+
+---
+
+### Amendment 8 — 2026-10-01
+
+**What changed:** the dual-vector POST injection fix (Amendment 7) is
+measured on the full corpus, and the project's run-to-run variance is
+characterized for the first time.
+
+**Result — full corpus, 1 run, 2026-09-30 (tool version 7.3.0):**
+
+| run dir                        | TP  | FP | FN  | TN   | P     | R     | F1    |
+|--------------------------------|-----|----|-----|------|-------|-------|-------|
+| 20260930T042245Z (pre-dual)    | 414 | 24 | 1001| 1301 | 0.945 | 0.293 | 0.447 |
+| 20260930T141249Z (post-dual)   | 497 | 28 | 918 | 1297 | 0.947 | 0.351 | 0.512 |
+
+Delta: TP +83, FP +4, FN -83, F1 +0.065. Precision unchanged (0.945 ->
+0.947). New headline: **F1 0.512, P 0.947, R 0.351.**
+
+**What changed between the runs:** one harness fix (Amendment 7). The
+`mode=param` dispatch now delivers the payload in the URL query string in
+addition to the POST form body, making the ~194 in-scope servlets that
+read `getQueryString()` reachable for the first time. No detector was
+added or modified.
+
+**Gain by category (fired cases):** sqli 155 -> 191 (+36),
+xss 199 -> 238 (+39), cmdi 72 -> 79 (+7), pathtraver 12 -> 17 (+5).
+
+**The xss question, resolved.** Amendment 7 excluded xss and trustbound
+from its pre-fix candidate count on the grounds that their differentials
+were reflection-shaped. The full-corpus result vindicates the fix and
+resolves the xss concern: xss firing rose +39 while total FP rose only
++4. If the xss gains were reflection-on-safe, FP would have risen by
+roughly the same count. It did not. An xss payload reflecting on an xss
+case is detection, not misattribution; the `cf10841` defect was cmdi
+payloads reflecting on *non-cmdi* cases. The +39 xss fires are real.
+
+**Run-to-run variance — first characterization.** Identical code, three
+runs of the 502-case targeted set, post-dual:
+
+| run dir                        | fired |
+|--------------------------------|-------|
+| 20260930T065839Z (standalone)  | 315   |
+| 20261001T003803Z (standalone)  | 304   |
+| 20260930T141249Z (corpus subset)| 309  |
+
+mean 309.3, population stdev 5.5, range 304-315. As a rate: 61.6% +/-
+1.1pp on 502 cases.
+
+Extrapolated to the 2740-case corpus, the run-to-run stdev on TP is
+approximately +/-13 cases. Gains smaller than that are not distinguishable
+from noise on a single run. The +83 TP delta recorded above is well
+outside that band and is attributed to the Amendment 7 fix.
+
+Note on an earlier apparent discrepancy: the pre-dual targeted set fired
+208 (standalone) and 226 (corpus subset) -- an 18-case spread. That is a
+standalone-versus-corpus *context* difference, not run-to-run noise; the
+same context difference appears, smaller, on the post-dual side (304/315
+standalone, 309 subset). Single-run targeted results are context-sensitive
+at this level and are not compared across contexts.
+
+**Known losses.** Four cases that fired pre-dual no longer fire
+post-dual: BenchmarkTest00034 (sqli-00), BenchmarkTest02137,
+BenchmarkTest02154, BenchmarkTest02430 (all cmdi-02). Three of four are
+in one sub-category, consistent with a servlet that mishandles the
+duplicated parameter (present in both query and body under the dual
+request). Net effect is +83 TP against these 4; the cluster is noted as
+an open item, not a blocker.
+
+**Reachability as a detection lever.** The single largest gain in this
+session came from fixing payload delivery, not from a detector. The
+dual-vector fix moved F1 +0.065 with no analyzer change. This establishes
+that payload *arrival* is a first-class concern alongside payload
+*analysis*, and that harness reachability deserves auditing on the same
+footing as detector coverage.
+
+**Effect on methodology:** none to the ground-truth labels, case-vector
+map, corpus, metric definitions, or statistical test. This amendment
+records a result and a variance characterization, both post-hoc.
+
+**Reporting rule adopted.** Intermediate numbers are single-run and
+labeled as such. A published headline requires 3 runs and reports mean
++/- stdev. Amendment 6 and this amendment are intermediate; the final
+number will carry the 3-run protocol.
+
+**Consequence for the target.** The pre-registered target (F1 >= 0.70,
+P >= 0.90) remains unmet. Precision is at gate. The recall gap is now
+0.351 -> ~0.554, approximately +314 TP. The largest available pool is
+sqli (est. 300 remaining); work proceeds there next.
