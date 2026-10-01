@@ -723,7 +723,7 @@ vulnerable and non-vulnerable bodies -- no black-box signal exists.
 3 out_of_scope_stream, 1 out_of_scope_uri). All FP are xss-detector
 precision on non-vulnerable xss cases (27-29 per run).
 
-### Amendment 4 -- 2026-10-02
+### Amendment 5 -- 2026-10-02
 
 **Correction to the e5c95f1 headline.** The claim *"All FP are
 xss-detector precision on non-vulnerable xss cases"* is wrong. There is
