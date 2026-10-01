@@ -22,6 +22,7 @@ from janissary.detection import (
     ResponseSnapshot,
     check_pathtraver_oracle,
     check_sqli_quote_oracle,
+    check_trustbound_oracle,
     check_weakrand_oracle,
 )
 from janissary.output.raw_http import (
@@ -217,6 +218,10 @@ class Scanner:
         self.pacer_config = cfg
 
         self._traversal_nonce = secrets.token_hex(6)
+        self._trustbound_nonce = "JNSRY_TB_" + secrets.token_hex(10)
+        self._payloads = list(DEFAULT_PAYLOADS) + [
+            ("trustbound_marker", self._trustbound_nonce, "trustbound", "high"),
+        ]
         self.waf_profile: WAFProfile | None = None
         self._pacer: AdaptivePacer | None = None
 
@@ -452,7 +457,7 @@ class Scanner:
                     f"{baseline.modal_status} - status gate disabled"
                 )
 
-            for name, value, category, _severity in DEFAULT_PAYLOADS:
+            for name, value, category, _severity in self._payloads:
                 try:
                     r = self._paced_request(self.target, param, value)
                 except requests.RequestException as e:
@@ -464,6 +469,40 @@ class Scanner:
                     continue
 
                 snapshot = ResponseSnapshot.from_response(r)
+
+                # Trustbound session-sink oracle: per-scan high-entropy
+                # marker payload; fires only when the marker is echoed
+                # into the "saved in session" sink.
+                if name == "trustbound_marker":
+                    tb_findings = check_trustbound_oracle(baseline, snapshot, value)
+                    for f in tb_findings:
+                        tb_req = getattr(r, "request", None)
+                        tb_finding = ScanFinding(
+                            param=param,
+                            payload_name="trustbound_marker",
+                            payload_value=value,
+                            category="trustbound",
+                            severity=f.get("severity", "high"),
+                            finding_type=f.get("type", "trustbound_session_oracle"),
+                            detail=f.get("detail", ""),
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(tb_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(tb_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(tb_finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {tb_finding.payload_name} -> "
+                                f"{tb_finding.severity.upper()}: "
+                                f"{tb_finding.finding_type} "
+                                f"| {tb_finding.detail[:80]}"
+                            )
 
                 # Weakrand RNG-class oracle: single-response body
                 # signature. Checked on every payload response; fires
