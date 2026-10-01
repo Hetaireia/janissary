@@ -9,6 +9,7 @@ from janissary.detection import (
     Baseline,
     DifferentialAnalyzer,
     ResponseSnapshot,
+    check_sqli_quote_oracle,
     normalize_body,
 )
 
@@ -470,3 +471,59 @@ def test_sqli_reflection_still_fires():
     body = "<html>search for: ' OR '1'='1</html>"
     findings = a.analyze(snap(text=body))
     assert "payload_reflected" in [f["type"] for f in findings]
+
+
+# ===================================================================
+
+
+# ===================================================================
+# SQLI BARE-QUOTE ORACLE (paired differential)
+# ===================================================================
+# Fire when the bare quote 5xxs but the balanced compound payload
+# (' OR '1'='1) succeeds. On a genuinely injectable query the quote
+# breaks the SQL syntax and the balanced payload repairs it; on a
+# servlet that errors on any unknown input, both fail.
+
+
+def test_sqli_quote_oracle_fires():
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="Internal Server Error")
+    or_payload = snap(status=200, text="results")
+    out = check_sqli_quote_oracle(b, quote, or_payload)
+    assert len(out) == 1
+    assert out[0]["type"] == "sqli_quote_oracle"
+    assert out[0]["severity"] == "critical"
+
+
+def test_sqli_quote_oracle_silent_when_or_also_500():
+    """The /traversal shape: any unrecognized input 500s, so a quote
+    500 is not evidence of sqli. The balanced payload guards this."""
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="file not found")
+    or_payload = snap(status=500, text="file not found")
+    assert check_sqli_quote_oracle(b, quote, or_payload) == []
+
+
+def test_sqli_quote_oracle_silent_when_quote_200():
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=200, text="no results")
+    or_payload = snap(status=200, text="no results")
+    assert check_sqli_quote_oracle(b, quote, or_payload) == []
+
+
+def test_sqli_quote_oracle_silent_on_dirty_baseline():
+    b = Baseline()
+    for s in (200, 200, 500, 200, 200):
+        b.add(snap(status=s, text="x"))
+    quote = snap(status=500, text="err")
+    or_payload = snap(status=200, text="ok")
+    assert check_sqli_quote_oracle(b, quote, or_payload) == []
+
+
+def test_sqli_quote_oracle_silent_on_4xx_baseline():
+    b = Baseline()
+    for _ in range(5):
+        b.add(snap(status=404, text="not found"))
+    quote = snap(status=500, text="err")
+    or_payload = snap(status=200, text="ok")
+    assert check_sqli_quote_oracle(b, quote, or_payload) == []

@@ -21,6 +21,7 @@ from janissary.detection import (
     DifferentialAnalyzer,
     ResponseSnapshot,
     check_pathtraver_oracle,
+    check_sqli_quote_oracle,
 )
 from janissary.output.raw_http import (
     serialize_request,
@@ -427,6 +428,10 @@ class Scanner:
         for param in self.params:
             baseline = self.collect_baseline(param)
             traversal_snap = None
+            sqli_quote_snap = None
+            sqli_or_snap = None
+            sqli_quote_resp = None
+            sqli_or_resp = None
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
                 "samples": len(baseline.snapshots),
@@ -459,6 +464,12 @@ class Scanner:
                 snapshot = ResponseSnapshot.from_response(r)
                 if name == "traversal_passwd":
                     traversal_snap = snapshot
+                elif name == "sql_single_quote":
+                    sqli_quote_snap = snapshot
+                    sqli_quote_resp = r
+                elif name == "sql_or_1eq1":
+                    sqli_or_snap = snapshot
+                    sqli_or_resp = r
                 analyzer = DifferentialAnalyzer(
                     baseline=baseline,
                     payload_name=name,
@@ -506,6 +517,42 @@ class Scanner:
                         _say(
                             f"  [{param}] {name} -> "
                             f"{finding.severity.upper()}: {finding.finding_type} "
+                            f"| {finding.detail[:80]}"
+                        )
+
+            # Paired-probe: sqli quote oracle.
+            if sqli_quote_snap is not None and sqli_or_snap is not None:
+                oracle = check_sqli_quote_oracle(
+                    baseline=baseline,
+                    quote_snapshot=sqli_quote_snap,
+                    or_snapshot=sqli_or_snap,
+                )
+                for f in oracle:
+                    req_obj = getattr(sqli_quote_resp, "request", None)
+                    finding = ScanFinding(
+                        param=param,
+                        payload_name="sql_quote_oracle",
+                        payload_value="'",
+                        category="sqli",
+                        severity=f.get("severity", "critical"),
+                        finding_type=f.get("type", "sqli_quote_oracle"),
+                        detail=f.get("detail", ""),
+                        response_status=sqli_quote_resp.status_code,
+                        response_length=len(sqli_quote_resp.text or ""),
+                        response_time=sqli_quote_snap.elapsed,
+                        response_content_type=sqli_quote_snap.content_type,
+                        url=getattr(req_obj, "url", None) or self.target,
+                        method=self.method,
+                        raw_request=serialize_request(req_obj),
+                        raw_response=serialize_response(sqli_quote_resp),
+                    )
+                    summary.findings.append(finding)
+                    summary.finding_count += 1
+                    if not quiet:
+                        _say(
+                            f"  [{param}] {finding.payload_name} -> "
+                            f"{finding.severity.upper()}: "
+                            f"{finding.finding_type} "
                             f"| {finding.detail[:80]}"
                         )
 
