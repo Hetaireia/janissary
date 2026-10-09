@@ -1,9 +1,9 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: S10 CLOSED — three-run Track A reproducible at F1 0.682 / P 1.000; shim flake fixed and pushed
-## NEXT: Recall recovery — 682 FN, of which 86 are the TP paths the FP fix cost (0.724 -> 0.682). Then structural throttle fix (--library-mode, Phase 4.5).
-## LAST COMPLETED: Three clean single-process runs at F1 0.682 (P 1.000 / R 0.518). Shim crash (WinError 5 / 0xC0000005, ~7% per spawn) worked around via JANISSARY_USE_MODULE=1. Five commits pushed to origin/main, HEAD b651c29. See SESSION HANDOFF.
+## STATUS: Track A target-broken claim WITHDRAWN. F1 0.682 is honest; 0.724 was inflated by reflection misattribution. Recall gap on CALL-sink SQLi identified.
+## NEXT: Close recall gap on CALL-sink SQLi (add HSQLDB db_error patterns, or relax check_sqli_quote_oracle to compare error-text content rather than status code). Do not claim Track A closure until resolved. Then structural throttle fix (--library-mode, Phase 4.5).
+## LAST COMPLETED: Falsified S10's "target broken for all sqli-*" claim. sqli-01/761 and sqli-00/510 return 200 on benign params; bare-URL 500s are a design property of prepareCall("CALL " + input). Diffed 8a65195: reflection gate is the only relevant change; it correctly suppresses misattributed TPs. Direct invocation of scanner on ground-truth-vulnerable sqli-01/761 returns 0 findings — recall gap, not regression. See Amendment 11.
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---

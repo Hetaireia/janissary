@@ -796,3 +796,79 @@ level; the change eliminates mid-run crashes only.
   benchmark/track-a/runs/20261001T170823Z-janissary-r1
   benchmark/track-a/runs/20261009T100138Z-janissary-r3
 
+
+
+### Amendment 11 -- 2026-10-10 -- Track A narrative correction
+
+The S10->S11 handoff claimed the OWASP Benchmark target was broken for
+all sqli-* categories and withdrew Track A numbers on that basis. The
+target-broken claim is FALSIFIED. The correct reading is the inverse of
+the handoff's regression claim.
+
+Target state (verified by direct probe).
+sqli-01/761 and sqli-00/510, ground truth mode=param vulnerable=true:
+
+    ?<param>=1        -> HTTP 200, normal results page
+    ?<param>=test     -> HTTP 500, "user lacks privilege or object not
+                         found: TEST in statement [ CALL test ]"
+    ?<param>=' OR '1'='1
+                      -> HTTP 500, "unexpected token: 1 in statement
+                         [ CALL ' OR '1'='1 ]"
+    (no param)        -> HTTP 500, "unexpected end of statement in
+                         statement [ CALL  ]"
+
+The endpoint executes SQL. The bare-URL 500 is a design property of
+prepareCall("CALL " + input) with empty input. Not a defect.
+
+Root cause of the 0.724 -> 0.682 change (commit 8a65195):
+
+  - Removed: scanner-side suppression of payload_reflected findings
+    when category != "xss" (scanner.py).
+  - Narrowed: postgresql db_error pattern from "unterminated quoted
+    string" to "unterminated quoted string at or near" (analyzer.py).
+  - No other analyzer or scanner logic changed.
+
+Consequences.
+
+  - The pre-fix 0.724 was INFLATED. Pre-fix "sqli TPs" were
+    payload_reflected findings stamped sqli because HSQLDB echoed the
+    payload in the error message and the scanner stamped the probe's
+    category. Path-only scoring counted them as TPs.
+  - 8a65195 correctly suppressed this. F1 0.682 is HONEST and stands.
+  - The "86 lost TPs" were correctly-suppressed misattributions, not
+    detection regressions. Recall-recovery work on that premise was
+    building on a wrong model.
+  - The entrypoint -Pdeploywhcl fix is legitimate hygiene but was not
+    a blocker at any point. The runtime DB was already functional.
+
+Open issue (new, unrelated to 8a65195): recall gap on CALL-sink SQLi.
+
+Direct invocation of `python -m janissary scan -u <761> -p <param>
+--method POST --inject-in body` returns 0 findings with 10/10 stable
+baseline samples at 200 and 35 requests dispatched. The scanner has the
+signal available (payload error text differs from baseline error text)
+but no detector consumes it:
+
+  - payload_reflected: correctly suppressed (8a65195)
+  - check_sqli_quote_oracle: requires or_snapshot.status < 500; the
+    balanced payload here returns 500 by design, so the gate blocks
+  - db_error patterns: no HSQLDB "unexpected token" / "unexpected end
+    of statement" coverage
+
+Fix direction (S11), not yet implemented.
+
+  1. Add HSQLDB syntax-error patterns to the db_error list.
+  2. Or relax check_sqli_quote_oracle to fire when the balanced-payload
+     error text differs from the baseline error text, regardless of
+     status code. (Payload "unexpected token: 1" vs baseline "unexpected
+     end of statement" — distinct, both 500.)
+  3. Re-run. Do not claim a new headline until the run is scorable.
+
+Prior handoff claims WITHDRAWN.
+
+  - "target broken for all sqli-*" (false)
+  - "F1 0.682 is a regression" (false; it is the honest number)
+  - "86 lost TPs caused by FP-fix commit" (false; correctly-suppressed
+    misattributions)
+  - "S10 closed at 0.682" (still not a valid closure claim, but for
+    different reasons: unresolved recall gap, not target invalidation)
