@@ -749,3 +749,50 @@ by the mislabeled-TP count (those findings were never real detections of
 their stated class), so F1 lands near the 0.70 pre-registered target.
 New canonical number pending re-run; this amendment will be updated with
 the run dirs once complete.
+
+---
+
+### Amendment 10 -- 2026-10-09
+
+**Three-run Track A closed. New canonical headline: F1 0.682 / P 1.000.**
+
+Supersedes the e5c95f1 3-run headline above (F1 0.724 / P 0.967). The
+Amendment 9 fixes eliminated all FPs and, as anticipated, dropped recall
+by the mislabeled-TP count.
+
+| run | dir                              | TP  | FP | FN  | TN   | P     | R     | F1    |
+|-----|----------------------------------|-----|----|-----|------|-------|-------|-------|
+| r1  | (handoff-referenced run)         | 732 | 0  | 683 | 1325 | 1.000 | 0.517 | 0.682 |
+| r2  | 20261001T170823Z-janissary-r1    | 732 | 0  | 683 | 1325 | 1.000 | 0.517 | 0.682 |
+| r3  | 20261009T100138Z-janissary-r3    | 733 | 0  | 682 | 1325 | 1.000 | 0.518 | 0.682 |
+
+Headline (mean +/- stdev):
+  Precision = 1.000 +/- 0.000
+  Recall    = 0.518 +/- 0.001
+  F1        = 0.682 +/- 0.000
+
+Pre-registered targets: F1 >= 0.70 MISSED by 0.018; P >= 0.90 EXCEEDED by 0.10.
+
+**Recall regression: -86 TP vs e5c95f1.** The Amendment 9 FP fix removed
+findings that were scoring as TPs but were never real detections of their
+stated class (reflection-path sqli/traversal on xss echo paths; the
+postgresql db_error pattern matching bash shell errors on 249 cmdi
+findings). Those 86 paths are the concrete first target for recall recovery.
+
+**Chunked-run caveat.** A parallel 4-chunk implementation (merged-r3)
+scored F1 0.679 (P 1.000 / R 0.514). Chunks are disjoint and merge is
+correct, but the process-boundary effect costs ~4 TPs. Headline numbers
+must come from single-process runs.
+
+**Infrastructure note.** Runs r1 and r2 used the pip launcher shim
+(`.venv\Scripts\janissary.exe`), which crashes at ~7% per spawn
+(WinError 5 / 0xC0000005). Two intermediate full runs died mid-corpus
+from this. Commit `b651c29` adds opt-in flag JANISSARY_USE_MODULE=1 to
+invoke `python -m janissary` directly; run r3 used that flag. No scoring
+difference was observed between shim and module path at the single-case
+level; the change eliminates mid-run crashes only.
+
+**Run dirs:**
+  benchmark/track-a/runs/20261001T170823Z-janissary-r1
+  benchmark/track-a/runs/20261009T100138Z-janissary-r3
+
