@@ -1,9 +1,9 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: BASELINE BUG FOUND + FIXED (UNCOMMITTED) — bench verified, structural issue found
-## NEXT: Commit scanner.py baseline fix + regression tests, then decide on structural misattribution issue (see SESSION HANDOFF below). PyPI/launch still browser-blocked.
-## LAST COMPLETED: Bench re-check found a real bug in collect_baseline (engine/scanner.py). It sampled 5 ROTATING benign values instead of one value N times. On endpoints that 500 for unknown input this made modal_status=500 and is_stable_body=False, silently killing the status and length gates before any payload was sent. Fixed to sample the URL's existing param value N times (fallback "1"). SQLi (11/2) and XSS (12/1) verified unchanged; traversal went 12/1 -> 36/7, path_traversal now fires (F-005), but 5 spurious category-labeled groups also appeared. See SESSION HANDOFF. UNCOMMITTED, untested, not committed.
+## STATUS: S10 CLOSED — three-run Track A reproducible at F1 0.682 / P 1.000; shim flake fixed and pushed
+## NEXT: Recall recovery — 682 FN, of which 86 are the TP paths the FP fix cost (0.724 -> 0.682). Then structural throttle fix (--library-mode, Phase 4.5).
+## LAST COMPLETED: Three clean single-process runs at F1 0.682 (P 1.000 / R 0.518). Shim crash (WinError 5 / 0xC0000005, ~7% per spawn) worked around via JANISSARY_USE_MODULE=1. Five commits pushed to origin/main, HEAD b651c29. See SESSION HANDOFF.
 
-Last updated: 2026-09-27
+Last updated: 2026-10-09
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
@@ -224,6 +224,95 @@ Suite: 303 tests passing. Ruff clean. Phase 3 complete.
 
 ## SESSION HANDOFF
 
+### 2026-10-09 — S10: three-run Track A closed, shim bypass shipped
+
+**Headline: three-run F1 0.682 / P 1.000.** Amendment 9's FP fix (reflection
+gate + PG db_error anchor) landed as expected: all FPs eliminated, recall
+dropped by the mislabeled-TP count. New canonical 3-run table:
+
+| run | dir                              | TP  | FP | FN  | P     | R     | F1    |
+|-----|----------------------------------|-----|----|-----|-------|-------|-------|
+| r1  | (handoff-referenced run)         | 732 | 0  | 683 | 1.000 | 0.517 | 0.682 |
+| r2  | 20261001T170823Z-janissary-r1    | 732 | 0  | 683 | 1.000 | 0.517 | 0.682 |
+| r3  | 20261009T100138Z-janissary-r3    | 733 | 0  | 682 | 1.000 | 0.518 | 0.682 |
+
+Headline: **P = 1.000 +/- 0.000, R = 0.518 +/- 0.001, F1 = 0.682 +/- 0.000.**
+Pre-registered F1 target (>= 0.70) missed by 0.018; P target (>= 0.90)
+exceeded by 0.10. Recall is the sole remaining gap.
+
+**The 0.682 is 86 TP below the old 0.724 headline (e5c95f1).** The FP fix
+took P 0.967 -> 1.000 and cost R 0.578 -> 0.517. The 86 lost TP paths are
+the findings that were scoring as TPs but were not real detections of their
+stated class (reflection-path sqli/traversal on xss echo paths, and the 249
+db_error mislabels whose path-based score counted them as TPs). Those 86 are
+the concrete first target for recall recovery.
+
+**Chunked-vs-single-process: -0.003 F1.** A parallel 4-chunk run (merged-r3)
+scored F1 0.679 vs 0.682 for single-process. Chunks are disjoint (1077
+lines, 1077 unique, zero overlap), merge is correct, but the process-boundary
+effect costs ~4 TPs. Do not use chunked runs for headline numbers.
+
+#### Failure modes catalogued this session
+
+1. **Shim flake — FIXED (b651c29).** The pip-generated launcher stub
+   `.venv\Scripts\janissary.exe` crashes with WinError 5 or 0xC0000005
+   (STATUS_ACCESS_VIOLATION) at ~7% per spawn, measured by a 30-iteration
+   loop test (2/30 fails). At 2740 cases that is ~180 expected crashes per
+   full run. Two runs died mid-corpus (20261004T070653Z, 20261004T214325Z),
+   both with the interrupted manifest signature (no exit_code, no
+   finished_at). Fix: opt-in env flag JANISSARY_USE_MODULE=1 swaps the shim
+   for `python -m janissary` via sys.executable. 0/30 fails with the module
+   path.
+
+2. **Docker Desktop auto-shutdown — pre-flight mandatory.** Container
+   exits with `Exited (255)` on host sleep or Docker Desktop shutdown. On
+   resume the target is dead and the runner completes cleanly with zero
+   findings and no error (see 20261004T214325Z). Before any run:
+   `docker ps` must show Up, and `Invoke-WebRequest
+   http://127.0.0.1:8080/benchmark/` must return 200. Consider
+   `docker run --restart unless-stopped` before the next long session.
+
+3. **Pytest PermissionError under elevated shell.** 40 tests in
+   `tests/unit/test_legal.py` error with `[WinError 5] Access is denied:
+   \\?\...\.pytest_tmp` when run from an admin terminal. Pre-existing,
+   environmental. Run pytest from a non-admin shell.
+
+#### Session takeaways
+
+- **Precision we didn't need.** The FP fix gained 0.033 precision against
+  a 0.90 target already at 0.967, and cost 0.061 recall, netting -0.042 F1
+  and pushing the headline below target. At this margin, recall is worth
+  strictly more per unit than precision. Future precision work should
+  require an explicit recall justification.
+
+- **"86 lost TP paths" was exact.** It is the measured delta between the
+  e5c95f1 3-run (0.724, ~818 TP mean) and now (0.682, 732-733 TP). The
+  full FN pool is 682; the recoverable-with-known-fix subset is 86.
+
+- **Enumerate, don't recall — run dirs too.** S9's handoff named the
+  run dir `20261001T170823Z`; on disk it is
+  `20261001T170823Z-janissary-r1` (make_run_dir suffix). Cost one wasted
+  scorer invocation. Copy run-dir names verbatim from `Get-ChildItem`.
+
+#### Commits this session
+
+- `b651c29` BENCHMARK: add JANISSARY_USE_MODULE to bypass flaky shim
+  (also gitignores `benchmark/track_a/_chunks/`).
+- Pushed with the 4 prior unpushed commits: `294acbd`, `2ce4fc8`,
+  `ac2ae1b`, `8a65195`.
+
+#### Open at handoff
+
+1. **Recall recovery** on the 682 FN; start with the 86 recoverable paths
+   (git history of `f37df99`, `e5c95f1`, `8a65195`).
+2. **Structural throttle fix** (`--library-mode`, Phase 4.5) — unchanged
+   from S9.
+3. **`docs/launch-plan.md` numbers stale** — still says 11/2 SQLi.
+4. **CI gaps** — mypy / bandit / pip-audit are local-only.
+5. **PyPI / launch** — browser-blocked, unchanged.
+
+---
+
 ### 2026-09-27 (late) — baseline + pacer fixes, CI verified
 
 Two bugs from the previous handoff are fixed, tested, and pushed. CI is green
@@ -402,7 +491,8 @@ authenticated scanning - it is the safest bet.
 
 ## Git status note
 
-All work through P3.1 is committed and pushed. The legal framework
-and P3.1 are on GitHub
-at the latest `main`.
+HEAD `b651c29`, working tree clean, `origin/main` up to date. Five
+commits pushed 2026-10-09 (S10). All Track A infrastructure work
+committed; run artifacts remain gitignored under
+`benchmark/track-a/runs/`.
 
