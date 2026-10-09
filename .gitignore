@@ -104,3 +104,7 @@ benchmark/track-a/runs/
 
 # Derived chunk CSVs (regenerate via _chunk_corpus.py)
 benchmark/track_a/_chunks/
+
+# S10/S11 evidence scratch
+_8a65195*.diff
+_lost_paths.txt
