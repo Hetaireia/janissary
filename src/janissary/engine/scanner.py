@@ -603,6 +603,16 @@ class Scanner:
                 for f in raw_findings:
                     if f.get("severity") == "info":
                         continue
+                    # Evidence-grounded classification: a finding's class
+                    # must come from the evidence, not the probe. A DB
+                    # error signature is evidence of SQL injection
+                    # regardless of which payload triggered it. Without
+                    # this override, every probe family (xss, traversal,
+                    # cmdi) that happens to trigger a SQL error gets
+                    # stamped with its own category -- the structural
+                    # misattribution class. See Amendment 12.
+                    if f.get("type") == "db_error":
+                        category = "sqli"
                     if f.get("type") in CORROBORATOR_ONLY_TYPES:
                         # Corroborators are dropped unconditionally.
                         # A length delta or status change on a target
