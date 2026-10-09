@@ -146,6 +146,17 @@ DB_ERROR_PATTERNS = {
         # would otherwise mislabel command-injection cases as sqli.
         re.compile(r"unterminated quoted string at or near", re.I),
     ],
+    "hsqldb": [
+        # HSQLDB is the DBMS behind OWASP Benchmark; the CALL-sink
+        # tests emit distinctive syntax errors. Without these, the
+        # scanner's non-xss reflection gate suppresses the only signal
+        # the endpoint emits. See Amendment 12.
+        re.compile(r"unexpected token:", re.I),
+        re.compile(r"unexpected end of statement", re.I),
+        re.compile(r"user lacks privilege or object not found", re.I),
+        re.compile(r"org\.hsqldb\.\w*Exception", re.I),
+        re.compile(r"java\.sql\.SQLSyntaxErrorException", re.I),
+    ],
     "mssql": [
         re.compile(r"Microsoft OLE DB Provider for SQL Server", re.I),
         re.compile(r"Unclosed quotation mark after the character string", re.I),
