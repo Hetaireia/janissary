@@ -101,3 +101,6 @@ _*.html
 *.log
 _score_*/
 benchmark/track-a/runs/
+
+# Derived chunk CSVs (regenerate via _chunk_corpus.py)
+benchmark/track_a/_chunks/

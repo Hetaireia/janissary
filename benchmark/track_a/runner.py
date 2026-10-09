@@ -197,6 +197,10 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
     timeouts_path = run_dir / "timeouts.jsonl"
     timeouts_path.write_text("", encoding="utf-8")
     cmd_template = env.get("JANISSARY_BIN", "janissary")
+    if env.get("JANISSARY_USE_MODULE", "").lower() in ("1", "true", "yes"):
+        cmd_prefix = [sys.executable, "-m", "janissary"]
+    else:
+        cmd_prefix = [cmd_template]
     timeout = float(env.get("JANISSARY_TIMEOUT", "30"))
     failures = 0
     for c in cases:
@@ -210,7 +214,7 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
         inject_in, param_arg, method = disp
         url = case_url(base, c)
         cmd = [
-            cmd_template, "scan",
+            *cmd_prefix, "scan",
             "-u", url,
             "-p", param_arg,
             "--method", method,
