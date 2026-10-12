@@ -1,6 +1,7 @@
 # JANISSARY — Port Workflow Tracker
 ## STATUS: Track A DAST-applicable F1 0.820 (P 1.000, R 0.696). Full-corpus F1 0.725. hash-* and crypto-* excluded as SAST-only categories (259 cases). First honest headline on a DAST-appropriate corpus.
-## NEXT: Close ldapi-00 (27 cases, 0.000 recall) and xpathi-00 (15 cases, 0.000 recall); then cmdi (0.25-0.59 recall). Pathtraver capped by target, not by scanner. Structural throttle fix (--library-mode, Phase 4.5) still pending.
+## NEXT: Close xpathi-00 (15 cases, 0.000 recall); then cmdi (0.25-0.59 recall). Pathtraver capped by target, not by scanner. Structural throttle fix (--library-mode, Phase 4.5) still pending.
+## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
 ## LAST COMPLETED: Falsified S10's "target broken for all sqli-*" claim. sqli-01/761 and sqli-00/510 return 200 on benign params; bare-URL 500s are a design property of prepareCall("CALL " + input). Diffed 8a65195: reflection gate is the only relevant change; it correctly suppresses misattributed TPs. Direct invocation of scanner on ground-truth-vulnerable sqli-01/761 returns 0 findings — recall gap, not regression. See Amendment 11.
 
 Last updated: 2026-10-12 (Amendment 13)
