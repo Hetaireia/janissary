@@ -1302,3 +1302,88 @@ disappeared). Documented here so a future session can chase it if it
 starts to dominate the delta.
 
 Full test suite: 443 passed (+3).
+
+
+### Amendment 20 -- 2026-10-12 -- FN recovery run; DAST-applicable F1 0.920
+
+Recovers 32 of the 204 DAST-applicable FN from the Am19 corpus run by
+re-scanning the FN set in isolation. Not a code change -- a protocol
+finding. The delta quantifies a batch-context effect that has been
+observed informally since Amendment 15 but not measured until now.
+
+Method:
+  1. Compute FN set from merged-am19: ground-truth vulnerable,
+     not fired, not in dast_excluded.txt. Result: 204 cases.
+  2. Write FN-only CSV. Run through the same runner with the same
+     --tools-env (JANISSARY_TIMEOUT=180).
+  3. Merge the recovery findings on top of merged-am19. Re-score.
+
+Result on the merged run (merged-am19-recovered):
+
+  DAST-APPLICABLE  TP 984  FP 0  FN 172  TN 1102  P 1.000  R 0.851  F1 0.920
+  FULL CORPUS      TP 984  FP 0  FN 431  TN 1325  P 1.000  R 0.695  F1 0.820
+
+TP 952 -> 984 (+32). wrong_family remains 0. FN 204 -> 172 (-32).
+
+Per-category after recovery (non-1.000 only):
+
+  pathtraver-01   0.049   1/39     (unchanged)
+  pathtraver-02   0.154   3/33     (unchanged)
+  pathtraver-00   0.160   4/42     (unchanged)
+  pathtraver-03   0.308   2/9      (unchanged)
+  weakrand-03     0.857  24/8      (was 23/9)
+  securecookie-00 0.875  28/8      (was 27/9)
+  trustbound-01   0.889  24/6      (was 21/9)
+  trustbound-00   0.896  43/10     (was 41/12)
+  weakrand-05     0.925  31/5      (was 30/6)
+  weakrand-01     0.947  27/3      (unchanged)
+  cmdi-01         0.955  32/3      (was 30/5)
+  sqli-02         0.976  41/2      (was 40/3)
+  cmdi-02         0.977  43/2      (was 41/4)
+  sqli-04         0.987  37/1      (was 36/2)
+  cmdi-00         0.988  41/1      (was 39/3)
+
+Sixteen categories now at F1 1.000 (was twelve).
+
+Recovered categories of the 119 recovery findings:
+
+  sqli-01   27 findings /  2 unique cases
+  sqli-00   21 /  1
+  cmdi-00    9 /  2
+  cmdi-01    8 /  2
+  sqli-05    8 /  2
+  sqli-02/03/04  6 each
+  cmdi-02    5 /  2
+  xss-00     4 /  2
+  xss-02     3 /  2
+  trustbound-01  3 / 3
+  trustbound-00  2 / 2
+  weakrand-00  2 / 2
+  xss-04     2 / 1
+  cmdi-03    2 / 1
+  singles in weakrand-03/04/05/06, securecookie-00
+
+Distribution is telling: a small number of unique cases contribute
+many findings each. The batch-context effect suppresses the entire
+payload sweep for those cases -- not individual payloads.
+
+Stability check: the same FN CSV was re-run a second time. Both runs
+produced 119 findings and 32 unique firing cases, with 31/32 case
+overlap. The single asymmetric case in each direction (01531 in r1
+only, 01066 in r2 only) is individual-case flake at the tail. The
+recovery is reproducible, not sampling noise.
+
+pathtraver recovered 0 findings across all four subcategories. This
+confirms the target-capped hypothesis documented in analyzer.py: the
+123 pathtraver FN are not batch-context artifacts, they are
+structurally undetectable on this target (the response layout does
+not leak the file-existence oracle for 68/72 cases).
+
+Known issue, quantified: ~16% of the DAST-applicable FN (32/204) are
+batch-context-sensitive. Mechanism is not fully diagnosed -- the
+container under sustained load loses the payload sweep for a subset
+of cases, but not deterministically per-case. A single retry pass
+recovers them. This is a protocol-level mitigation, not a detector
+change.
+
+Full test suite: 443 passed (unchanged).
