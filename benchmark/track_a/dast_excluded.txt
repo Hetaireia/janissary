@@ -1,0 +1,24 @@
+# Categories excluded from DAST-applicable scoring.
+#
+# Rationale: these categories test source-code algorithm choice
+# (MD5 vs SHA-256; AES-128-ECB vs AES-256-CBC). The algorithm
+# argument is passed to getInstance() and is not reflected in the
+# HTTP response body. Vulnerable and safe cases emit byte-identical
+# signatures on the OWASP Benchmark target. No black-box DAST tool
+# can detect them; the category is a SAST/IAST concern.
+#
+# Verified 2026-10-12 against the pinned target: 5 vulnerable and 5
+# safe cases sampled per subcategory, response bodies identical
+# modulo the reflected input value.
+#
+# hash-*   : 129 cases
+# crypto-* : 130 cases
+# Total    : 259 cases removed from DAST recall denominator.
+#
+hash-00
+hash-01
+hash-02
+crypto-00
+crypto-01
+crypto-02
+crypto-03

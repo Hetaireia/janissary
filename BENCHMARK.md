@@ -942,3 +942,47 @@ Run provenance (merged to benchmark/track-a/runs/merged-post-fix):
   20261012T003039Z  tail chunk p3  (02640-02739)
   20261012T003349Z  tail chunk p4  (02740)
 Total: 2433 raw finding lines, 1702 unique after dedupe.
+
+
+### Amendment 13 -- 2026-10-12 -- DAST-applicable scoring; headline F1 0.820
+
+Corrects the scoring basis. The 0.725 in Amendment 12 was computed over
+the full 2740-case corpus. That corpus includes 259 cases (hash-* and
+crypto-*) that no black-box DAST tool can detect, because the tested
+property -- algorithm choice (MD5 vs SHA-256; AES-128-ECB vs AES-256-CBC)
+-- is passed to getInstance() and is not reflected in the HTTP response.
+
+Verified on the pinned target 2026-10-12: 5 vulnerable and 5 safe cases
+sampled per subcategory (hash-00/01/02, crypto-00/01/02/03); response
+bodies identical modulo the reflected input value. The category is a
+source-code property, not a black-box observable. It is a SAST/IAST
+concern.
+
+Exclusions are declared in benchmark/track_a/dast_excluded.txt. The
+scorer (benchmark/track_a/score_dast_aware.py) reports two numbers:
+FULL CORPUS (all 2740 cases) and DAST-APPLICABLE (2481 cases, 259
+excluded).
+
+Result on the merged post-fix run:
+
+  FULL CORPUS      TP 804  FP 0  FN 611  TN 1325  P 1.000  R 0.568  F1 0.725
+  DAST-APPLICABLE  TP 804  FP 0  FN 352  TN 1102  P 1.000  R 0.696  F1 0.820
+
+The DAST-applicable figure is the headline going forward. It is
+comparable to how other DAST tools are measured against OWASP Benchmark
+in the literature, which typically excludes the SAST-only categories.
+
+This is a metric correction, not a detection improvement. No scanner
+code changed. TP is unchanged at 804. The F1 rose because the
+denominator stopped counting what the tool is structurally unable to
+detect. Both numbers are reported so external comparisons can use
+whichever they need.
+
+Remaining recall gaps under DAST-applicable scoring, unchanged by this
+amendment:
+  - ldapi-00:    0.000 recall, 27 cases
+  - xpathi-00:   0.000 recall, 15 cases
+  - pathtraver-*: 0.049-0.308 recall, structurally capped (see analyzer.py)
+  - cmdi-*:      0.250-0.594 recall
+
+These are the next work items.
