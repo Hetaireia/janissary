@@ -1,10 +1,10 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: Track A DAST-applicable F1 0.887 (P 1.000, R 0.798). Full-corpus F1 0.789. xpathi closed at 0.889. cmdi and ldapi closed at 0.97-1.00. No zero-floor categories remain; hash/crypto excluded as SAST-only (259 cases).
-## NEXT: (1) Diagnose remaining xpathi-00 3 FN (mode dispatch or sub-shape regex). (2) Triage xss (42 FN across subcategories). (3) weakrand (25 FN) and trustbound (18 FN) if xss proves unfruitful. Pathtraver (125 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending.
+## STATUS: Track A DAST-applicable F1 0.892 (P 1.000, R 0.804). Full-corpus F1 0.793. xpathi closed at 1.000 via error-based oracle (Amendments 17+18). cmdi and ldapi closed at 0.96-1.00. No zero-floor categories remain; hash/crypto excluded as SAST-only (259 cases). wrong_family=0.
+## NEXT: (1) Triage xss (37 FN, concentrated in xss-04 at 15 FN). (2) weakrand (23 FN) and trustbound (17 FN) if xss proves unfruitful. Pathtraver (124 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending.
 ## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
-## LAST COMPLETED: Falsified S10's "target broken for all sqli-*" claim. sqli-01/761 and sqli-00/510 return 200 on benign params; bare-URL 500s are a design property of prepareCall("CALL " + input). Diffed 8a65195: reflection gate is the only relevant change; it correctly suppresses misattributed TPs. Direct invocation of scanner on ground-truth-vulnerable sqli-01/761 returns 0 findings — recall gap, not regression. See Amendment 11.
+## LAST COMPLETED: Amendment 18. xpathi-00 01892/01894 closed at 15/15 TP via check_xpath_error_oracle (error-based detection; the sink does not accept or-payload injection). Amendment 17 gated check_sqli_quote_oracle on DB_ERROR_PATTERNS, eliminating the wrong-family misattribution that masked the xpathi FN. DAST-applicable F1 0.887 -> 0.892. wrong_family 2 -> 0. See Amendments 17-18.
 
-Last updated: 2026-10-12 (Amendment 13)
+Last updated: 2026-10-12 (Amendment 18)
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
