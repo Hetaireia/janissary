@@ -1,7 +1,6 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: Track A DAST-applicable F1 0.884 (P 1.000, R 0.792). Full-corpus F1 0.786. cmdi closed across all four subcategories via output-region gate + env-var payloads. hash-* and crypto-* excluded as SAST-only (259 cases).
-## NEXT: (1) Triage xpathi-00 (15 cases, 0.000) and xss (32 FN). Pathtraver (123 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending.
-## DRIFTS CLEARED: The 27 case flips vs. the previous run were re-probed through the runner. All five sampled cases fire; the pattern is batch-run variance, not regression. F1 0.884 is not caveated by undiagnosed drift.
+## STATUS: Track A DAST-applicable F1 0.887 (P 1.000, R 0.798). Full-corpus F1 0.789. xpathi closed at 0.889. cmdi and ldapi closed at 0.97-1.00. No zero-floor categories remain; hash/crypto excluded as SAST-only (259 cases).
+## NEXT: (1) Diagnose remaining xpathi-00 3 FN (mode dispatch or sub-shape regex). (2) Triage xss (42 FN across subcategories). (3) weakrand (25 FN) and trustbound (18 FN) if xss proves unfruitful. Pathtraver (125 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending.
 ## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
 ## LAST COMPLETED: Falsified S10's "target broken for all sqli-*" claim. sqli-01/761 and sqli-00/510 return 200 on benign params; bare-URL 500s are a design property of prepareCall("CALL " + input). Diffed 8a65195: reflection gate is the only relevant change; it correctly suppresses misattributed TPs. Direct invocation of scanner on ground-truth-vulnerable sqli-01/761 returns 0 findings — recall gap, not regression. See Amendment 11.
 

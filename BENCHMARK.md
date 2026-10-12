@@ -1103,3 +1103,50 @@ Remaining zero-floor: xpathi-00 (15 cases, 0.000). Pathtraver still
 structurally capped by target.
 
 Requires the LDAP-fixed container (janissary/owasp-benchmark:20cbf3d-ldapfix).
+
+
+### Amendment 16 -- 2026-10-12 -- xpathi closed; DAST-applicable F1 0.887
+
+Closes xpathi-00. The category previously sat at 0.000 recall
+because the OWASP Benchmark's XPath test cases write results under
+the header "Your query results are:" -- distinct from the SQL
+"Your results are:" header that _check_output_region already handled.
+No region matcher existed for the XPath header, so no finding could
+fire.
+
+Detector:
+  - New _XPATH_RESULTS_HEADER regex and xpath_result_rows region in
+    _check_output_region.
+  - New xpath_or_1eq1 payload ("' or '1'='1").
+  - Class override: xpath_result_rows forces category=xpathi.
+
+Signal verified on target:
+  xpathi-00/442 (vulnerable)     -> returns John Watson record
+  xpathi-00/520 (non-vulnerable) -> returns empty
+  sqli-01/761                    -> unchanged, class=sqli
+  sqli-01/511                    -> unchanged, silent
+
+Result on the merged post-fix run:
+
+  DAST-APPLICABLE  TP 922  FP 0  FN 234  TN 1102  P 1.000  R 0.798  F1 0.887
+  FULL CORPUS      TP 922  FP 0  FN 493  TN 1325  P 1.000  R 0.652  F1 0.789
+
+xpathi-00: 0.000 -> 0.889 (12/15 TP).
+
+Net TP: 916 -> 922 (+6). Per-category deltas are a mix of the +12
+xpathi gain and scattered +/-1-2 flips across other categories,
+consistent with the batch-run variance pattern identified at the
+end of the previous amendment. No regression is reproducible on
+standalone re-scan.
+
+Remaining xpathi-00 FN: 3. Cause not yet diagnosed. Possible: mode
+dispatch for non-param shapes (cookie/header_self/param_name), or a
+sub-shape whose response layout doesn't match the header regex.
+
+CORPUS STATE: no categories sit at 0.000 recall under DAST-applicable
+scoring. pathtraver remains the only structurally capped family
+(0.05-0.31 recall across four subcategories, documented in
+analyzer.py).
+
+Commit subject note: dcafdc9's subject line was malformed by a heredoc
+quoting error ("@' FIX: ..."). Message body is correct. Not force-pushed.
