@@ -436,6 +436,16 @@ class DifferentialAnalyzer:
         for ftype, sev, header, stops, detail in regions:
             if header.search(self.payload_value):
                 continue
+            # Evidence-grounded: command_output is evidence of command
+            # injection, not of whichever probe happened to trigger it.
+            # A non-cmdi payload that happens to cause shell output
+            # (e.g. glob expansion of ldap_wildcard's "*") is not
+            # evidence of that probe's category. Same rule for
+            # sql_result_rows -> sqli. See Amendment 15.
+            if ftype == "command_output" and self.payload_category != "cmdi":
+                continue
+            if ftype == "sql_result_rows" and self.payload_category != "sqli":
+                continue
             m = header.search(snapshot.body)
             if not m:
                 continue
