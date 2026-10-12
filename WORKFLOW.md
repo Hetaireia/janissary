@@ -1,9 +1,9 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: Track A target-broken claim WITHDRAWN. F1 0.682 is honest; 0.724 was inflated by reflection misattribution. Recall gap on CALL-sink SQLi identified.
-## NEXT: Close recall gap on CALL-sink SQLi (add HSQLDB db_error patterns, or relax check_sqli_quote_oracle to compare error-text content rather than status code). Do not claim Track A closure until resolved. Then structural throttle fix (--library-mode, Phase 4.5).
+## STATUS: Track A F1 0.725 (P 1.000, R 0.568) -- CALL-sink SQLi recall closed via HSQLDB db_error patterns + evidence-grounded class override. First honest headline.
+## NEXT: Address remaining 0.000-recall categories (hash, crypto, ldapi, xpathi) and structural throttle fix (--library-mode, Phase 4.5). Do not claim Track A closure until per-category recall has no zero-floor.
 ## LAST COMPLETED: Falsified S10's "target broken for all sqli-*" claim. sqli-01/761 and sqli-00/510 return 200 on benign params; bare-URL 500s are a design property of prepareCall("CALL " + input). Diffed 8a65195: reflection gate is the only relevant change; it correctly suppresses misattributed TPs. Direct invocation of scanner on ground-truth-vulnerable sqli-01/761 returns 0 findings — recall gap, not regression. See Amendment 11.
 
-Last updated: 2026-10-10
+Last updated: 2026-10-12
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---

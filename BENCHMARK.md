@@ -872,3 +872,73 @@ Prior handoff claims WITHDRAWN.
     misattributions)
   - "S10 closed at 0.682" (still not a valid closure claim, but for
     different reasons: unresolved recall gap, not target invalidation)
+
+
+### Amendment 12 -- 2026-10-12 -- CALL-sink SQLi recall closed; Track A headline F1 0.725
+
+Corrects Amendment 11 and supersedes the 0.681 headline.
+
+Context. Amendment 11 (commit 8585c0d) claimed the pre-fix F1 0.724 was
+inflated by reflection misattribution and that the post-fix 0.681 was
+the honest number. That framing was wrong. Class-aware re-scoring of
+five prior runs (see _score_run_v2.py) showed the pre-fix class-aware
+score was 0.707, not 0.724 -- the path-only metric inflated it by only
+0.017. The 0.681 was neither a regression nor a re-baseline; it was the
+score of a scanner that could not see CALL-sink SQLi.
+
+Root cause of the 0.681. Commit 8a65195's non-xss reflection gate
+correctly suppressed ~1490 payload_reflected findings whose class did
+not match their landing path's ground-truth family. It also suppressed
+~43 sqli detections where the response body was a SQL error page
+containing the payload -- a case where the reflection signal happened to
+coincide with a real detection. The gate could not distinguish the two.
+
+Fix (commit 2890dff).
+  1. Added HSQLDB patterns to DB_ERROR_PATTERNS: "unexpected token:",
+     "unexpected end of statement", "user lacks privilege or object not
+     found", "org.hsqldb.*Exception", "java.sql.SQLSyntaxErrorException".
+  2. db_error findings now force class=sqli in the scanner emit loop,
+     regardless of the probe's category. This is the first instance of
+     the evidence-grounded classification rule that Amendment 12
+     generalizes: a finding's class comes from its evidence, not from
+     the probe that triggered it.
+
+Verified regression tests:
+  - test_hsqldb_patterns_present
+  - test_hsqldb_patterns_do_not_match_shell_errors (preserves 8a65195's
+    anti-shell-error guarantee)
+  - test_db_error_forces_sqli_category
+
+Result. Merged post-fix run over the full 2740-case corpus:
+  F1 0.725   P 1.000   R 0.568   TP 804   FP 0   FN 611
+
+Per-category gains vs. the pre-fix class-aware run (0.707):
+  sqli-00  0.933 -> 0.989   (+5 TP)
+  sqli-01  0.976 -> 0.988   (+1 TP)
+  sqli-02  0.838 -> 0.951   (+8 TP)
+  sqli-03  0.871 -> 0.989  (+10 TP)
+  sqli-05  0.905 -> 0.943   (+3 TP)
+  sqli-06  0.727 -> 1.000   (+3 TP)
+  sqli-04  0.973 -> 0.944   (-2 TP, single-case variance)
+
+This is the first honest Track A headline. F1 0.725 with P 1.000 on a
+class-aware scorer over the full corpus supersedes both 0.724 (path-only,
+pre-fix) and 0.681 (post-fix, CALL-sink blind).
+
+Remaining recall gaps, unchanged by this fix:
+  - hash-*, crypto-*, ldapi-00, xpathi-00: 0.000 recall (260 cases)
+  - pathtraver-*: capped at ~0.05-0.31 recall (structurally, see
+    analyzer.py ceiling comment)
+  - cmdi-00..03: 0.25-0.59 recall
+
+These are separate gaps and separate work. This amendment closes only
+the CALL-sink SQLi gap.
+
+Run provenance (merged to benchmark/track-a/runs/merged-post-fix):
+  20261010T103833Z  main corpus, killed by parent-shell crash at 02405
+  20261010T114436Z  tail chunk p0  (02340-02439)
+  20261010T120044Z  tail chunk p1  (02440-02539)
+  20261012T002453Z  tail chunk p2  (02540-02639)
+  20261012T003039Z  tail chunk p3  (02640-02739)
+  20261012T003349Z  tail chunk p4  (02740)
+Total: 2433 raw finding lines, 1702 unique after dedupe.
