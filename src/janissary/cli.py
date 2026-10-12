@@ -169,14 +169,35 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if not args.url:
         print("[!] scan requires --url", file=sys.stderr)
         return 64
-    if not args.params:
-        print("[!] scan requires --params", file=sys.stderr)
-        return 64
-
-    params = [p.strip() for p in args.params.split(",") if p.strip()]
-    if not params:
-        print("[!] --params produced no valid parameter names", file=sys.stderr)
-        return 64
+    # --params is optional. Explicit --params always wins. If absent,
+    # prefer the URL's own query-string keys; if the URL has no query
+    # string, fall back to a small default set so a bare URL is still a
+    # useful invocation. The chosen names are printed to stderr so the
+    # user can override.
+    if args.params:
+        params = [p.strip() for p in args.params.split(",") if p.strip()]
+        if not params:
+            print("[!] --params produced no valid parameter names", file=sys.stderr)
+            return 64
+        params_source = "explicit --params"
+    else:
+        from urllib.parse import parse_qs, urlparse
+        detected = list(parse_qs(urlparse(args.url).query).keys())
+        if detected:
+            params = detected
+            params_source = "URL query string"
+        else:
+            params = [
+                "id", "name", "q", "search", "query",
+                "user", "username", "email",
+            ]
+            params_source = "built-in defaults"
+        if not args.quiet:
+            print(
+                f"[*] No --params given; using {params_source}: "
+                f"{', '.join(params)}",
+                file=sys.stderr,
+            )
 
     try:
         scope_from_args(args).require(args.url)
@@ -979,7 +1000,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan = sub.add_parser("scan", help="scan an HTTP endpoint")
     scan.add_argument("-u", "--url", default=None, help="target URL")
     scan.add_argument(
-        "-p", "--params", default=None, help="comma-separated parameter names"
+        "-p", "--params", default=None, help=("comma-separated parameter names; if omitted, derived from ""the URL query string, or a small built-in default set")
     )
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(
