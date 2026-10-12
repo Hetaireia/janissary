@@ -200,6 +200,11 @@ _SQL_RESULTS_END = re.compile(r"</p>", re.I)
 def _strip_tags(s: str) -> str:
     return re.sub(r"<[^>]+>", "", s or "")
 
+def _norm_region(s: str) -> str:
+    """Normalize region text for baseline-vs-payload comparison."""
+    return " ".join(s.lower().split())
+
+
 
 def _region_after(body: str, header_match, stops) -> str:
     start = header_match.end()
@@ -449,19 +454,25 @@ class DifferentialAnalyzer:
             m = header.search(snapshot.body)
             if not m:
                 continue
-            baseline_dirty = False
+            # A baseline region may legitimately contain static text
+            # (e.g. the shell script's own "Your original string:"
+            # preamble on the insecureCmd.sh sink). What we suppress is
+            # a payload region that matches a baseline region exactly --
+            # no novel content, no evidence of injection. Novel content
+            # fires. See Amendment 15.
+            baseline_regions = set()
             for s in self.baseline.snapshots:
                 bm = header.search(s.body)
                 if not bm:
                     continue
-                if _strip_tags(_region_after(s.body, bm, stops)).strip():
-                    baseline_dirty = True
-                    break
-            if baseline_dirty:
-                continue
+                br = _strip_tags(_region_after(s.body, bm, stops)).strip()
+                if br:
+                    baseline_regions.add(_norm_region(br))
             region = _region_after(snapshot.body, m, stops)
             stripped = _strip_tags(region).strip()
             if not stripped:
+                continue
+            if _norm_region(stripped) in baseline_regions:
                 continue
             return [
                 {
