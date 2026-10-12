@@ -1343,7 +1343,7 @@ Per-category after recovery (non-1.000 only):
   sqli-04         0.987  37/1      (was 36/2)
   cmdi-00         0.988  41/1      (was 39/3)
 
-Sixteen categories now at F1 1.000 (was twelve).
+Eighteen categories now at F1 1.000.
 
 Recovered categories of the 119 recovery findings:
 

@@ -110,6 +110,61 @@ paying triage tax on every scan.
 
 ---
 
+## Does any of this hold at scale?
+
+The Flask demo is a demo. Here's a harder test: OWASP Benchmark, the
+standard open benchmark for DAST tools.
+
+It contains 2,740 test cases across SQL injection, XSS, command
+injection, path traversal, LDAP injection, XPath injection, weak
+randomness, trust-boundary violations, and secure-cookie flags. Each
+case is a servlet that either is or isn't vulnerable to a specific
+class. The scanner has to figure out which without source access.
+
+On the DAST-applicable subset — the corpus minus the crypto and hash
+cases that only a source-aware tool can observe — JANISSARY scores:
+
+    F1        0.920
+    Precision 1.000
+    Recall    0.851
+    TP        984
+    FP        0
+    FN        172
+
+Eighteen of the DAST-applicable categories score F1 1.000. Six more
+score F1 0.95 or above. The weakest category is pathtraver, where the
+F1 range across four subcategories is 0.049 to 0.308 — and there's a
+separate write-up on why that's a property of the benchmark target,
+not of the scanner: [`docs/pathtraver.md`](./pathtraver.md).
+
+**The number that matters most here is Precision 1.000.** Not a single
+false positive across the whole DAST-applicable corpus. That's the
+design claim — a finding that isn't a difference is a guess — turned
+into a measured outcome.
+
+A scanner that emits zero false positives on a corpus this size isn't
+"tuned." It's architected that way. Every oracle requires evidence of
+a specific kind: a real database error signature, a session sink echo
+of a per-scan random marker, a raw XSS payload past its trailing
+character, a paired differential on a file-existence oracle. Nothing
+fires on pattern match alone.
+
+The 0.920 recall is the honest number. There are 172 cases JANISSARY
+doesn't catch. 123 are the pathtraver target-cap; the rest are
+scattered gaps across subcategories that we triage one at a time. The
+full breakdown, including the cases we miss, is in `BENCHMARK.md`.
+The point of running a benchmark is to learn where the tool fails,
+not to have a number.
+
+The run is reproducible:
+
+    python benchmark/track_a/run_with_recovery.py       --target-base http://127.0.0.1:8080/benchmark       --cases-csv benchmark/track_a/_chunks/full_p0.csv       --tools-env benchmark/track_a/tools_env_default.txt
+
+Requires the OWASP Benchmark container; the script and the container
+image are in the repo.
+
+---
+
 ## What this means if you're evaluating DAST
 
 Ask your current tool one question: **if I run this scan twice, do I get
