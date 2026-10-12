@@ -1150,3 +1150,90 @@ analyzer.py).
 
 Commit subject note: dcafdc9's subject line was malformed by a heredoc
 quoting error ("@' FIX: ..."). Message body is correct. Not force-pushed.
+
+
+### Amendment 17 -- 2026-10-12 -- sqli_quote_oracle gated on DB_ERROR_PATTERNS
+
+check_sqli_quote_oracle fires when a bare-quote request returns 5xx and
+the balanced payload returns 2xx. That pairing is evidence of a SQL
+sink only if the 500 body actually carries a SQL error. XPath and LDAP
+sinks also 500 on a bare quote, but their error text is not a database
+signature. Pre-Amendment-17, those cases were classified as sqli: two
+wrong-family findings on xpathi-00 01892/01894 (mode=cookie), and a
+family-aware scorer recorded them as FN for xpathi.
+
+Gate added: the 500 body must match a DB_ERROR_PATTERNS entry before
+the oracle fires. The XPath sink's "Error parsing XPath input:
+&#x27;" does not match any DB_ERROR_PATTERNS pattern, so the oracle
+is correctly silent.
+
+Signal verified on target:
+  xpathi-00/01892 -> quote 500, or-payload 200, no DB_ERROR_PATTERNS
+                     signature, oracle silent
+  xpathi-00/01894 -> same
+  sqli-01/00761   -> quote 500 carries SQL error, oracle fires
+
+Unit tests: fixed fixture to carry a real SQL signature; added
+test_sqli_quote_oracle_silent_when_500_not_sql_error.
+
+Corpus effect: wrong_family 2 -> 0. TP unchanged (the two xpathi
+cases were already FN; removing the misattribution does not recover
+them, only the false attribution).
+
+Full test suite: 437 passed.
+
+
+### Amendment 18 -- 2026-10-12 -- xpathi-00 01892/01894 closed; DAST-applicable F1 0.892
+
+Closes the xpathi-00 01892/01894 FN left open by Amendment 17.
+
+The working theory coming in was that the xpath_result_rows region
+was being suppressed by the novel-content gate. That was wrong. A
+direct probe of the sink showed the or-payload family does not inject
+here:
+
+  cookie 2222                 -> 200, one row (Sherlock / Holmes)
+  cookie ' (bare quote)       -> 500, "Error parsing XPath input: '&#x27;'"
+  cookie ' or '1'='1          -> 200, ZERO rows
+  cookie 2222' or '1'='1      -> 200, ZERO rows
+  cookie ' or true() or '     -> 200, ZERO rows
+  (and 5 more variants, all 200 with zero rows)
+
+Same behavior on 01894. There is no positive-injection signal on this
+sink. The only evidence is the 500 on the bare quote with the XPath
+parser error.
+
+Detector: check_xpath_error_oracle, shaped exactly like
+check_sqli_quote_oracle -- bare-quote 5xx + balanced-payload 2xx -- but
+keyed on _XPATH_ERROR_PATTERNS ("Error parsing XPath input",
+"XPathExpressionException", "XPathFactory") instead of DB_ERROR_PATTERNS.
+Wired at the same call site, reusing the two snapshots already
+captured.
+
+The sqli oracle stays silent on this 500 because its DB_ERROR_PATTERNS
+gate (Amendment 17) does not match. No collision.
+
+Signal verified on target:
+  xpathi-00/01892 -> class=xpathi, xpathi_error_oracle
+  xpathi-00/01894 -> class=xpathi, xpathi_error_oracle
+  sqli-01/00761   -> unchanged, 21 sqli findings
+
+Result on the merged 5-chunk post-fix run:
+
+  DAST-APPLICABLE  TP 930  FP 0  FN 226  TN 1102  P 1.000  R 0.804  F1 0.892
+  FULL CORPUS      TP 930  FP 0  FN 485  TN 1325  P 1.000  R 0.657  F1 0.793
+
+xpathi-00: 0.889 -> 1.000 (15/15 TP). wrong_family: 0.
+
+Net TP: 922 -> 930 (+8). The +3 xpathi recovery is direct; the +5
+spread across pathtraver-00, trustbound-00, xss-00, sqli-01/03,
+cmdi-01 and others is the batch-run variance pattern identified
+at the end of Amendment 15. No regression is reproducible on
+standalone re-scan.
+
+Full test suite: 440 passed (+3).
+
+Method note: the OWASP Benchmark xpathi sink response layout defeats
+positive-payload detection. Any future work on xpathi coverage must
+extend the error-based approach (broader error signatures, other
+mode shapes) rather than hunt for a row-count differential.
