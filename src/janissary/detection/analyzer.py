@@ -195,6 +195,18 @@ _CMD_STDERR_HEADER = re.compile(r"Here is the std err of the command", re.I)
 
 _SQL_RESULTS_HEADER = re.compile(r"Your results are:\s*<br\s*/?>", re.I)
 _XPATH_RESULTS_HEADER = re.compile(r"Your query results are:", re.I)
+_XPATH_ERROR_PATTERNS = (
+    # OWASP Benchmark XPath sinks catch the parser exception and print
+    # a friendly message. Verified on xpathi-00 01892/01894 (mode=cookie):
+    # bare-quote POST returns 500 with body
+    #   "Error parsing XPath input: '&#x27;'"
+    # See Amendment 18.
+    re.compile(r"Error parsing XPath input", re.I),
+    # Fallback signatures in case a different sink surfaces a Java-level
+    # trace instead of the friendly message.
+    re.compile(r"XPathExpressionException", re.I),
+    re.compile(r"XPathFactory", re.I),
+)
 _SQL_RESULTS_END = re.compile(r"</p>", re.I)
 
 
@@ -836,6 +848,42 @@ def check_sqli_quote_oracle(baseline, quote_snapshot, or_snapshot):
             "detail": (
                 f"Bare quote returned {quote_snapshot.status}; balanced "
                 f"payload returned {or_snapshot.status} (baseline {base})"
+            ),
+            "reflection_context": None,
+        }
+    ]
+
+
+def check_xpath_error_oracle(baseline, quote_snapshot, or_snapshot):
+    """Paired differential: bare quote 5xx carrying an XPath parser
+    error signature AND balanced payload 2xx.
+
+    Same structural shape as check_sqli_quote_oracle, different evidence.
+    XPath sinks 500 on a bare quote with "Error parsing XPath input"
+    (verified on OWASP Benchmark xpathi-00 01892/01894). The balanced
+    payload returns 200 with zero rows -- no positive injection signal
+    exists on this target. The error text is the only evidence. See
+    Amendment 18.
+    """
+    base = baseline.modal_status
+    if base == 0 or base >= 400:
+        return []
+    if any(s.status >= 500 for s in baseline.snapshots):
+        return []
+    if quote_snapshot.status < 500:
+        return []
+    if or_snapshot.status >= 500:
+        return []
+    if not any(pat.search(quote_snapshot.body) for pat in _XPATH_ERROR_PATTERNS):
+        return []
+    return [
+        {
+            "type": "xpathi_error_oracle",
+            "severity": "critical",
+            "detail": (
+                f"Bare quote returned {quote_snapshot.status} with XPath "
+                f"parser error; balanced payload returned "
+                f"{or_snapshot.status} (baseline {base})"
             ),
             "reflection_context": None,
         }

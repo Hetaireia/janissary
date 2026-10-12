@@ -14,6 +14,7 @@ from .analyzer import (
     check_pathtraver_oracle,
     check_securecookie_oracle,
     check_sqli_quote_oracle,
+    check_xpath_error_oracle,
     check_ldap_injection_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,

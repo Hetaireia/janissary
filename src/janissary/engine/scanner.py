@@ -23,6 +23,7 @@ from janissary.detection import (
     check_pathtraver_oracle,
     check_securecookie_oracle,
     check_sqli_quote_oracle,
+    check_xpath_error_oracle,
     check_ldap_injection_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,
@@ -705,6 +706,39 @@ class Scanner:
                         category="sqli",
                         severity=f.get("severity", "critical"),
                         finding_type=f.get("type", "sqli_quote_oracle"),
+                        detail=f.get("detail", ""),
+                        response_status=sqli_quote_resp.status_code,
+                        response_length=len(sqli_quote_resp.text or ""),
+                        response_time=sqli_quote_snap.elapsed,
+                        response_content_type=sqli_quote_snap.content_type,
+                        url=getattr(req_obj, "url", None) or self.target,
+                        method=self.method,
+                        raw_request=serialize_request(req_obj),
+                        raw_response=serialize_response(sqli_quote_resp),
+                    )
+                    summary.findings.append(finding)
+                    summary.finding_count += 1
+
+            # Paired-probe: xpathi error oracle. Reuses the bare-quote
+            # and balanced snapshots captured for the sqli quote oracle.
+            # XPath sinks 500 on the quote with a parser error (not a
+            # SQL error), so the sqli oracle stays silent and this one
+            # fires. See Amendment 18.
+            if sqli_quote_snap is not None and sqli_or_snap is not None:
+                xo = check_xpath_error_oracle(
+                    baseline=baseline,
+                    quote_snapshot=sqli_quote_snap,
+                    or_snapshot=sqli_or_snap,
+                )
+                for f in xo:
+                    req_obj = getattr(sqli_quote_resp, "request", None)
+                    finding = ScanFinding(
+                        param=param,
+                        payload_name="xpath_error_oracle",
+                        payload_value="'",
+                        category="xpathi",
+                        severity=f.get("severity", "critical"),
+                        finding_type=f.get("type", "xpathi_error_oracle"),
                         detail=f.get("detail", ""),
                         response_status=sqli_quote_resp.status_code,
                         response_length=len(sqli_quote_resp.text or ""),

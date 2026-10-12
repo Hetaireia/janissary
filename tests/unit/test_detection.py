@@ -10,6 +10,7 @@ from janissary.detection import (
     DifferentialAnalyzer,
     ResponseSnapshot,
     check_sqli_quote_oracle,
+    check_xpath_error_oracle,
     normalize_body,
 )
 
@@ -495,6 +496,37 @@ def test_sqli_quote_oracle_silent_when_500_not_sql_error():
     quote = snap(status=500, text="XPathException: invalid expression at column 3")
     or_payload = snap(status=200, text="results")
     assert check_sqli_quote_oracle(b, quote, or_payload) == []
+
+
+def test_xpath_error_oracle_fires_on_xpath_500():
+    """Amendment 18: bare-quote 500 carrying an XPath parser error fires
+    the xpathi error oracle. Verified on xpathi-00 01892/01894
+    (mode=cookie), where the servlet prints
+    "Error parsing XPath input: '&#x27;'" on the quote and returns 200
+    with zero rows on the balanced payload."""
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="Error parsing XPath input: '&#x27;'")
+    or_payload = snap(status=200, text="Your query results are: <br/>")
+    out = check_xpath_error_oracle(b, quote, or_payload)
+    assert len(out) == 1
+    assert out[0]["type"] == "xpathi_error_oracle"
+    assert out[0]["severity"] == "critical"
+
+
+def test_xpath_error_oracle_silent_on_sql_error():
+    """A 500 whose body carries a SQL error signature must not fire the
+    xpathi oracle. That is sqli territory."""
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="You have an error in your SQL syntax")
+    or_payload = snap(status=200, text="results")
+    assert check_xpath_error_oracle(b, quote, or_payload) == []
+
+
+def test_xpath_error_oracle_silent_when_or_also_500():
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="Error parsing XPath input: '&#x27;'")
+    or_payload = snap(status=500, text="Error parsing XPath input: '&#x27;'")
+    assert check_xpath_error_oracle(b, quote, or_payload) == []
 
 
 def test_sqli_quote_oracle_silent_when_or_also_500():
