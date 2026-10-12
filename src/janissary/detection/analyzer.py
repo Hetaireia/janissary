@@ -194,6 +194,7 @@ _CMD_OUTPUT_HEADER = re.compile(
 _CMD_STDERR_HEADER = re.compile(r"Here is the std err of the command", re.I)
 
 _SQL_RESULTS_HEADER = re.compile(r"Your results are:\s*<br\s*/?>", re.I)
+_XPATH_RESULTS_HEADER = re.compile(r"Your query results are:", re.I)
 _SQL_RESULTS_END = re.compile(r"</p>", re.I)
 
 
@@ -437,6 +438,13 @@ class DifferentialAnalyzer:
                 [_SQL_RESULTS_END],
                 "SQL result rows present in response body",
             ),
+            (
+                "xpath_result_rows",
+                "critical",
+                _XPATH_RESULTS_HEADER,
+                [],
+                "XPath result rows present in response body",
+            ),
         )
         for ftype, sev, header, stops, detail in regions:
             if header.search(self.payload_value):
@@ -450,6 +458,8 @@ class DifferentialAnalyzer:
             if ftype == "command_output" and self.payload_category != "cmdi":
                 continue
             if ftype == "sql_result_rows" and self.payload_category != "sqli":
+                continue
+            if ftype == "xpath_result_rows" and self.payload_category != "xpathi":
                 continue
             m = header.search(snapshot.body)
             if not m:

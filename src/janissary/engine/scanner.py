@@ -49,6 +49,7 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("sql_union_null", "' UNION SELECT NULL,NULL,NULL--", "sqli", "critical"),
     ("sql_sleep_mysql", "' OR SLEEP(5)--", "sqli", "critical"),
     ("sql_sleep_pg", "'; SELECT pg_sleep(5)--", "sqli", "critical"),
+    ("xpath_or_1eq1", "' or '1'='1", "xpathi", "critical"),
     ("ldap_wildcard", "*", "ldapi", "critical"),
     ("ldap_filter_break", "*)(uid=*))(|(uid=*", "ldapi", "critical"),
     ("xss_script", "<script>alert(1)</script>", "xss", "high"),
@@ -631,6 +632,8 @@ class Scanner:
                         category = "cmdi"
                     if f.get("type") == "sql_result_rows":
                         category = "sqli"
+                    if f.get("type") == "xpath_result_rows":
+                        category = "xpathi"
                     if f.get("type") in CORROBORATOR_ONLY_TYPES:
                         # Corroborators are dropped unconditionally.
                         # A length delta or status change on a target
