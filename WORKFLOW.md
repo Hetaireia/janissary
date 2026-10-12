@@ -1,10 +1,10 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: Track A DAST-applicable F1 0.903 (P 1.000, R 0.824). Full-corpus F1 0.804. xpathi, ldapi, xss-01, xss-03, xss-05, and all weakrand subcats except -03 at 1.000. Five xss subcategories now at F1 1.000 (Amendments 18+19). wrong_family=0.
-## NEXT: (1) Triage trustbound (21 FN across -00/-01) -- largest remaining recoverable mass. (2) weakrand-03 (9 FN), securecookie-00 (9 FN). (3) Pathtraver (123 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending. (4) Known batch nondeterminism -- chase only if it starts to dominate run-to-run deltas.
+## STATUS: Track A DAST-applicable F1 0.920 (P 1.000, R 0.851) with single-retry FN recovery; 0.903 on the first pass. Full-corpus F1 0.820. Sixteen categories at F1 1.000. pathtraver 0.049-0.308, documented as target-capped and confirmed by zero recovery on the FN-retry pass. ~16% of DAST-applicable FN are batch-context-sensitive. wrong_family=0.
+## NEXT: (1) Script the FN-retry protocol into runner.py as --retry-zero or --second-pass, so 0.920 is reproducible in one command. (2) Fix --params ergonomics (required flag blocks first-30-second success). (3) Write pathtraver explanation page. (4) Comparison table: ZAP / Nuclei / JANISSARY on Track A. (5) README + install path + demo target. (6) Structural throttle fix (--library-mode, Phase 4.5) still pending.
 ## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
-## LAST COMPLETED: Amendment 19. Trailing-char-tolerant reflection match in _check_reflection. OWASP Benchmark xss sinks drop or mutate the trailing '>' of XSS payloads via write(char[]) / print(char[]) / printf(Locale) routes. Exact-substring match missed them. Fallback retries with payload[:-1]. 15 of 16 xss-04 FN closed; +32 xss TP total. DAST-applicable F1 0.892 -> 0.903. See Amendment 19.
+## LAST COMPLETED: Amendment 20. FN recovery run. 204 DAST-applicable FN re-scanned in isolation; 32 recovered; two identical runs agreed on 31/32 cases. DAST-applicable F1 0.903 -> 0.920. pathtraver recovered 0, confirming target-capped hypothesis. Batch-context effect quantified at ~16% of FN. See Amendment 20.
 
-Last updated: 2026-10-12 (Amendment 19)
+Last updated: 2026-10-12 (Amendment 20)
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
