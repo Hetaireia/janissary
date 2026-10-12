@@ -819,6 +819,16 @@ def check_sqli_quote_oracle(baseline, quote_snapshot, or_snapshot):
         return []
     if or_snapshot.status >= 500:
         return []
+    # Evidence-grounded: the 500 on the bare quote must carry a SQL
+    # error signature. An XPath or LDAP sink also 500s on a bare quote,
+    # but its error text does not match DB_ERROR_PATTERNS. Without this
+    # gate the oracle mislabels those cases as sqli. See Amendment 17.
+    if not any(
+        pat.search(quote_snapshot.body)
+        for patterns in DB_ERROR_PATTERNS.values()
+        for pat in patterns
+    ):
+        return []
     return [
         {
             "type": "sqli_quote_oracle",

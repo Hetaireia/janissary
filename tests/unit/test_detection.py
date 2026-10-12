@@ -477,12 +477,24 @@ def test_sqli_reflection_still_fires():
 
 def test_sqli_quote_oracle_fires():
     b = make_baseline(["<html>OK</html>"] * 5)
-    quote = snap(status=500, text="Internal Server Error")
+    quote = snap(status=500, text="You have an error in your SQL syntax")
     or_payload = snap(status=200, text="results")
     out = check_sqli_quote_oracle(b, quote, or_payload)
     assert len(out) == 1
     assert out[0]["type"] == "sqli_quote_oracle"
     assert out[0]["severity"] == "critical"
+
+
+def test_sqli_quote_oracle_silent_when_500_not_sql_error():
+    """Amendment 17: XPath and LDAP sinks also 500 on a bare quote, but
+    their error text carries no DB_ERROR_PATTERNS signature. Without
+    this gate the oracle mislabels those cases as sqli. Motivating
+    cases: xpathi-00 01892 and 01894 (mode=cookie), which fired as
+    sqli_quote_oracle rather than xpathi."""
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="XPathException: invalid expression at column 3")
+    or_payload = snap(status=200, text="results")
+    assert check_sqli_quote_oracle(b, quote, or_payload) == []
 
 
 def test_sqli_quote_oracle_silent_when_or_also_500():
