@@ -971,3 +971,40 @@ def check_securecookie_oracle(baseline, response, marker):
         ]
     return []
 
+
+
+
+# ===================================================================
+# LDAP INJECTION ORACLE
+# ===================================================================
+# The pinned target's LDAP manager passes user input straight into a
+# search filter. Benign input matches at most a few records; a bare
+# wildcard ('*') matches every record in the directory. A safe target
+# escapes or rejects the wildcard, so record count is unchanged.
+# Signal: count of "Record found with name" lines in the wildcard
+# response exceeds the benign baseline count.
+
+_LDAP_RECORD_PATTERN = re.compile(r"Record found with name", re.I)
+
+
+def check_ldap_injection_oracle(baseline, wildcard_snapshot):
+    base_counts = [
+        len(_LDAP_RECORD_PATTERN.findall(s.body))
+        for s in baseline.snapshots
+    ]
+    if not base_counts:
+        return []
+    base_count = min(base_counts)
+    wild_count = len(_LDAP_RECORD_PATTERN.findall(wildcard_snapshot.body))
+    if wild_count <= base_count:
+        return []
+    return [
+        {
+            "type": "ldap_injection",
+            "severity": "critical",
+            "detail": (
+                f"LDAP filter injection: wildcard payload returned "
+                f"{wild_count} records vs {base_count} for benign input"
+            ),
+        }
+    ]
