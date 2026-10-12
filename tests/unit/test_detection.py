@@ -174,6 +174,38 @@ def test_xss_does_not_fire_on_escaped_reflection():
     assert any(f["type"] == "reflected_xss_safe" for f in findings)
 
 
+def test_xss_fires_on_trailing_char_stripped():
+    """OWASP Benchmark xss-04 02128/02131/02134 (mode=param): the sink
+    reflects the payload with the trailing '>' dropped via
+    response.getWriter().write(char[]) / print(char[]). The interior is
+    raw. Amendment 19."""
+    baseline = make_baseline(["<html>OK</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "xss_script", "<script>alert(1)</script>", "xss")
+    resp = snap(text="<html>Formatted like: a and <script>alert(1)</script</html>")
+    findings = a.analyze(resp)
+    assert any(f["type"] == "reflected_xss" and f["severity"] == "high" for f in findings)
+
+
+def test_xss_fires_on_trailing_char_mutated():
+    """OWASP Benchmark xss-04 02124 (mode=param): the sink rewrites the
+    trailing '>' to 'Z'. Interior reflected raw. Amendment 19."""
+    baseline = make_baseline(["<html>OK</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "xss_script", "<script>alert(1)</script>", "xss")
+    resp = snap(text="<html>Formatted like: a and <script>alert(1)</scriptZ</html>")
+    findings = a.analyze(resp)
+    assert any(f["type"] == "reflected_xss" and f["severity"] == "high" for f in findings)
+
+
+def test_xss_still_silent_on_absent_payload():
+    """Regression guard: trailing-char tolerance must not fire when the
+    payload is simply absent from the response."""
+    baseline = make_baseline(["<html>OK</html>"] * 5)
+    a = DifferentialAnalyzer(baseline, "xss_script", "<script>alert(1)</script>", "xss")
+    resp = snap(text="<html>nothing interesting here</html>")
+    findings = a.analyze(resp)
+    assert not any(f["type"] == "reflected_xss" for f in findings)
+
+
 def test_xss_does_not_fire_in_json_content_type():
     baseline = make_baseline(["{}"] * 5)
     a = DifferentialAnalyzer(baseline, "xss_script", "<script>alert(1)</script>", "xss")

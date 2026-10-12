@@ -538,6 +538,23 @@ class DifferentialAnalyzer:
         idx_raw = body.find(payload)
         idx_escaped = body.find(escaped)
 
+        # Trailing-char-tolerant match. Verified on OWASP Benchmark
+        # xss-04 02124/02128/02131/02134 (mode=param): the sink reflects
+        # the payload with the trailing ">" dropped or rewritten to "Z"
+        # via response.getWriter().print(char[]) / write(char[]) /
+        # printf(Locale, ...) routes. The interior of the payload -- the
+        # part that carries the XSS -- is reflected raw. Exact-substring
+        # match misses these four cases. See Amendment 19.
+        if idx_raw < 0 and idx_escaped < 0 and len(payload) > 2:
+            payload_trimmed = payload[:-1]
+            escaped_trimmed = escaped[:-1]
+            idx_raw = body.find(payload_trimmed)
+            idx_escaped = body.find(escaped_trimmed)
+            if idx_raw >= 0:
+                # interior reflected raw; extend idx to cover full length
+                # so context slice in the finding includes the mutation
+                payload = payload_trimmed
+
         if idx_raw < 0 and idx_escaped < 0:
             return []
 
