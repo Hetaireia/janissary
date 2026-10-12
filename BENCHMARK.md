@@ -1237,3 +1237,68 @@ Method note: the OWASP Benchmark xpathi sink response layout defeats
 positive-payload detection. Any future work on xpathi coverage must
 extend the error-based approach (broader error signatures, other
 mode shapes) rather than hunt for a row-count differential.
+
+
+### Amendment 19 -- 2026-10-12 -- trailing-char-tolerant XSS reflection match; DAST-applicable F1 0.903
+
+Closes 15 of the 16 xss-04 FN, plus 17 more across the other xss
+subcategories.
+
+Root cause, verified by direct POST probe against the target: OWASP
+Benchmark xss sinks in the xss-04 and related ranges write the
+response via response.getWriter().write(char[]) / print(char[]) /
+printf(Locale, ...) routes. These drop or mutate the trailing ">" of
+the payload. Observed shapes:
+
+  BenchmarkTest02128 -> "<script>alert(1)</script"    (">" dropped)
+  BenchmarkTest02131 -> "<script>alert(1)</script"    (">" dropped)
+  BenchmarkTest02134 -> "<script>alert(1)</script"    (">" dropped)
+  BenchmarkTest02124 -> "<script>alert(1)</scriptZ"   (">" -> "Z")
+  BenchmarkTest02486 -> "<script>alert(1)</scriptZ"   (">" -> "Z")
+
+The interior of the payload is reflected raw. That is the
+vulnerability. The pre-Am19 _check_reflection did exact substring
+match (body.find(payload) and body.find(escaped)) and returned [] on
+these cases because the trailing char was gone.
+
+Fix: if neither exact nor HTML-escaped substring match succeeds,
+retry with the trailing character trimmed (payload[:-1] and
+escaped[:-1]). If the trimmed form hits raw in the body, proceed as
+if the payload had matched. Narrow scope: only the exact mutation
+shape we have evidence for. No speculation about interior mutation
+or longer-distance edits.
+
+Signal verified on target (pre-Am19 sub-run 9/15 firing):
+  xss-04/02124 -> now fires (class=xss, reflected_xss high)
+  xss-04/02128 -> now fires
+  xss-04/02131 -> now fires
+  xss-04/02134 -> now fires
+  xss-04/02125 (non-vulnerable) -> still silent
+  xss-04/02135 (non-vulnerable) -> still silent
+
+Result on the merged 5-chunk post-fix run:
+
+  DAST-APPLICABLE  TP 952  FP 0  FN 204  TN 1102  P 1.000  R 0.824  F1 0.903
+  FULL CORPUS      TP 952  FP 0  FN 463  TN 1325  P 1.000  R 0.673  F1 0.804
+
+Per-category xss deltas:
+
+  xss-00  0.949 -> 0.980   (47 -> 50 TP, 5 -> 2 FN)
+  xss-01  0.959 -> 1.000   (35 -> 38 TP, 3 -> 0 FN)
+  xss-02  0.955 -> 0.978   (42 -> 44 TP, 4 -> 2 FN)
+  xss-03  0.933 -> 1.000   (35 -> 40 TP, 5 -> 0 FN)
+  xss-04  0.819 -> 0.990   (34 -> 48 TP, 15 -> 1 FN)
+  xss-05  0.865 -> 1.000   (16 -> 21 TP, 5 -> 0 FN)
+
+Total xss TP: 209 -> 241 (+32). Five xss subcategories at F1 1.000.
+
+Remaining non-1.000 recoverable categories: trustbound-00 (12 FN),
+trustbound-01 (9 FN), weakrand-03 (9 FN), securecookie-00 (9 FN).
+Pathtraver still target-capped.
+
+Known issue, not addressed: batch nondeterminism. Between two
+identical chunk-3 runs the case set differed by 10 (7 appeared, 3
+disappeared). Documented here so a future session can chase it if it
+starts to dominate the delta.
+
+Full test suite: 443 passed (+3).

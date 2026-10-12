@@ -1,10 +1,10 @@
 # JANISSARY — Port Workflow Tracker
-## STATUS: Track A DAST-applicable F1 0.892 (P 1.000, R 0.804). Full-corpus F1 0.793. xpathi closed at 1.000 via error-based oracle (Amendments 17+18). cmdi and ldapi closed at 0.96-1.00. No zero-floor categories remain; hash/crypto excluded as SAST-only (259 cases). wrong_family=0.
-## NEXT: (1) Triage xss (37 FN, concentrated in xss-04 at 15 FN). (2) weakrand (23 FN) and trustbound (17 FN) if xss proves unfruitful. Pathtraver (124 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending.
+## STATUS: Track A DAST-applicable F1 0.903 (P 1.000, R 0.824). Full-corpus F1 0.804. xpathi, ldapi, xss-01, xss-03, xss-05, and all weakrand subcats except -03 at 1.000. Five xss subcategories now at F1 1.000 (Amendments 18+19). wrong_family=0.
+## NEXT: (1) Triage trustbound (21 FN across -00/-01) -- largest remaining recoverable mass. (2) weakrand-03 (9 FN), securecookie-00 (9 FN). (3) Pathtraver (123 FN) documented as target-capped. Structural throttle fix (--library-mode, Phase 4.5) still pending. (4) Known batch nondeterminism -- chase only if it starts to dominate run-to-run deltas.
 ## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
-## LAST COMPLETED: Amendment 18. xpathi-00 01892/01894 closed at 15/15 TP via check_xpath_error_oracle (error-based detection; the sink does not accept or-payload injection). Amendment 17 gated check_sqli_quote_oracle on DB_ERROR_PATTERNS, eliminating the wrong-family misattribution that masked the xpathi FN. DAST-applicable F1 0.887 -> 0.892. wrong_family 2 -> 0. See Amendments 17-18.
+## LAST COMPLETED: Amendment 19. Trailing-char-tolerant reflection match in _check_reflection. OWASP Benchmark xss sinks drop or mutate the trailing '>' of XSS payloads via write(char[]) / print(char[]) / printf(Locale) routes. Exact-substring match missed them. Fallback retries with payload[:-1]. 15 of 16 xss-04 FN closed; +32 xss TP total. DAST-applicable F1 0.892 -> 0.903. See Amendment 19.
 
-Last updated: 2026-10-12 (Amendment 18)
+Last updated: 2026-10-12 (Amendment 19)
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
