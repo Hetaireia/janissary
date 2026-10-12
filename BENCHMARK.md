@@ -1035,3 +1035,71 @@ Remaining zero-floor: xpathi-00 (15 cases, 0.000). Largest FN masses
 are pathtraver (124 FN across 4 subcategories) and cmdi (82 FN across
 4 subcategories); pathtraver is documented in analyzer.py as
 structurally capped by the target. cmdi status is unverified.
+
+
+### Amendment 15 -- 2026-10-12 -- cmdi closed; DAST-applicable F1 0.884
+
+Closes cmdi-00 through cmdi-03. Two root causes were found and fixed.
+
+Root cause 1: command_output fired on any payload that put content
+into the OWASP-Benchmark output region, without regard for the probe's
+category. On cmdi paths, ldap_wildcard ("*") and traversal_passwd both
+caused shell output; findings were emitted under those wrong classes.
+Fixed by gating: command_output fires only for cmdi payloads,
+sql_result_rows only for sqli payloads. Scanner-side override forces
+the emitted class accordingly.
+
+Root cause 2: _check_output_region suppressed whenever any baseline
+sample had a non-empty output region. On sinks whose baseline
+legitimately contains static text (e.g. insecureCmd.sh's "Your
+original string:" preamble), this made the oracle structurally unable
+to fire. Fixed by building the set of normalized baseline regions and
+suppressing only when the payload region matches one of them.
+
+A third fix, in the payload library: cmdi vulnerable cases split into
+two sink shapes.
+
+  Group A (e.g. cmdi-00/407): user input passed to Runtime.exec as a
+    shell argument. Breakout via ;, |, backtick works.
+
+  Group B (e.g. cmdi-00/495-497): user input passed via Runtime.exec's
+    argsEnv as the string "FOO=<value>". The target runs a fixed shell
+    script (insecureCmd.sh) that does eval $FOO. Shell metacharacters
+    in the URL are inert; the payload must BE the env-var assignment.
+
+  Two payloads added: cmdi_env_marker ("FOO=echo JNSRY_MARK") and
+  cmdi_env_id ("FOO=id"). Both fire on Group B; the marker also fires
+  on Group A.
+
+Result on the merged post-fix run:
+
+  DAST-APPLICABLE  TP 916  FP 0  FN 240  TN 1102  P 1.000  R 0.792  F1 0.884
+  FULL CORPUS      TP 916  FP 0  FN 499  TN 1325  P 1.000  R 0.647  F1 0.786
+
+TP: 837 -> 916 (+79). wrong_family: 36 -> 2.
+
+Per-category gains vs. Amendment 14, largest first:
+  cmdi-00   0.473 -> 0.976  (+27)
+  cmdi-02   0.571 -> 0.966  (+24)
+  cmdi-01   0.511 -> 0.971  (+21)
+  cmdi-03   0.400 -> 1.000  (+3)
+  weakrand-03 0.815 -> 0.857  (+2)
+  weakrand-01 0.929 -> 0.947  (+1)
+
+Unnamed regressions, not yet diagnosed:
+  ldapi-00   1.000 -> 0.941  (-3)
+  weakrand-00 1.000 -> 0.989  (-1)
+  weakrand-02 1.000 -> 0.984  (-1)
+  xss-04     0.874 -> 0.860  (-1)
+  xss-01     0.973 -> 0.944  (-1)
+  trustbound-01 0.889 -> 0.846  (-2)
+These are single-case drifts and consistent with run-to-run variance,
+but they have not been verified. They should be resolved before this
+headline is quoted externally.
+
+Full test suite: 436 passed (unchanged).
+
+Remaining zero-floor: xpathi-00 (15 cases, 0.000). Pathtraver still
+structurally capped by target.
+
+Requires the LDAP-fixed container (janissary/owasp-benchmark:20cbf3d-ldapfix).
