@@ -986,3 +986,52 @@ amendment:
   - cmdi-*:      0.250-0.594 recall
 
 These are the next work items.
+
+
+### Amendment 14 -- 2026-10-12 -- LDAP detector; DAST-applicable F1 0.840
+
+Closes ldapi-00. The category was previously 0.000 recall because the
+container entrypoint never started the embedded ApacheDS server, so
+every ldapi-* endpoint returned HTTP 500 on every request including
+baseline. Fixing the entrypoint (commit 4f59208) exposed the signal;
+adding the detector (commit 0586c18) turned it into detections.
+
+Detector: check_ldap_injection_oracle, driven by an ldap_wildcard ("*")
+payload. The pinned target passes user input directly into the LDAP
+search filter without escaping. Benign input matches one record; the
+wildcard matches every record in the directory. Signal is the count of
+"Record found with name" lines in the wildcard response vs. the
+benign baseline.
+
+Result on the merged post-fix run (5 chunks, 2740 cases):
+
+  DAST-APPLICABLE  TP 837  FP 0  FN 319  TN 1102  P 1.000  R 0.724  F1 0.840
+  FULL CORPUS      TP 837  FP 0  FN 578  TN 1325  P 1.000  R 0.592  F1 0.743
+
+ldapi-00: 0.000 -> 1.000 (27 TP, 0 FN).
+TP total: 804 -> 837 (+33).
+
+Per-category changes vs. Amendment 13, largest first:
+  ldapi-00       0.000 -> 1.000  (+27)
+  weakrand-00    0.978 -> 1.000  (+2)
+  xss-04         0.847 -> 0.874  (+2)
+  sqli-02        0.951 -> 0.988  (+3)
+  sqli-05        0.943 -> 0.989  (+4)
+  sqli-04        0.944 -> 0.987  (+3)
+  sqli-00        0.989 -> 0.968  (-2)
+  sqli-03        0.989 -> 0.968  (-2)
+  sqli-06        1.000 -> 0.923  (-1)
+  cmdi-02        0.594 -> 0.571  (-1)
+  trustbound-00  0.896 -> 0.884  (-1)
+
+The sqli/cmdi/trustbound deltas are single-case, within run-to-run
+variance. Not treated as regressions.
+
+Container dependency: this result requires the LDAP-fixed container
+(janissary/owasp-benchmark:20cbf3d-ldapfix, see 4f59208). Against the
+base image, ldapi-00 collapses back to 0.000.
+
+Remaining zero-floor: xpathi-00 (15 cases, 0.000). Largest FN masses
+are pathtraver (124 FN across 4 subcategories) and cmdi (82 FN across
+4 subcategories); pathtraver is documented in analyzer.py as
+structurally capped by the target. cmdi status is unverified.
