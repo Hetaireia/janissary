@@ -1,4 +1,7 @@
-# Runner-level settings. Required: --tools-env path for these to take effect.
-# Runner ignores process env vars.
+# Runner-level settings. Pass with --tools-env.
+# The runner reads these from the --tools-env file, NOT from os.environ.
+# Without it: JANISSARY_TIMEOUT defaults to 30s (too tight for per-case
+# scan cost on the benchmark target) and cmd_prefix falls back to a bare
+# "janissary" instead of "python -m janissary".
 JANISSARY_BIN=janissary
 JANISSARY_TIMEOUT=180
