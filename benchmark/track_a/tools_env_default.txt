@@ -1,0 +1,4 @@
+# Runner-level settings. Required: --tools-env path for these to take effect.
+# Runner ignores process env vars.
+JANISSARY_BIN=janissary
+JANISSARY_TIMEOUT=180
