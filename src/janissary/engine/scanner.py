@@ -23,6 +23,7 @@ from janissary.detection import (
     check_pathtraver_oracle,
     check_securecookie_oracle,
     check_sqli_quote_oracle,
+    check_ldap_injection_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,
 )
@@ -48,6 +49,8 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("sql_union_null", "' UNION SELECT NULL,NULL,NULL--", "sqli", "critical"),
     ("sql_sleep_mysql", "' OR SLEEP(5)--", "sqli", "critical"),
     ("sql_sleep_pg", "'; SELECT pg_sleep(5)--", "sqli", "critical"),
+    ("ldap_wildcard", "*", "ldapi", "critical"),
+    ("ldap_filter_break", "*)(uid=*))(|(uid=*", "ldapi", "critical"),
     ("xss_script", "<script>alert(1)</script>", "xss", "high"),
     ("xss_img", "<img src=x onerror=alert(1)>", "xss", "high"),
     ("traversal_passwd", "../../../etc/passwd", "traversal", "critical"),
@@ -458,6 +461,8 @@ class Scanner:
                     f"{baseline.modal_status} - status gate disabled"
                 )
 
+            ldap_wild_snap = None
+            ldap_wild_resp = None
             for name, value, category, _severity in self._payloads:
                 try:
                     r = self._paced_request(self.target, param, value)
@@ -583,6 +588,9 @@ class Scanner:
                 elif name == "sql_or_1eq1":
                     sqli_or_snap = snapshot
                     sqli_or_resp = r
+                elif name == "ldap_wildcard":
+                    ldap_wild_snap = snapshot
+                    ldap_wild_resp = r
                 # The trustbound marker is a purpose-built oracle
                 # probe, not an attack string. Running the generic
                 # analyzer on it labels any reflecting target with the
@@ -696,6 +704,46 @@ class Scanner:
                     )
                     summary.findings.append(finding)
                     summary.finding_count += 1
+
+
+            # Paired-probe: LDAP injection oracle.
+            if ldap_wild_snap is not None:
+                oracle = check_ldap_injection_oracle(
+                    baseline=baseline,
+                    wildcard_snapshot=ldap_wild_snap,
+                )
+                for f in oracle:
+                    req_obj = getattr(ldap_wild_resp, "request", None)
+                    finding = ScanFinding(
+                        param=param,
+                        payload_name="ldap_wildcard",
+                        payload_value="*",
+                        category="ldapi",
+                        severity=f.get("severity", "critical"),
+                        finding_type=f.get("type", "ldap_injection"),
+                        detail=f.get("detail", ""),
+                        response_status=ldap_wild_resp.status_code,
+                        response_length=len(ldap_wild_resp.text or ""),
+                        response_time=ldap_wild_snap.elapsed,
+                        response_content_type=ldap_wild_snap.content_type,
+                        url=getattr(req_obj, "url", None) or self.target,
+                        method=self.method,
+                        raw_request=serialize_request(req_obj),
+                        raw_response=serialize_response(ldap_wild_resp),
+                    )
+                    summary.findings.append(finding)
+                    summary.finding_count += 1
+                    if not quiet:
+                        _say(
+                            f"  [{param}] ldap_wildcard -> "
+                            f"{finding.severity.upper()}: {finding.finding_type} "
+                            f"| {finding.detail[:80]}"
+                        )
+                    # Fire once: the wildcard snapshot is captured once,
+                    # but the oracle call site sits inside the payload
+                    # loop. Clear after first hit to avoid re-emitting
+                    # on every subsequent payload iteration.
+                    ldap_wild_snap = None
                     if not quiet:
                         _say(
                             f"  [{param}] {finding.payload_name} -> "
