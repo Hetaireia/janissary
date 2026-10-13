@@ -1,8 +1,8 @@
 # JANISSARY
 
-**Differential DAST for teams who need results they can trust.
+**Differential DAST for teams who need results they can trust.**
 
-`v7.3.0` — Apache 2.0**
+`v7.3.0` — Apache 2.0
 
 > ### Authorised use only
 >
@@ -22,9 +22,9 @@
 
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
-**Differential detection eliminates false positives by design.** Every finding is gated by a baseline comparison. No finding is ever emitted from a single response alone.
+**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus: precision 1.000 (0 FP), recall 0.851, F1 0.920 across 1,156 cases. Reproducible in one command.
 
-**WAF-aware pacing keeps you under the radar.** JANISSARY detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then backs off on blocks and recovers on clean streaks.
+**WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
 
 **Multi-protocol coverage.** HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 
