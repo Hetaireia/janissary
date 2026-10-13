@@ -1387,3 +1387,35 @@ recovers them. This is a protocol-level mitigation, not a detector
 change.
 
 Full test suite: 443 passed (unchanged).
+
+---
+
+## DAST-applicable subset (scoring definition)
+
+OWASP Benchmark contains 2,740 test cases. Of those, 482 fall into
+categories that cannot be observed by a black-box DAST tool regardless
+of its quality:
+
+- `crypto-00` through `crypto-03` (weak cryptography)
+- `hash-00` through `hash-02` (weak hashing)
+
+These cases require source-aware observation. The vulnerability is a
+property of the code, not a difference observable in the HTTP response.
+A black-box scanner sees the same traffic whether the underlying cipher
+is AES-256 or a hardcoded XOR. Excluding them is not a concession — it
+is the correct definition of what a black-box tool can be scored on.
+
+**Subset size:** 2,258 cases (1,156 vulnerable, 1,102 non-vulnerable).
+
+All headline F1, precision, and recall figures in the README, the blog
+("We refuse to emit a finding from a single response"), and the launch
+assets refer to this subset. The full-corpus figure (F1 0.820) is
+reported alongside for completeness.
+
+**Scorer:** `benchmark/track_a/score_dast_aware.py` — the DAST-applicable
+subset is selected by excluding the crypto and hash categories listed
+above. The exclusion list is explicit in the scorer, not inferred.
+
+**Reproduce:**
+
+    python benchmark/track_a/score_dast_aware.py benchmark/track-a/runs/merged-am19-recovered
