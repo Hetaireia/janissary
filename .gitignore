@@ -108,3 +108,10 @@ benchmark/track_a/_chunks/
 # S10/S11 evidence scratch
 _8a65195*.diff
 _lost_paths.txt
+
+# Local tool binaries (nuclei for comparison runs; not committed)
+tools/bin/*
+!tools/bin/README.md
+
+# ZAP baseline config generated at runtime
+zap.yaml
