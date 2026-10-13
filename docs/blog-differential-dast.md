@@ -1,8 +1,8 @@
 ---
 title: "We refuse to emit a finding from a single response"
-published: false
+published: true
 description: "How differential gating killed false positives in JANISSARY at the architecture level — and what we gave up to get there."
-tags: security, dast, false-positives, tooling
+tags: security, python, opensource, testing
 ---
 
 # We refuse to emit a finding from a single response
@@ -135,7 +135,7 @@ Eighteen of the DAST-applicable categories score F1 1.000. Six more
 score F1 0.95 or above. The weakest category is pathtraver, where the
 F1 range across four subcategories is 0.049 to 0.308 — and there's a
 separate write-up on why that's a property of the benchmark target,
-not of the scanner: [`docs/pathtraver.md`](./pathtraver.md).
+not of the scanner: [`docs/pathtraver.md`](https://github.com/Hetaireia/janissary/blob/main/docs/pathtraver.md).
 
 **The number that matters most here is Precision 1.000.** Not a single
 false positive across the whole DAST-applicable corpus. That's the
