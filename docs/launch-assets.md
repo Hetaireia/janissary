@@ -1,4 +1,4 @@
-# Launch Assets — 15 October 2026 (Wednesday 8 AM ET)
+# Launch Assets — 14 October 2026 (Wednesday 8 AM ET)
 
 Copy from here on launch night. Do not edit unless a number changes.
 
