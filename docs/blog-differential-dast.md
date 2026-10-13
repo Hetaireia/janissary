@@ -5,8 +5,6 @@ description: "How differential gating killed false positives in JANISSARY at the
 tags: security, python, opensource, testing
 ---
 
-# We refuse to emit a finding from a single response
-
 Every DAST tool I've used has the same failure mode, and it isn't detection.
 It's trust.
 
@@ -221,4 +219,7 @@ pip install janissary
 *JANISSARY is a dual-use security testing tool. Run it only against
 systems you own or have prior written permission to test. See the
 [Terms of Use](https://github.com/Hetaireia/janissary/blob/main/LEGAL.md).*
+
+
+
 
