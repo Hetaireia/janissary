@@ -1,6 +1,8 @@
 # JANISSARY
 
-**Differential DAST for teams who need results they can trust.**
+**Differential DAST for teams who need results they can trust.
+
+`v7.3.0` — Apache 2.0**
 
 > ### Authorised use only
 >
@@ -89,9 +91,29 @@ different root cause (reflection) and stays separate. One finding to
 triage, with the receipts attached.
 ---
 
+## Benchmark
+
+JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full results, methodology, and the class-aware definition are in `BENCHMARK.md`. The current run is `benchmark/track-a/runs/merged-am19-recovered`.
+
+| Metric | Value |
+|---|---|
+| Precision | 1.000 |
+| Recall | 0.851 |
+| F1 | 0.920 |
+| TP / FP / FN | 984 / 0 / 172 |
+| Categories at F1 1.000 | 18 |
+
+Reproduce: `python benchmark/track_a/score_dast_aware.py benchmark/track-a/runs/merged-am19-recovered`
+
+The weakest category is path traversal (F1 0.049–0.308), documented in `docs/pathtraver.md` as a property of the benchmark target, not a scanner gap.
+
 ## Install
 
+
 ```bash
+pip install janissary
+
+# From source (development)
 git clone https://github.com/Hetaireia/janissary.git
 cd janissary
 pip install -e .
