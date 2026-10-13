@@ -62,7 +62,7 @@ Tag: `security`. Link: blog post, not repo.
 
 1. The thesis: "A finding that isn't a difference is a guess."
 2. The demo GIF (12s)
-3. The benchmark: 23 findings / 3 groups; SQLi scan returns identical results across two runs
+3. The benchmark: F1 0.920 at 1.000 precision on OWASP Benchmark (984 TP, 0 FP). Same corpus run against Nuclei and ZAP baseline: 0 TPs from either. Comparison in the linked blog.
 4. `pip install janissary` + repo link
 
 ## Day 2
@@ -112,6 +112,22 @@ Tag: `security`. Link: blog post, not repo.
 > with 8 evidence rows: `F-001 CRITICAL sqli:sql_injection (param=q)` —
 > one thing to triage, with the receipts attached. The README has the
 > full output.
+
+**"0, 0, 984 — that comparison is rigged."**
+
+> I know how it reads. It isn't rigged, and here's the test: the numbers
+> are reproducible in one command against the public corpus.
+>
+> Nuclei found 0 findings at medium+ severity across 550 URLs. That's not
+> a fault — its templates are CVE-keyed. The benchmark has no CVEs. ZAP
+> baseline found 27 findings, all of them passive (headers, CSP, error
+> disclosure). It doesn't inject. The benchmark scores injection.
+>
+> The honest way to read the table is: these tools answer different
+> questions. JANISSARY's question is the one the benchmark asks. If
+> you'd rather see the active-scan comparison, install ZAP full and run
+> it yourself — I'd publish the numbers if someone provides them. I
+> won't claim a win I haven't earned.
 
 **"Why Flask apps for the benchmark instead of real targets?"**
 
