@@ -22,7 +22,7 @@
 
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
-**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus: precision 1.000 (0 FP), recall 0.851, F1 0.920 across 1,156 cases. Reproducible in one command.
+**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus: precision 1.000 (0 FP), recall 0.851, F1 0.920 across 2,258 cases (1,156 vulnerable). Reproducible in one command.
 
 **WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
 
