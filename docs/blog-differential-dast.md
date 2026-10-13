@@ -214,10 +214,10 @@ It will only tell you what it can prove.
 pip install janissary
 ```
 
-[github.com/Damn-Infidel/janissary](https://github.com/Damn-Infidel/janissary)
+[github.com/Hetaireia/janissary](https://github.com/Hetaireia/janissary)
 
 ---
 
 *JANISSARY is a dual-use security testing tool. Run it only against
 systems you own or have prior written permission to test. See the
-[Terms of Use](https://github.com/Damn-Infidel/janissary/blob/main/LEGAL.md).*
+[Terms of Use](https://github.com/Hetaireia/janissary/blob/main/LEGAL.md).*
