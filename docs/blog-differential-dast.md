@@ -163,6 +163,37 @@ The run is reproducible:
 Requires the OWASP Benchmark container; the script and the container
 image are in the repo.
 
+### How do other tools do?
+
+We ran Nuclei 3.11 and ZAP baseline against the same corpus (chunk 0,
+550 URLs). Neither is a direct competitor to JANISSARY — they answer
+different questions — but the comparison is instructive.
+
+| Tool          | Benchmark TPs | Benchmark FPs | Findings on the corpus |
+|---------------|---------------|---------------|------------------------|
+| JANISSARY     | 984 / 1156    | 0             | 2914                   |
+| Nuclei 3.11   | 0             | N/A           | 0                      |
+| ZAP baseline  | 0             | N/A           | 27                     |
+
+Nuclei's templates are keyed on known CVEs and version fingerprints.
+The benchmark uses neither. Its 0 findings aren't a failure — they're a
+measurement of scope. Nuclei is a vulnerability-discovery tool. The
+OWASP Benchmark is not a discovery target.
+
+ZAP baseline is passive-only: it spiders and reads. It found missing
+security headers, missing anti-CSRF tokens, CSP weaknesses, and error
+disclosures — all real signals about the benchmark's Tomcat setup,
+none of them the injection classes the benchmark scores. Active
+scanning (ZAP full) is the closer comparison, and its recall on
+synthetic injection cases is historically below 20%. JANISSARY's
+F1 0.920 is a specific outcome of the differential design, not a
+category-wide win for "scanners."
+
+The honest takeaway: **these tools are complementary.** Run Nuclei
+for CVE coverage. Run ZAP for passive hygiene findings. Run JANISSARY
+for reproducible differential detection on the injection classes.
+They don't compete for the same triage slot.
+
 ---
 
 ## What this means if you're evaluating DAST
