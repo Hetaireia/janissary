@@ -300,3 +300,12 @@ JANISSARY was run against OWASP Juice Shop behind ModSecurity + OWASP CRS. The s
 
 Configuration: `docker-compose.waf.yml` (ModSecurity CRS reverse proxy in front of Juice Shop). This closes the gap between "architecturally paces" and "provably paces."
 
+
+## Docker
+
+```bash
+docker run --rm oraclemode337/janissary scan -u "https://target.example" -p q
+```
+
+The image exposes the same entrypoint as the PyPI package. Use host.docker.internal to reach services on the host from inside the container.
+
