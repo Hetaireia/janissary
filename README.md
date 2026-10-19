@@ -269,3 +269,27 @@ See [SECURITY.md](SECURITY.md).
 Apache 2.0 for the source code. See [LICENSE](LICENSE).
 
 Use is additionally governed by the [Terms of Use](LEGAL.md), which supplement and do not replace the Apache 2.0 licence.
+
+## Live WAF Evidence
+
+JANISSARY was run against OWASP Juice Shop behind ModSecurity + OWASP CRS. The scanner detected the WAF, received block signals, and paced requests without aborting the scan.
+
+```text
+[*] Probing for WAF...
+    WAF detected: unknown (confidence 0.90)
+[*] Initial inter-request delay: 2.80s
+...
+
+  WAF:
+    detected=True vendor=None confidence=0.9
+
+  Pacer:
+    final_delay=30.0s events=38
+
+  Findings:
+    F-001  CRITICAL sqli:sql_injection  (param=q)
+           - [sql_hash_comment] db_error: SQLITE error signature matched
+```
+
+Configuration: `docker-compose.waf.yml` (ModSecurity CRS reverse proxy in front of Juice Shop). This closes the gap between "architecturally paces" and "provably paces."
+
