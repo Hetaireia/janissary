@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    container_name: juice-shop-waf-target
+    networks:
+      - waf-net
+    # Do NOT publish 3000 to the host. Only the WAF should reach it.
+
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    container_name: modsecurity-waf
+    ports:
+      - "8080:8080"
+    environment:
+      - BACKEND=http://juice-shop:3000
+      - PORT=8080
+    depends_on:
+      - juice-shop
+    networks:
+      - waf-net
+
+networks:
+  waf-net:
+    driver: bridge
