@@ -264,6 +264,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 See [SECURITY.md](SECURITY.md).
 
+## Known Limitations
+*Honesty over assumptions. These are actively tracked, known issues.*
+
+- **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to report false positives (e.g., `/wp-admin/`). Future work requires moving beyond status codes to content-length and body-signature differentials.
+- **HTTP 401 Abort Behavior (Issue #2):** A 401 response currently aborts the scan instead of reporting an `auth_required` state. Future work will capture 401/403, continue safe checks, and report the auth state cleanly.
+- **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
+
 ## License
 
 Apache 2.0 for the source code. See [LICENSE](LICENSE).
