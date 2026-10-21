@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.3.0] - 2026-10-22
+
+### Changed
+
+- Code freeze. Functionally complete; frozen at 7.3.0 to prevent regressions.
+
+### Added
+
+- `release/` templates and stepwise GitHub Release automation.
+
+### Notes
+
+- No scored benchmark claim in this release. Methodology is in `BENCHMARK.md`;
+  scored results and run artifacts will be published separately once committed
+  to `benchmark/track_a/runs/`.
+
 ## [7.2.0] - 2026-09-28
 
 ### Added
