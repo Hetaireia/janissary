@@ -165,7 +165,7 @@ switch ($Step) {
   if ($LASTEXITCODE -ne 0) { Fail "pip install smoke failed" }
   $ver = (& "$venv\Scripts\janissary.exe" --version) -join ''
   if ($ver -notmatch [regex]::Escape($s.Version)) { Fail "janissary --version = '$ver'" }
-  Remove-Item -Recurse -Force $venv -ErrorAction SilentlyContinue
+  try { [System.IO.Directory]::Delete($venv, $true) } catch { }
   Ok "pip install + --version smoke OK"
   Mark 5
   Ok "Step 5 complete"
