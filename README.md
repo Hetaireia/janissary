@@ -25,7 +25,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 > **The Strategic Wedge:** JANISSARY is the only open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
 
 
-**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus: precision 1.000 (0 FP), recall 0.851, F1 0.920 across 2,258 cases (1,156 vulnerable). Reproducible in one command.
+**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Measured on the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md) (v7.2.0): precision 1.000 (0 FP), recall 0.851, F1 0.920 across 2,258 cases (1,156 vulnerable). Run artifacts and the v7.3.0 scored re-run will be published as a separate benchmark announcement.
 
 **WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
 
