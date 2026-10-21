@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-RUNS = REPO / "benchmark" / "track-a" / "runs"
+RUNS = REPO / "benchmark" / "track_a" / "runs"
 RUNNER = REPO / "benchmark" / "track_a" / "runner.py"
 
 

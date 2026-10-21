@@ -48,7 +48,7 @@ from benchmark.common.run_utils import (  # noqa: E402
     write_manifest,
 )
 
-TRACK = "track-a"
+TRACK = "track_a"
 BENCH_ROOT = HERE.parent
 
 
