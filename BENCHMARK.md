@@ -947,8 +947,7 @@ Total: 2433 raw finding lines, 1702 unique after dedupe.
 ### Amendment 13 -- 2026-10-12 -- DAST-applicable scoring; headline F1 0.820
 
 Corrects the scoring basis. The 0.725 in Amendment 12 was computed over
-the full 2740-case corpus. That corpus includes 259 cases (hash-* and
-crypto-*) that no black-box DAST tool can detect, because the tested
+the full 2740-case corpus. That corpus includes all 482 hash-* and crypto-* cases (259 vulnerable + 223 non-vulnerable) that no black-box DAST tool can detect, because the tested
 property -- algorithm choice (MD5 vs SHA-256; AES-128-ECB vs AES-256-CBC)
 -- is passed to getInstance() and is not reflected in the HTTP response.
 
@@ -960,8 +959,7 @@ concern.
 
 Exclusions are declared in benchmark/track_a/dast_excluded.txt. The
 scorer (benchmark/track_a/score_dast_aware.py) reports two numbers:
-FULL CORPUS (all 2740 cases) and DAST-APPLICABLE (2481 cases, 259
-excluded).
+FULL CORPUS (all 2740 cases) and DAST-APPLICABLE (2,258 cases, 482 excluded).
 
 Result on the merged post-fix run:
 
