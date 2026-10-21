@@ -1,0 +1,43 @@
+## JANISSARY {{VERSION}}
+
+Code-freeze release. Functionally complete; frozen to prevent regressions. Architectural work
+continues in 8.x.
+
+### Benchmark status
+
+No scored performance claim is made in this release. The pre-registered methodology is in
+`BENCHMARK.md` (v7.2.0, frozen 2026-09-28). Scored results and run artifacts will be published
+as a separate benchmark announcement once committed to `benchmark/track_a/runs/`.
+
+### What's in the box
+
+- **Deduplication / grouping.** DVWA run: 8 CRITICAL signals grouped into 1 finding.
+- **WAF evasion evidence.** Live ModSecurity: pacer backed off to 30.0s across 38 events
+  (backoff behavior observed, not a claimed bypass).
+- **Framework-specific SQLi payloads.** Paren-closing payloads verified live.
+
+### Install
+
+    docker pull {{IMAGE_REPO}}:{{VERSION}}
+    pip install {{PKG}}=={{VERSION}}
+
+`:latest` points at digest `{{IMAGE_DIGEST}}` — same as `:{{VERSION}}`.
+
+### Known limitations
+
+- **SPA catch-all false positives** (Issue #1). 39 FPs observed on a Node SPA in our Juice Shop run.
+- **401 abort** (Issue #2). 401 aborts the scan for that path; may mask auth-gated findings.
+- **Pathtraver recall 0.049-0.308.** Not a supported detection class in 7.x.
+- **Framework-wrapped SQLi can be missed.** Juice Shop search endpoint not flagged in our run —
+  payload-set limitation, scoped to 8.x with Issue #4.
+
+### Deferred to 8.x
+
+- Issue #4 — generalize the six-oracle pattern to close the misattribution class.
+- `--mode ci` — fast, unpaced mode for trusted CI/CD.
+- Payload-set generalization for framework-wrapped queries.
+- Scored benchmark announcement (see Benchmark status above).
+
+### Testing
+
+443 tests passing. `main` is clean at this tag.

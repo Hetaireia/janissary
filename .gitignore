@@ -115,3 +115,7 @@ tools/bin/*
 
 # ZAP baseline config generated at runtime
 zap.yaml
+# Release automation: runtime state and rendered output
+benchmark/track_a/tools.env
+release-state.json
+release/out/
