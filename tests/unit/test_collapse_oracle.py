@@ -10,6 +10,7 @@ from janissary.detection.collapse_oracle import (
     check_traversal_collapse_oracle,
 )
 from janissary.engine.baseline_struct import ArmingReason, BaselineArmingState
+from janissary.engine.dom_hash import StructuralFingerprint as _SF_13e
 from janissary.engine.dom_hash import fingerprint
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
@@ -207,3 +208,99 @@ def test_reason_priority_no_markup_over_known_file():
         payload_name="traversal_passwd",
     )
     assert out[0]["reason"] == "collapse_no_markup"
+
+
+# ---------------------------------------------------------------------------
+# 1.3e hardening — boundary, WAF-block FP, marker robustness
+# ---------------------------------------------------------------------------
+
+
+def _fake_payload_fp(baseline_val: int, bits_set: int) -> _SF_13e:
+    """Build a StructuralFingerprint exactly `bits_set` bits from baseline."""
+    mask = (1 << bits_set) - 1
+    return _SF_13e(baseline_val ^ mask, 10, 5)
+
+
+def test_boundary_d19_no_emit(monkeypatch):
+    baseline = _baseline_of(REAL_FORM)
+    baseline_val = _fp_vals(REAL_FORM)[0]
+    arming = _arming((baseline_val,))
+    fake = _fake_payload_fp(baseline_val, 19)
+    monkeypatch.setattr(
+        "janissary.detection.collapse_oracle.fingerprint", lambda b: fake
+    )
+    snap = _snap("<html><body>whatever</body></html>")
+    out = check_traversal_collapse_oracle(
+        baseline=baseline,
+        arming=arming,
+        snapshot=snap,
+        response_status=200,
+        payload_value="x",
+        payload_name="traversal_passwd",
+    )
+    assert out == []
+
+
+def test_boundary_d21_emits(monkeypatch):
+    baseline = _baseline_of(REAL_FORM)
+    baseline_val = _fp_vals(REAL_FORM)[0]
+    arming = _arming((baseline_val,))
+    fake = _fake_payload_fp(baseline_val, 21)
+    monkeypatch.setattr(
+        "janissary.detection.collapse_oracle.fingerprint", lambda b: fake
+    )
+    snap = _snap(PASSWD, status=200, content_type="text/plain")
+    out = check_traversal_collapse_oracle(
+        baseline=baseline,
+        arming=arming,
+        snapshot=snap,
+        response_status=200,
+        payload_value="../../../etc/passwd",
+        payload_name="traversal_passwd",
+    )
+    assert len(out) == 1
+    assert out[0]["min_distance"] == 21
+
+
+def test_waf_block_200_fires_as_tiny_body():
+    """Known FP class: 200-status WAF block with ':' fires tiny_body.
+
+    At the HTTP layer, '200 + tiny body containing : or /' is
+    indistinguishable from a real traversal response. Distinct category
+    for WAF-blocks is deferred to Phase 2.x. Documenting current
+    behavior so it can't change accidentally.
+    """
+    baseline = _baseline_of(REAL_FORM)
+    arming = _arming(_fp_vals(REAL_FORM))
+    waf_body = "Blocked by WAF (rule: 942100)"
+    snap = _snap(waf_body, status=200, content_type="text/html")
+    out = check_traversal_collapse_oracle(
+        baseline=baseline,
+        arming=arming,
+        snapshot=snap,
+        response_status=200,
+        payload_value="x",
+        payload_name="traversal_passwd",
+    )
+    assert len(out) == 1
+    assert out[0]["reason"] == "collapse_tiny_body"
+
+
+def test_passwd_without_root_line_still_fires():
+    """passwd variant without root: line still detected via /usr/, /bin/."""
+    baseline = _baseline_of(REAL_FORM)
+    arming = _arming(_fp_vals(REAL_FORM))
+    lines = [ln for ln in PASSWD.splitlines() if not ln.startswith("root:")]
+    payload = "\n".join(lines)
+    assert not any(ln.startswith("root:") for ln in payload.splitlines())
+    snap = _snap(payload, status=200, content_type="text/plain")
+    out = check_traversal_collapse_oracle(
+        baseline=baseline,
+        arming=arming,
+        snapshot=snap,
+        response_status=200,
+        payload_value="../../../etc/passwd",
+        payload_name="traversal_passwd",
+    )
+    assert len(out) == 1
+    assert "collapse_no_markup" in out[0]["aux_signals"]
