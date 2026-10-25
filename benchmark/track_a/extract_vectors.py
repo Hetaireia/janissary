@@ -10,6 +10,7 @@ Usage:
 
 Requires `docker cp` against a container named `janissary-owasp`.
 """
+
 from __future__ import annotations
 
 import csv
@@ -117,6 +118,7 @@ def main() -> int:
             w.writerows(rows)
 
         import collections
+
         c = collections.Counter(r["mode"] for r in rows)
         print(f"wrote {len(rows)} rows to {OUT}")
         for k, v in c.most_common():

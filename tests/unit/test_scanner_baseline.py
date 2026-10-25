@@ -5,6 +5,7 @@ the baseline a test of the payload list rather than the target. On endpoints
 that 500 for unknown input, `modal_status` became 500, and both the status
 and length gates bailed before any payload was sent.
 """
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock
@@ -33,8 +34,14 @@ def make_scanner(monkeypatch):
     returns the same status/body.
     """
 
-    def _build(target: str, param: str, *, status_code: int = 200,
-               body: bytes = b"baseline-body", responses=None):
+    def _build(
+        target: str,
+        param: str,
+        *,
+        status_code: int = 200,
+        body: bytes = b"baseline-body",
+        responses=None,
+    ):
         scanner = Scanner(
             target=target,
             params=[param],
@@ -93,16 +100,15 @@ def test_baseline_preserves_blank_value_when_url_says_so(make_scanner):
     scanner.collect_baseline("q")
 
     values = {value for _, _, value in scanner._recorded_calls}
-    assert values == {""}, (
-        f"expected blank value to be replayed verbatim, got {values}"
-    )
+    assert values == {""}, f"expected blank value to be replayed verbatim, got {values}"
     assert len(scanner._recorded_calls) == scanner.baseline_count
 
 
 def test_baseline_is_stable_when_endpoint_500s_unknown_input(make_scanner):
     """The actual traversal bug: identical input -> stable baseline despite 500s."""
     scanner = make_scanner(
-        "http://example.test/traversal?f=readme.txt", "f",
+        "http://example.test/traversal?f=readme.txt",
+        "f",
         status_code=500,
         body=b"file not found",
     )
@@ -124,20 +130,21 @@ def test_500_on_unknown_input_does_not_misattribute_categories(make_scanner):
     Categories are bare strings ('sqli', 'xss', 'cmdi', 'traversal'), not
     'sqli:sql_injection'.
     """
+
     def responses(value: str):
         if value == "readme.txt":
             return 200, b"file contents"
         return 500, b"file not found"
 
     scanner = make_scanner(
-        "http://example.test/traversal?f=readme.txt", "f",
+        "http://example.test/traversal?f=readme.txt",
+        "f",
         responses=responses,
     )
     summary = scanner.scan(quiet=True)
 
     misattributed = [
-        f.category for f in summary.findings
-        if f.category in {"sqli", "xss", "cmdi"}
+        f.category for f in summary.findings if f.category in {"sqli", "xss", "cmdi"}
     ]
     assert not misattributed, (
         f"category-agnostic detector emitted category-specific findings: "

@@ -108,8 +108,6 @@ def test_stats_reports_events():
     assert "current_delay" in stats
 
 
-
-
 def test_application_error_does_not_backoff():
     """500 is an application error, not a block signal.
 
@@ -149,11 +147,11 @@ def test_500_resets_clean_streak():
         ),
         sleep=_no_sleep,
     )
-    p.record(403)          # force a backoff
+    p.record(403)  # force a backoff
     high = p.delay
     p.record(200)
     p.record(200)
-    p.record(500)          # resets the streak -- the next two 200s do NOT recover
+    p.record(500)  # resets the streak -- the next two 200s do NOT recover
     p.record(200)
     p.record(200)
     assert p.delay == high

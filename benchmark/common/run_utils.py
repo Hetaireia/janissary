@@ -105,8 +105,10 @@ def run_subprocess(
     stderr_path = run_dir / "stderr.log"
     merged_env = {**os.environ, **(env or {})}
     started = time.perf_counter()
-    with stdout_path.open("w", encoding="utf-8", errors="replace") as out_fh, \
-         stderr_path.open("w", encoding="utf-8", errors="replace") as err_fh:
+    with (
+        stdout_path.open("w", encoding="utf-8", errors="replace") as out_fh,
+        stderr_path.open("w", encoding="utf-8", errors="replace") as err_fh,
+    ):
         try:
             proc = subprocess.run(
                 list(cmd),

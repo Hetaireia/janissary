@@ -11,6 +11,7 @@ Usage:
         --cases-csv benchmark/track_a/_chunks/full_p0.csv `
         --tools-env benchmark/track_a/tools_env_default.txt
 """
+
 from __future__ import annotations
 
 import argparse
@@ -43,12 +44,18 @@ def _new_run(before: set[str]) -> Path:
 def _invoke_runner(target_base: str, cases_csv: Path, tools_env: Path) -> Path:
     before = _snapshot_runs()
     cmd = [
-        sys.executable, str(RUNNER),
-        "--tool", "janissary",
-        "--run-number", "1",
-        "--target-base", target_base,
-        "--cases-csv", str(cases_csv),
-        "--tools-env", str(tools_env),
+        sys.executable,
+        str(RUNNER),
+        "--tool",
+        "janissary",
+        "--run-number",
+        "1",
+        "--target-base",
+        target_base,
+        "--cases-csv",
+        str(cases_csv),
+        "--tools-env",
+        str(tools_env),
     ]
     print(f"[recovery] invoking: {' '.join(cmd)}", flush=True)
     rc = subprocess.run(cmd, cwd=str(REPO), check=False).returncode
@@ -83,7 +90,14 @@ def _all_cases(csv_path: Path) -> list[dict]:
 
 
 def _write_subset(cases: list[dict], out_path: Path) -> None:
-    fieldnames = ["testname", "category", "urlpath", "mode", "header_name", "vulnerable"]
+    fieldnames = [
+        "testname",
+        "category",
+        "urlpath",
+        "mode",
+        "header_name",
+        "vulnerable",
+    ]
     with out_path.open("w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fieldnames, extrasaction="ignore")
         w.writeheader()
@@ -127,7 +141,8 @@ def main() -> int:
     print(f"[recovery] cases with findings in pass 1: {len(fired)}", flush=True)
 
     zero_cases = [
-        c for c in all_cases
+        c
+        for c in all_cases
         if c["testname"] not in fired
         and (c.get("vulnerable") or "").strip().lower() == "true"
     ]

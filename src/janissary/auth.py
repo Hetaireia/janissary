@@ -19,7 +19,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 REDACTED = "[REDACTED]"
-_SECRET_HEADERS = frozenset({"authorization", "cookie", "set-cookie", "proxy-authorization"})
+_SECRET_HEADERS = frozenset(
+    {"authorization", "cookie", "set-cookie", "proxy-authorization"}
+)
 
 
 @dataclass

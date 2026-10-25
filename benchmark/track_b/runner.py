@@ -92,7 +92,8 @@ def probe(target_url: str, timeout: float = 10.0) -> tuple[int, bytes] | None:
         return None
 
     req = urllib.request.Request(
-        target_url, method="GET",
+        target_url,
+        method="GET",
         headers={"User-Agent": "janissary-bench-probe/1.0"},
     )
     try:
@@ -126,11 +127,15 @@ class ProbeWatcher(threading.Thread):
             r = probe(self.target_url)
             elapsed = time.perf_counter() - self.t0
             if r is None:
-                self.samples.append({"t": round(elapsed, 2), "status": None, "blocked": False})
+                self.samples.append(
+                    {"t": round(elapsed, 2), "status": None, "blocked": False}
+                )
             else:
                 status, body = r
                 blocked = looks_blocked(status, body)
-                self.samples.append({"t": round(elapsed, 2), "status": status, "blocked": blocked})
+                self.samples.append(
+                    {"t": round(elapsed, 2), "status": status, "blocked": blocked}
+                )
                 if blocked and self.first_block_at is None:
                     self.first_block_at = elapsed
             self.stop_event.wait(PROBE_INTERVAL_S)
@@ -144,10 +149,14 @@ class ProbeWatcher(threading.Thread):
 def build_cmd(tool: str, target_url: str, run_dir: Path, env: dict) -> list[str]:
     if tool == "janissary":
         cmd = [
-            env.get("JANISSARY_BIN", "janissary"), "scan",
-            "-u", target_url,
-            "-p", env.get("JANISSARY_PARAM", "q"),
-            "--jsonl", "--quiet",
+            env.get("JANISSARY_BIN", "janissary"),
+            "scan",
+            "-u",
+            target_url,
+            "-p",
+            env.get("JANISSARY_PARAM", "q"),
+            "--jsonl",
+            "--quiet",
         ]
         return cmd
     if tool == "nuclei":
@@ -155,9 +164,13 @@ def build_cmd(tool: str, target_url: str, run_dir: Path, env: dict) -> list[str]
         templates = env.get("NUCLEI_TEMPLATES", "")
         cmd = [
             env.get("NUCLEI_BIN", "nuclei"),
-            "-u", target_url,
-            "-jsonl", "-silent", "-nc",
-            "-o", str(run_dir / "findings.jsonl"),
+            "-u",
+            target_url,
+            "-jsonl",
+            "-silent",
+            "-nc",
+            "-o",
+            str(run_dir / "findings.jsonl"),
         ]
         if templates:
             cmd += ["-t", templates]
@@ -167,13 +180,20 @@ def build_cmd(tool: str, target_url: str, run_dir: Path, env: dict) -> list[str]
     if tool == "zap":
         image = env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable")
         return [
-            "docker", "run", "--rm",
-            "-v", f"{run_dir.resolve()}:/zap/wrk/:rw",
-            "-t", image,
+            "docker",
+            "run",
+            "--rm",
+            "-v",
+            f"{run_dir.resolve()}:/zap/wrk/:rw",
+            "-t",
+            image,
             "zap-baseline.py",
-            "-t", target_url,
-            "-J", "zap-report.json",
-            "-m", env.get("ZAP_MINUTES", "10"),
+            "-t",
+            target_url,
+            "-J",
+            "zap-report.json",
+            "-m",
+            env.get("ZAP_MINUTES", "10"),
         ]
     raise ValueError(f"unknown tool: {tool}")
 
@@ -191,12 +211,17 @@ def zap_to_jsonl(run_dir: Path) -> None:
         for site in doc.get("site", []):
             for alert in site.get("alerts", []):
                 for inst in alert.get("instances", []):
-                    fh.write(json.dumps({
-                        "url": inst.get("uri"),
-                        "alert": alert.get("alert"),
-                        "riskcode": alert.get("riskcode"),
-                        "cweid": alert.get("cweid"),
-                    }) + "\n")
+                    fh.write(
+                        json.dumps(
+                            {
+                                "url": inst.get("uri"),
+                                "alert": alert.get("alert"),
+                                "riskcode": alert.get("riskcode"),
+                                "cweid": alert.get("cweid"),
+                            }
+                        )
+                        + "\n"
+                    )
 
 
 def load_env(path: Path | None) -> dict:
@@ -214,14 +239,22 @@ def load_env(path: Path | None) -> dict:
 
 def tool_version(tool: str, env: dict) -> str:
     if tool == "janissary":
-        cmd = [sys.executable, "-c",
-               "from janissary import __version__; print(__version__)"]
+        cmd = [
+            sys.executable,
+            "-c",
+            "from janissary import __version__; print(__version__)",
+        ]
     elif tool == "nuclei":
         cmd = [env.get("NUCLEI_BIN", "nuclei"), "-version"]
     elif tool == "zap":
-        cmd = ["docker", "image", "inspect",
-               env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable"),
-               "--format", "{{.Id}}"]
+        cmd = [
+            "docker",
+            "image",
+            "inspect",
+            env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable"),
+            "--format",
+            "{{.Id}}",
+        ]
     else:
         return "unknown"
     try:
@@ -275,15 +308,22 @@ def main(argv: list[str] | None = None) -> int:
     stderr_path = run_dir / "stderr.log"
     exit_code = 127
     try:
-        with stdout_path.open("w", encoding="utf-8", errors="replace") as out_fh, \
-             stderr_path.open("w", encoding="utf-8", errors="replace") as err_fh:
+        with (
+            stdout_path.open("w", encoding="utf-8", errors="replace") as out_fh,
+            stderr_path.open("w", encoding="utf-8", errors="replace") as err_fh,
+        ):
             proc = subprocess.run(
-                cmd, stdout=out_fh, stderr=err_fh,
-                env={**os.environ, **env}, check=False,
+                cmd,
+                stdout=out_fh,
+                stderr=err_fh,
+                env={**os.environ, **env},
+                check=False,
             )
             exit_code = proc.returncode
     except FileNotFoundError as exc:
-        stderr_path.write_text(f"[track-b] command not found: {exc}\n", encoding="utf-8")
+        stderr_path.write_text(
+            f"[track-b] command not found: {exc}\n", encoding="utf-8"
+        )
         exit_code = 127
 
     scan_time = time.perf_counter() - t_scan_start
@@ -309,13 +349,17 @@ def main(argv: list[str] | None = None) -> int:
         zap_to_jsonl(run_dir)
 
     findings = load_jsonl(run_dir / "findings.jsonl")
-    grouped_ids = {f.get("root_cause_group") for f in findings if f.get("root_cause_group")}
+    grouped_ids = {
+        f.get("root_cause_group") for f in findings if f.get("root_cause_group")
+    }
 
     result = {
         "scan_completed": exit_code in (0, 1),
         "exit_code": exit_code,
         "scan_time_s": round(scan_time, 3),
-        "time_to_first_block_s": round(watcher.first_block_at, 3) if watcher.first_block_at else None,
+        "time_to_first_block_s": round(watcher.first_block_at, 3)
+        if watcher.first_block_at
+        else None,
         "ip_banned_after": ip_banned_after,
         "total_findings": len(findings),
         "grouped_findings_count": len(grouped_ids) if grouped_ids else None,

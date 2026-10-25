@@ -26,18 +26,13 @@ from janissary.engine.scanner import Scanner
 def _scanner(method: str = "GET", inject_in: str = "auto") -> Scanner:
 
     return Scanner(
-
         target="http://example.test/x",
-
         params=["p"],
-
         method=method,
-
         detect_waf=False,
-
         inject_in=inject_in,
-
     )
+
 
 def _record_session(scanner: Scanner) -> list[tuple[str, dict]]:
 
@@ -61,6 +56,7 @@ def _record_session(scanner: Scanner) -> list[tuple[str, dict]]:
 
     return calls
 
+
 def test_auto_get_puts_payload_in_query():
 
     s = _scanner("GET", "auto")
@@ -79,6 +75,7 @@ def test_auto_get_puts_payload_in_query():
 
     assert "data" not in kw and "cookies" not in kw
 
+
 def test_auto_post_puts_payload_in_body():
 
     s = _scanner("POST", "auto")
@@ -94,6 +91,7 @@ def test_auto_post_puts_payload_in_body():
     assert kw["data"] == {"p": "PAY"}
 
     assert "cookies" not in kw
+
 
 def test_cookie_mode_post_sends_payload_as_cookie():
 
@@ -111,6 +109,7 @@ def test_cookie_mode_post_sends_payload_as_cookie():
 
     assert "data" not in kw
 
+
 def test_cookie_mode_get_sends_payload_as_cookie():
 
     s = _scanner("GET", "cookie")
@@ -127,6 +126,7 @@ def test_cookie_mode_get_sends_payload_as_cookie():
 
     assert "p=PAY" not in kw["url"]
 
+
 def test_body_mode_get_still_posts_body():
 
     s = _scanner("GET", "body")
@@ -140,6 +140,7 @@ def test_body_mode_get_still_posts_body():
     assert verb == "POST"
 
     assert kw["data"] == {"p": "PAY"}
+
 
 def test_header_mode_get_sets_named_header():
 
@@ -157,6 +158,7 @@ def test_header_mode_get_sets_named_header():
 
     assert "cookies" not in kw and "data" not in kw
 
+
 def test_header_mode_post_sets_named_header():
 
     s = _scanner("POST", "header")
@@ -171,6 +173,7 @@ def test_header_mode_post_sets_named_header():
 
     assert kw["headers"].get("X-Bench") == "PAY"
 
+
 def test_param_name_mode_post_swaps_key_and_value():
     s = _scanner("POST", "param-name")
     calls = _record_session(s)
@@ -178,6 +181,7 @@ def test_param_name_mode_post_swaps_key_and_value():
     verb, kw = calls[0]
     assert verb == "POST"
     assert kw["data"] == {"PAYLOAD": "BenchmarkTest00035"}
+
 
 def test_param_name_mode_get_swaps_key_and_value():
     s = _scanner("GET", "param-name")
@@ -187,11 +191,12 @@ def test_param_name_mode_get_swaps_key_and_value():
     assert verb == "GET"
     assert "PAYLOAD=BenchmarkTest00035" in kw["url"]
 
+
 def test_invalid_inject_in_rejected():
 
     with pytest.raises(ValueError):
-
         _scanner("GET", "nope")
+
 
 # -- length_anomaly corroborator policy ----------------------------
 
@@ -204,6 +209,7 @@ def test_invalid_inject_in_rejected():
 # length_anomaly unconditionally; the new code emits it. And the /traversal
 
 # shape (baseline 200, payloads 500) must still suppress everything.
+
 
 def _resp(status_code: int = 200, body: bytes = b"body") -> MagicMock:
 
@@ -233,6 +239,7 @@ def _resp(status_code: int = 200, body: bytes = b"body") -> MagicMock:
 
     return r
 
+
 def test_scan_suppresses_length_anomaly_on_stable_2xx(monkeypatch):
     """length_anomaly is a corroborator, not a detector. A large body
     delta on a reflecting target is not diagnostic of any category, so
@@ -251,8 +258,8 @@ def test_scan_suppresses_length_anomaly_on_stable_2xx(monkeypatch):
     summary = s.scan(quiet=True)
     assert not summary.findings, [f.finding_type for f in summary.findings]
 
-def test_scan_suppresses_corroborators_on_erroring_baseline(monkeypatch):
 
+def test_scan_suppresses_corroborators_on_erroring_baseline(monkeypatch):
     """The original /traversal shape: baseline 200 on known input, but
 
     every payload returns 500. Corroborators must stay filtered so no
@@ -266,7 +273,6 @@ def test_scan_suppresses_corroborators_on_erroring_baseline(monkeypatch):
     def paced(url, param, value):
 
         if value == "1":
-
             return _resp(200, b"readme.txt contents")
 
         return _resp(500, b"file not found")

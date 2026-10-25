@@ -50,9 +50,7 @@ def serialize_response(response: Any) -> str | None:
     body_text = _body_to_text(getattr(response, "content", None))
 
     status_line = f"{version} {status} {reason}".rstrip()
-    head = "\r\n".join(
-        [status_line, *(f"{k}: {v}" for k, v in headers.items())]
-    )
+    head = "\r\n".join([status_line, *(f"{k}: {v}" for k, v in headers.items())])
     return head + "\r\n\r\n" + (body_text or "")
 
 

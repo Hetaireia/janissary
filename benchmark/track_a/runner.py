@@ -103,14 +103,22 @@ def case_url(base: str, case: dict) -> str:
 
 def tool_version(tool: str, env: dict) -> str:
     if tool == "janissary":
-        cmd = [sys.executable, "-c",
-               "from janissary import __version__; print(__version__)"]
+        cmd = [
+            sys.executable,
+            "-c",
+            "from janissary import __version__; print(__version__)",
+        ]
     elif tool == "nuclei":
         cmd = [env.get("NUCLEI_BIN", "nuclei"), "-version"]
     elif tool == "zap":
-        cmd = ["docker", "image", "inspect",
-               env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable"),
-               "--format", "{{.Id}}"]
+        cmd = [
+            "docker",
+            "image",
+            "inspect",
+            env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable"),
+            "--format",
+            "{{.Id}}",
+        ]
     else:
         return "unknown"
     try:
@@ -178,6 +186,7 @@ def _run_subprocess_tree(
         else:
             import os
             import signal
+
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             except Exception:
@@ -187,7 +196,6 @@ def _run_subprocess_tree(
         except Exception:
             out, err = "", ""
         return None, out or "", err or "", True
-
 
 
 def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
@@ -208,21 +216,33 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
         disp = _dispatch(c)
         if disp is None:
             with skipped_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps({
-                    "testname": c["testname"], "mode": c["mode"],
-                }) + "\n")
+                fh.write(
+                    json.dumps(
+                        {
+                            "testname": c["testname"],
+                            "mode": c["mode"],
+                        }
+                    )
+                    + "\n"
+                )
             continue
         inject_in, param_arg, method = disp
         url = case_url(base, c)
         cmd = [
-            *cmd_prefix, "scan",
-            "-u", url,
-            "-p", param_arg,
-            "--method", method,
-            "--inject-in", inject_in,
+            *cmd_prefix,
+            "scan",
+            "-u",
+            url,
+            "-p",
+            param_arg,
+            "--method",
+            method,
+            "--inject-in",
+            inject_in,
             "--jsonl",
             "--quiet",
-            "--baseline-count", "5",
+            "--baseline-count",
+            "5",
         ]
         rc, out_s, _err_s, timed_out = _run_subprocess_tree(cmd, timeout)
         if timed_out:
@@ -230,10 +250,16 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             # Record and continue; analyze.py will treat this case as
             # silent (no findings emitted).
             with timeouts_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps({
-                    "testname": c["testname"], "mode": c["mode"],
-                    "timeout_s": timeout,
-                }) + "\n")
+                fh.write(
+                    json.dumps(
+                        {
+                            "testname": c["testname"],
+                            "mode": c["mode"],
+                            "timeout_s": timeout,
+                        }
+                    )
+                    + "\n"
+                )
             failures += 1
             continue
         with findings.open("a", encoding="utf-8") as fh:
@@ -254,16 +280,21 @@ def run_nuclei(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     out_file = run_dir / "findings.jsonl"
     cmd = [
         env.get("NUCLEI_BIN", "nuclei"),
-        "-list", str(urls_file),
-        "-jsonl", "-silent", "-nc",
-        "-o", str(out_file),
+        "-list",
+        str(urls_file),
+        "-jsonl",
+        "-silent",
+        "-nc",
+        "-o",
+        str(out_file),
     ]
     if env.get("NUCLEI_SEVERITY"):
         cmd += ["-severity", env["NUCLEI_SEVERITY"]]
     if env.get("NUCLEI_TEMPLATES"):
         cmd += ["-t", env["NUCLEI_TEMPLATES"]]
     return run_subprocess(
-        cmd, run_dir,
+        cmd,
+        run_dir,
         timeout=float(env.get("NUCLEI_TIMEOUT", "3600")),
     )
 
@@ -272,13 +303,20 @@ def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     image = env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable")
     wrk = run_dir.resolve()
     cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{wrk}:/zap/wrk/:rw",
-        "-t", image,
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{wrk}:/zap/wrk/:rw",
+        "-t",
+        image,
         "zap-baseline.py",
-        "-t", base,
-        "-J", "zap-report.json",
-        "-m", env.get("ZAP_MINUTES", "10"),
+        "-t",
+        base,
+        "-J",
+        "zap-report.json",
+        "-m",
+        env.get("ZAP_MINUTES", "10"),
     ]
     code = run_subprocess(cmd, run_dir, timeout=float(env.get("ZAP_TIMEOUT", "1800")))
 
@@ -328,7 +366,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--target-base", required=True)
     p.add_argument("--cases-csv", type=Path, required=True)
     p.add_argument(
-        "--tools-env", type=Path,
+        "--tools-env",
+        type=Path,
         default=HERE / "tools.env",
         help="Optional env file with binary paths and timeouts.",
     )

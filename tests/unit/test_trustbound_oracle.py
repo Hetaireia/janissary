@@ -45,14 +45,12 @@ def make_baseline(bodies):
 MARKER = "JNSRY_TB_abc123def456"
 BENIGN = "Welcome."
 
-VULN_BODY = (
-    "Item: 'userid' with value: '" + MARKER + "' saved in session.\n"
-)
-NONV_BODY = (
-    "Item: 'userid' with value: 'moresafe' saved in session.\n"
-)
+VULN_BODY = "Item: 'userid' with value: '" + MARKER + "' saved in session.\n"
+NONV_BODY = "Item: 'userid' with value: 'moresafe' saved in session.\n"
 REFLECT_NO_SINK = "Sensitive value: '" + MARKER + "' encrypted and stored\n"
-SINK_NO_MARKER = "Item: 'userid' with value: 'This_should_always_happen' saved in session.\n"
+SINK_NO_MARKER = (
+    "Item: 'userid' with value: 'This_should_always_happen' saved in session.\n"
+)
 
 
 def test_fires_on_marker_and_sink():

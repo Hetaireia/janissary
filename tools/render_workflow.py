@@ -1,4 +1,5 @@
 """Render WORKFLOW.md to HTML and open it in the default browser."""
+
 from __future__ import annotations
 
 import sys

@@ -7,13 +7,21 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 FAMILY_OF = {
-    "xss": "xss", "sqli": "sqli", "weakrand": "weakrand", "cmdi": "cmdi",
-    "trustbound": "trustbound", "traversal": "pathtraver",
-    "securecookie": "securecookie", "xpathi": "xpathi", "ldapi": "ldapi",
-    "crypto": "crypto", "hash": "hash",
+    "xss": "xss",
+    "sqli": "sqli",
+    "weakrand": "weakrand",
+    "cmdi": "cmdi",
+    "trustbound": "trustbound",
+    "traversal": "pathtraver",
+    "securecookie": "securecookie",
+    "xpathi": "xpathi",
+    "ldapi": "ldapi",
+    "crypto": "crypto",
+    "hash": "hash",
 }
 
 EXCLUDE_FILE = Path("benchmark/track_a/dast_excluded.txt")
+
 
 def load_excluded():
     if not EXCLUDE_FILE.exists():
@@ -26,8 +34,10 @@ def load_excluded():
         ex.add(line)
     return ex
 
+
 def family(cat):
     return cat.split("-")[0]
+
 
 def score(run_dir, cases_csv, label="full"):
     with open(cases_csv, encoding="utf-8", newline="") as fh:
@@ -48,7 +58,7 @@ def score(run_dir, cases_csv, label="full"):
         d = json.loads(line)
         p = urlparse(d["url"]).path
         if p.startswith("/benchmark"):
-            p = p[len("/benchmark"):]
+            p = p[len("/benchmark") :]
         if p not in by_path:
             n_orphan += 1
             continue
@@ -62,7 +72,7 @@ def score(run_dir, cases_csv, label="full"):
 
     def tally(filter_excluded):
         TP = FP = FN = TN = 0
-        per_cat = collections.defaultdict(lambda: {"TP":0,"FP":0,"FN":0,"TN":0})
+        per_cat = collections.defaultdict(lambda: {"TP": 0, "FP": 0, "FN": 0, "TN": 0})
         for c in cases:
             cat = c["category"]
             if filter_excluded and cat in excluded:
@@ -81,9 +91,9 @@ def score(run_dir, cases_csv, label="full"):
             else:
                 TN += 1
                 per_cat[cat]["TN"] += 1
-        P = TP/(TP+FP) if TP+FP else 0
-        R = TP/(TP+FN) if TP+FN else 0
-        F1 = 2*P*R/(P+R) if P+R else 0
+        P = TP / (TP + FP) if TP + FP else 0
+        R = TP / (TP + FN) if TP + FN else 0
+        F1 = 2 * P * R / (P + R) if P + R else 0
         return TP, FP, FN, TN, P, R, F1, per_cat
 
     print(f"RUN {run_dir}")
@@ -107,16 +117,19 @@ def score(run_dir, cases_csv, label="full"):
     rows = []
     for cat, d in per_cat.items():
         tp, fp, fn = d["TP"], d["FP"], d["FN"]
-        p = tp/(tp+fp) if tp+fp else 0
-        r = tp/(tp+fn) if tp+fn else 0
-        f1 = 2*p*r/(p+r) if p+r else 0
+        p = tp / (tp + fp) if tp + fp else 0
+        r = tp / (tp + fn) if tp + fn else 0
+        f1 = 2 * p * r / (p + r) if p + r else 0
         rows.append((cat, f1, p, r, tp, fp, fn))
     rows.sort(key=lambda x: x[1])
-    print(f"  {'category':<18} {'F1':>6} {'P':>6} {'R':>6} {'TP':>5} {'FP':>5} {'FN':>5}")
+    print(
+        f"  {'category':<18} {'F1':>6} {'P':>6} {'R':>6} {'TP':>5} {'FP':>5} {'FN':>5}"
+    )
     for cat, f1, p, r, tp, fp, fn in rows:
         print(f"  {cat:<18} {f1:>6.3f} {p:>6.3f} {r:>6.3f} {tp:>5} {fp:>5} {fn:>5}")
 
     return dast_metrics
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(
@@ -129,11 +142,15 @@ if __name__ == "__main__":
         help="Case vectors CSV (default: full 2,258-case corpus)",
     )
     ap.add_argument(
-        "--min-f1", type=float, default=None,
+        "--min-f1",
+        type=float,
+        default=None,
         help="Exit 1 if DAST-applicable F1 < threshold",
     )
     ap.add_argument(
-        "--max-fp", type=int, default=None,
+        "--max-fp",
+        type=int,
+        default=None,
         help="Exit 1 if DAST-applicable FP > threshold",
     )
     args = ap.parse_args()

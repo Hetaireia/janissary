@@ -184,7 +184,9 @@ def metrics_from_confusion(c: dict[str, int]) -> dict[str, float]:
     precision = tp / denom_p if denom_p else 0.0
     recall = tp / denom_r if denom_r else 0.0
     fpr = fp / denom_fpr if denom_fpr else 0.0
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    f1 = (
+        (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    )
     specificity = 1.0 - fpr
     youden = recall + specificity - 1.0
     return {
@@ -221,7 +223,11 @@ def summarize_tool(runs: list[dict]) -> dict:
 
     agg_keys = ["precision", "recall", "fpr", "f1", "youden"]
     times = [row["scan_time_s"] for row in per_run if row["scan_time_s"] is not None]
-    time_stats = {"mean": round(mean(times), 3), "stdev": round(pstdev(times), 3)} if times else {}
+    time_stats = (
+        {"mean": round(mean(times), 3), "stdev": round(pstdev(times), 3)}
+        if times
+        else {}
+    )
 
     return {
         "per_run": per_run,
@@ -296,8 +302,6 @@ def mcnemar(a: dict[str, str], b: dict[str, str]) -> dict:
     }
 
 
-
-
 def _chi2_df1_sf(x: float) -> float:
     """Survival function P(X > x) for chi-square with 1 degree of freedom.
 
@@ -339,6 +343,8 @@ def _exact_binomial_two_sided(k: int, n: int) -> float:
         if lp <= log_pk + tol:
             p += math.exp(lp)
     return min(1.0, p)
+
+
 # ---------------------------------------------------------------------
 # entry point
 # ---------------------------------------------------------------------
@@ -411,7 +417,7 @@ def main(argv: list[str] | None = None) -> int:
 
     stats: dict[str, dict] = {}
     for i, t1 in enumerate(TOOLS):
-        for t2 in TOOLS[i + 1:]:
+        for t2 in TOOLS[i + 1 :]:
             if t1 in by_tool and t2 in by_tool:
                 stats[f"{t1}_vs_{t2}"] = mcnemar(pooled(t1), pooled(t2))
     summary["mcnemar"] = stats

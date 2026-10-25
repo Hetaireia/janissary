@@ -31,8 +31,14 @@ class _Raw:
 
 
 class FakeResponse:
-    def __init__(self, status=200, text="", content_type="text/html",
-                 elapsed=0.1, set_cookies=None):
+    def __init__(
+        self,
+        status=200,
+        text="",
+        content_type="text/html",
+        elapsed=0.1,
+        set_cookies=None,
+    ):
         self.status_code = status
         self.text = text
         self.headers = {"content-type": content_type}
@@ -122,4 +128,5 @@ def test_handles_response_without_get_all():
     class Bare:
         headers: ClassVar[dict] = {}
         raw = None
+
     assert check_securecookie_oracle(None, Bare(), MARK) == []
