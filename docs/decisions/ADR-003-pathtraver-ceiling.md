@@ -73,3 +73,53 @@ Three reasons this is the correct decision, in order of weight:
 - `docs/decisions/ADR-001-benchmark-methodology.md` — the corpus and exclusion rules
 - `docs/decisions/ADR-002-dom-structural-hashing.md` — the 1.3d mechanism that is expected to improve traversal recall
 - `BENCHMARK.md` Amendment 22 — per-category F1 including pathtraver
+## Amendment 2026-10-26 — revisit trigger 1 fired, evidence gate blocked
+
+**Trigger state.** Phase 1.3d merged at 97ffd8d on 2026-10-26. Revisit
+trigger 1 ("Phase 1.3d ships") fires on the first half of its condition.
+
+**Evidence state.** Trigger 1 also requires "1.3d's benchmark re-run
+shows traversal F1 materially improves." That half has not been
+evaluated:
+
+- Docker daemon was offline during 2026-10-26 sessions.
+- Image janissary/owasp-benchmark:20cbf3d-ldapfix could not be started.
+- No live benchmark scan was run against 1.3d.
+- CI benchmark-gate scores the committed artifact
+  benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec, generated
+  2026-10-24 (manifest started_at=2026-10-24T13:07:35Z,
+  tool_version=7.3.0, harness_commit=1b4cf6c).
+- 1.3d's traversal_collapse oracle has never been observed against
+  the OWASP Java Benchmark corpus.
+
+**Harness topology (mapped 2026-10-26 for the evidence work).**
+- Runner: benchmark/track_a/runner.py. Shells out per case:
+  janissary scan -u URL -p PARAM --jsonl --quiet.
+- Findings schema: id, class, title, severity, url, method, parameter,
+  payload, raw_request, raw_response, signals, timestamp. Traversal is
+  class "traversal".
+- 10 traversal findings exist in r1+rec artifact (pathtraver per-
+  category TP counts: 00:4, 01:1, 02:3, 03:2).
+- header_any / out_of_scope_stream are documented gaps in
+  runner.py:92-95, not hidden capability.
+- 2.2 payloads land in src/janissary/engine/scanner.py
+  DEFAULT_PAYLOADS. The runner does not import or shadow this list;
+  subprocess boundary means 2.2 needs no harness changes.
+
+**Decision.** Ceiling stands. The trigger fired but the evidence gate
+cannot be evaluated without a fresh benchmark scan.
+
+1. The ceiling remains 0.049-0.308 pending evidence.
+2. The 1.3d merge does not imply a performance claim. Any doc or
+   communication implying 1.3d improved traversal F1 is retracted.
+3. 2.2 entry is blocked on the evidence gate, not on any design
+   decision. When Docker is available and a fresh scan runs, the
+   evidence resolves and either ADR-003 is superseded (if F1 moved)
+   or ADR-003 continues to hold and 2.2 becomes the next lever.
+4. "Materially" threshold set at evidence time, not now. Conservative
+   default if not specified: 3-run mean pathtraver F1 moves by 0.05
+   absolute on any of the four categories.
+
+**Reproducibility note.** Harness commits, artifacts, and Dockerfile
+are all in-repo. Scan reproduction is feasible when Docker returns.
+Not a reproducibility problem — a scheduling problem.
