@@ -1,5 +1,5 @@
 """LDAP injection oracle regression tests."""
-from janissary.detection import check_ldap_injection_oracle, Baseline, ResponseSnapshot
+from janissary.detection import Baseline, ResponseSnapshot, check_ldap_injection_oracle
 
 
 class _FakeResponse:

@@ -1,5 +1,5 @@
 """Output-region oracle category-gating regression tests."""
-from janissary.detection import DifferentialAnalyzer, Baseline, ResponseSnapshot
+from janissary.detection import Baseline, DifferentialAnalyzer, ResponseSnapshot
 
 
 class _FakeResponse:

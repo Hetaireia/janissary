@@ -20,13 +20,13 @@ from janissary.detection import (
     Baseline,
     DifferentialAnalyzer,
     ResponseSnapshot,
+    check_ldap_injection_oracle,
     check_pathtraver_oracle,
     check_securecookie_oracle,
     check_sqli_quote_oracle,
-    check_xpath_error_oracle,
-    check_ldap_injection_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,
+    check_xpath_error_oracle,
 )
 from janissary.output.raw_http import (
     serialize_request,
@@ -236,7 +236,8 @@ class Scanner:
 
         self._traversal_nonce = secrets.token_hex(6)
         self._trustbound_nonce = "JNSRY_TB_" + secrets.token_hex(10)
-        self._payloads = list(DEFAULT_PAYLOADS) + [
+        self._payloads = [
+            *DEFAULT_PAYLOADS,
             ("trustbound_marker", self._trustbound_nonce, "trustbound", "high"),
         ]
         self.waf_profile: WAFProfile | None = None
@@ -454,7 +455,6 @@ class Scanner:
             sqli_quote_snap = None
             sqli_or_snap = None
             sqli_quote_resp = None
-            sqli_or_resp = None
             weakrand_seen = False
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
@@ -600,7 +600,9 @@ class Scanner:
                     sqli_quote_resp = r
                 elif name == "sql_or_1eq1":
                     sqli_or_snap = snapshot
-                    sqli_or_resp = r
+                    # sqli_or_resp previously assigned here was unused (F841);
+                    # removed 2026-10-25 to unblock CI. The "or 1=1" response body
+                    # should arguably be examined like sqli_quote_resp; Phase 1 audit.
                 elif name == "ldap_wildcard":
                     ldap_wild_snap = snapshot
                     ldap_wild_resp = r

@@ -9,6 +9,8 @@ Secure attribute is the discriminator.
 Negative tests are the point.
 """
 
+from typing import ClassVar
+
 from janissary.detection import Baseline, ResponseSnapshot
 from janissary.detection.analyzer import check_securecookie_oracle
 
@@ -118,6 +120,6 @@ def test_case_insensitive_secure_attribute():
 
 def test_handles_response_without_get_all():
     class Bare:
-        headers = {}
+        headers: ClassVar[dict] = {}
         raw = None
     assert check_securecookie_oracle(None, Bare(), MARK) == []

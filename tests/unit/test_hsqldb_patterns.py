@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from janissary.detection.analyzer import DB_ERROR_PATTERNS
 
 
@@ -26,7 +28,7 @@ def test_hsqldb_patterns_do_not_match_shell_errors():
 
 def test_db_error_forces_sqli_category(tmp_path):
     """db_error findings must carry class=sqli regardless of probe."""
-    src = open("src/janissary/engine/scanner.py").read()
+    src = Path("src/janissary/engine/scanner.py").read_text(encoding="utf-8")
     # Anchor: the override must be present in the emit loop
     assert 'if f.get("type") == "db_error":' in src
     assert 'category = "sqli"' in src
