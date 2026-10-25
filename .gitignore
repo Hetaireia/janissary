@@ -65,6 +65,10 @@ tools/ascension.ps1
 ASCENSION.html
 WORKFLOW.html
 
+# session handover notes (working documents, not published)
+JANISSARY-Session-Handover-*.txt
+JANISSARY-Session-Handover.txt
+
 # local benchmark scratch
 bench-*.json
 benchapp.py
