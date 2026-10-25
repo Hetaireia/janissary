@@ -1,4 +1,4 @@
-import json, csv, collections, sys
+import json, csv, collections, sys, argparse
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -75,8 +75,11 @@ def score(run_dir, cases_csv, label="full"):
     print(f"excluded categories: {sorted(excluded)}")
     print()
 
+    dast_metrics = None
     for label, filt in [("FULL CORPUS", False), ("DAST-APPLICABLE", True)]:
         TP, FP, FN, TN, P, R, F1, per_cat = tally(filt)
+        if filt:
+            dast_metrics = (TP, FP, FN, TN, P, R, F1)
         print(f"=== {label} ===")
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")
@@ -97,7 +100,39 @@ def score(run_dir, cases_csv, label="full"):
     for cat, f1, p, r, tp, fp, fn in rows:
         print(f"  {cat:<18} {f1:>6.3f} {p:>6.3f} {r:>6.3f} {tp:>5} {fp:>5} {fn:>5}")
 
+    return dast_metrics
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("usage: python benchmark/track_a/score_dast_aware.py <run-dir>"); sys.exit(1)
-    score(sys.argv[1], "benchmark/track_a/case_vectors.csv")
+    ap = argparse.ArgumentParser(
+        description="Score a JANISSARY DAST run against the OWASP Benchmark."
+    )
+    ap.add_argument("run_dir", help="Path to the run directory")
+    ap.add_argument(
+        "--cases-csv",
+        default="benchmark/track_a/case_vectors.csv",
+        help="Case vectors CSV (default: full 2,258-case corpus)",
+    )
+    ap.add_argument(
+        "--min-f1", type=float, default=None,
+        help="Exit 1 if DAST-applicable F1 < threshold",
+    )
+    ap.add_argument(
+        "--max-fp", type=int, default=None,
+        help="Exit 1 if DAST-applicable FP > threshold",
+    )
+    args = ap.parse_args()
+
+    dast = score(args.run_dir, args.cases_csv)
+
+    if args.min_f1 is not None or args.max_fp is not None:
+        _, FP, _, _, _, _, F1 = dast
+        fail = []
+        if args.min_f1 is not None and F1 < args.min_f1:
+            fail.append(f"F1 {F1:.3f} < --min-f1 {args.min_f1}")
+        if args.max_fp is not None and FP > args.max_fp:
+            fail.append(f"FP {FP} > --max-fp {args.max_fp}")
+        if fail:
+            for msg in fail:
+                print(f"THRESHOLD FAIL: {msg}")
+            sys.exit(1)
+        print(f"THRESHOLD PASS: F1={F1:.3f}, FP={FP}")
