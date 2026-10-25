@@ -1,0 +1,356 @@
+JANISSARY — Session Handover (post-0.3, session 2026-10-26)
+State-of-record.
+
+§1 — Where we are right now
+Phase 0.3 (stable finding fingerprint) is COMPLETE and CI-green.
+Phase 0.3c (SARIF enterprise parity) merged as part of 0.3.
+Both workflows green on final commit. 581 tests (was 507 at
+session open). Benchmark F1=0.921, FP=0 — unchanged from session
+open, unchanged throughout (0.3 is non-metric on OWASP corpus).
+
+HEAD:         7ce755a (origin/main, in sync)
+CI on 7ce755a: both workflows green (verified 2026-10-26)
+               ci.yml:          5 legs py3.10-3.14
+               benchmark-gate:  F1=0.921, FP=0, PASS
+Tests:        581/581 (was 507 at session open)
+
+Benchmark: F1 unchanged at 0.921 across all code states this
+session. 0.3 is metric-neutral by construction: benchmark-gate
+scores the committed 19MB findings.jsonl artifact against
+ground-truth vuln IDs on (param, category, finding_type) — no
+field the fingerprint or SARIF work touches is on the scoring
+path. Pathtraver F1 remains 0.049-0.308 (ADR-003 amendment;
+Docker evidence gate still closed).
+
+§2 — Commits added this session
+7ce755a  feat(sarif): full 2.1.0 parity (0.3c-b)        [GREEN]
+3f89e55  feat(sarif): rule catalog module (0.3c-a)       [GREEN]
+0ca0466  fix(ci): ruff format drift                       [GREEN]
+354f843  feat(identity): wire fingerprint into ... (0.3b) [RED - superseded]
+fa58641  feat(identity): finding_identity module (0.3a)   [RED - superseded]
+06b21a8  [session-open baseline]                          [GREEN]
+
+Two red commits in trunk added this session: fa58641, 354f843.
+Both failed on `ruff format --check .` on the 0.3a test file.
+Fix-forwarded by 0ca0466. No reverts. No force-pushes. Per
+§7 tolerance (unchanged from 1.3e) — red history is honest,
+not shameful. Root cause: pre-commit gate was scope-shortcut
+(<files> not whole-tree) for two consecutive commits, then
+format-order error once. See §8 (process rules).
+
+§3 — What shipped this session
+0.3 — stable finding fingerprint (ADR-007)
+  Phase 0.3a — 0.3a: finding_identity module
+    src/janissary/finding_identity.py (pure module, ~135 lines)
+    - compute_fingerprint(target, discriminator, category,
+      finding_type) -> "jfv1:<32-hex>"
+    - canonicalize_target with VOLATILE_PARAMS (11 entries,
+      conservative — false merges are worse than false splits
+      for enterprise dashboards)
+    - SHA-256 truncated to 128 bits, ASCII Unit Separator
+      (0x1F) joins prevent field-boundary collisions
+    tests/unit/test_finding_identity.py (26 tests)
+    ADR-007 (full ADR in ADR-006 format)
+
+  Phase 0.3b — 0.3b: wiring
+    ScanFinding.fingerprint (engine/scanner.py)
+      __post_init__ populates from (url, param, category,
+      finding_type); no per-site changes needed at 9 call sites
+    Finding.fingerprint (agent/finding_store.py)
+      __post_init__ populates from (target, discriminator,
+      category, finding_type); dedup_key() delegates to
+      fingerprint; from_dict backfills via __post_init__ on
+      legacy records; FINDING_KEYS gains "fingerprint"
+    output/emitter.py
+      _REQUIRED_FINDING_KEYS gains "fingerprint"; id falls
+      back to fingerprint when no explicit id is set
+    cli._summary_to_dict — emits fingerprint per finding
+    cli._write_sarif — partialFingerprints.finding/v1
+    tests/integration/test_finding_identity_wiring.py (11 tests)
+    Behavior change (documented in ADR-007 D5): dedup_key()
+    returns jfv1:<32-hex> instead of bare 32-hex. Legacy stores
+    that held duplicates of the same bug under different raw
+    URLs (case, volatile params) silently dedupe on next load.
+
+  Phase 0.3c — 0.3c-a: rule catalog
+    src/janissary/sarif_rules.py (pure module, ~180 lines)
+    - RuleMeta dataclass, _SPECS catalog (16 entries)
+    - CWE mapping: 89 (sqli), 22 (traversal), 78 (cmdi),
+      90 (ldapi), 643 (xpathi), 79 (xss), 501 (trustbound),
+      614 (securecookie), 338 (weakrand)
+    - sarif_level(severity) -> 4-way (error/warning/note)
+    - security_severity(severity) -> CVSS 0-10 float
+    - cwe_tag(cwe) -> external/cwe/cwe-NNN
+    - cwe_taxonomy() -> SARIF taxonomies[] entry
+    - rule_for() with graceful fallback for uncataloged types
+    tests/unit/test_sarif_rules.py (27 tests)
+    ADR-008 (full ADR)
+
+  Phase 0.3c — 0.3c-b: _write_sarif rewrite
+    cli._write_sarif — rules[], invocations[], taxonomies[],
+      per-result ruleIndex and security-severity,
+      per-finding artifactLocation.uri (f.url || summary.target),
+      4-level severity (was 2-level: low/info demoted from
+      warning to note per SARIF semantics)
+    tests/integration/test_sarif_output.py (10 tests)
+    Benchmark neutral.
+
+Net effect for the enterprise surface:
+- Cross-scan finding identity on every surface where a finding
+  appears (ScanFinding, agent.Finding, JSON output, SARIF,
+  finding store)
+- SARIF output is now GitHub Code Scanning / Azure DevOps
+  Code Analysis compatible: severity badges work, CWE taxonomy
+  links work, rule names render, orchestrators get invocation
+  health metadata
+- FindingStore deduplicates across scans by stable identity
+  regardless of URL case / volatile query parameter churn
+
+§4 — ADRs now in place
+ADR-001..002: unchanged.
+ADR-003: AMENDED 2026-10-26 (pre-session). Revisit trigger 1
+  fired at 1.3d merge; evidence gate still closed (Docker down).
+  Ceiling stands. 2.2 entry blocked.
+ADR-004: unchanged.
+ADR-005: unchanged.
+ADR-006: unchanged (D6 amended post-merge).
+ADR-007: NEW (2026-10-26). Finding identity scheme.
+ADR-008: NEW (2026-10-26). SARIF enterprise parity.
+
+§5 — Benchmark state-of-record
+  r1  TP 950 / FN 206 / F1 0.902
+  r2  TP 970 / FN 186 / F1 0.913
+  r3  TP 937 / FN 219 / F1 0.895
+  3-run mean: 0.903 +/- 0.009. Recovery: 0.921 (r1+rec).
+
+benchmark-gate on 7ce755a: F1=0.921, FP=0, PASS.
+Same F1 on every code state this session. 0.3 is non-metric
+by construction.
+
+Artifact of record: benchmark/track_a/runs/
+20261024T130735Z-janissary-r1+rec (19MB findings.jsonl, tracked
+in git, manifest harness_commit=1b4cf6c). CI scores this static
+artifact — not a live scan. Fresh scan requires Docker image
+janissary/owasp-benchmark:20cbf3d-ldapfix, still offline.
+
+§6 — Known issues (updated)
+#1 SPA catch-all FPs (39) - 1.3c filter + 1.3d oracle deployed.
+   Manual 39->0 deferred (ADR-005 D7). Synthetic fixture is
+   the certification surface.
+#2 401 abort - Open, Phase 1.1 -> 1.2
+#4 six-oracle refactor - Deferred 8.x
+#5 --mode ci - Deferred 8.x
+- pre-commit hook broken locally - CI is enforcement
+- scanner.py:601 sqli_or_resp - Phase 1 audit
+- tools.env Windows path - blocks 0.1b
+- benchmark image not on registry - blocks 0.1b
+- Pathtraver F1 0.049-0.308 - ADR-003 amended. 2.2 entry
+  blocked on Docker evidence gate.
+- WAF-block tiny_body FP class - documented in
+  test_waf_block_200_fires_as_tiny_body; distinct category
+  deferred to 2.x
+- fa58641, 354f843 red in history - RESOLVED by fix-forward
+  (0ca0466). Per §7 tolerance.
+- ADR-007 D5 (legacy store silent dedupe on next load) - not
+  covered by a test. Behavior is correct (D2 canonicalization)
+  but existing stores may surprise users who didn't expect
+  merges. Follow-on if needed.
+- Agent findings do not reach SARIF - _write_sarif takes
+  ScanSummary which carries only ScanFinding instances.
+  agent.Finding is separate. If agent findings ever need
+  SARIF, _write_sarif signature must accept both. Deferred.
+
+Phase 0: 0.1a DONE, 0.1b DEFERRED, 0.2 COMMITTED, 0.3 DONE
+(this session), 0.4 DONE, 0.5 DONE.
+Phase 1: 1.3a/b/c/d/e MERGED. Phase 2.2 blocked on Docker.
+
+§7 — Environment limitations (unchanged from 1.3e, plus)
+Unchanged: pre-commit broken; PS7 no heredocs at top level;
+code <newpath> opens unsaved buffer; gh run view needs numeric
+ID; < reserved; git commit -m $msg with heredoc $msg fragile
+(use repeated -m "..."); em dashes in commit subjects can
+break argument passing; bare git push can fail silently (capture
+output); Set-Content does not halt sequence on failure inside
+& { } (throw + loud STOP); git status --porcelain gives M/??
+prefixes; $env:TEMP resolves to 8.3 short path (use
+[System.IO.Path]::GetTempFileName()); ResponseSnapshot has NO
+status_code field (status, body, normalized, fingerprint,
+length, normalized_length, elapsed, content_type);
+transient 0xc0000005 git crash in gh run view during CI poll
+(cosmetic, next poll recovers); file paths drift between
+sessions (always Test-Path before assuming); heredoc
+terminator `'@` must be at column 0 — inside `& { }` block
+this is still required; `return` at top level of a bare script
+block is a no-op — MUST wrap in `& { }` for `return` to halt
+execution.
+
+NEW this session:
+- ruff format . and ruff check . are DIFFERENT tools. Passing
+  `ruff check <file>` does not imply `ruff format --check`
+  will pass. Both must run on whole tree.
+- ruff check --fix . must come BEFORE ruff format . — import
+  sort and unused-import removal are check territory, not
+  format territory. Reversed order means check failures
+  survive the format step and stop the pipeline.
+- CI runs 3 checks (ruff check ., ruff format --check .,
+  pytest -q) in that order, whole tree, 5 Python versions.
+  Any local gate that runs a subset is insufficient.
+- gh run list --json with empty fields returns empty strings,
+  not nulls. Check `-eq "success"` not `-ne ""`.
+- `git ls-remote origin main` is a good push-transport
+  diagnostic — it exercises network+auth for read without
+  pushing. If it succeeds but push fails with `aborted
+  session`, that's the credential helper holding state, not
+  a network path issue.
+- Push failures with `remote helper 'https' aborted session`
+  recover on retry. Confirmed twice this session. One retry
+  after 3s, then report — do not retry indefinitely.
+
+§8 — Session lessons and locked process rules
+Supersedes 1.3e §8. Prior lessons still apply, but these are
+load-bearing now:
+
+PROCESS RULE 1 (pre-commit gate): Before any commit that
+touches src/, tests/, or docs/, run ALL THREE CI checks
+verbatim on whole tree, in order:
+    ruff check --fix .         # sort imports, remove unused
+    ruff format .              # formatting
+    ruff check .               # verify no lint remains
+    ruff format --check .      # verify formatting
+    pytest -q                  # tests
+Any failure halts the pre-commit sequence. This is not
+optional. The two red commits this session (fa58641,
+354f843) were caused by skipping or shortcutting this rule.
+
+PROCESS RULE 2 (pre-push gate): Before any push, verify the
+PREVIOUS commit's CI is `conclusion: success`. Never push on
+top of a red predecessor. `gh run list --branch main
+--limit 1 --json status,conclusion` — if not success, fix
+first.
+
+PROCESS RULE 3 (post-push gate): After pushing, poll CI to
+completion before starting new work. A push that "succeeded"
+is not a green tree. If CI fails, diagnose before making
+further changes.
+
+PROCESS RULE 4 (control flow): Multi-step PowerShell scripts
+MUST be wrapped in `& { ... }` with `return` inside. A `return`
+at top-level of a bare script is a no-op — the script continues
+after "STOP" and produces misleading green success messages.
+
+PROCESS RULE 5 (heredoc discipline): Heredoc terminators must
+be at column 0. `'@` inside `& { }` still needs to start the
+line. Do not chain `'''` (Python triple-quote close) into the
+same line as `'@` — PowerShell will not recognize it.
+
+PROCESS RULE 6 (scope verification before commit): After the
+pre-commit gate, run `git status --porcelain` and explicitly
+verify that the file set matches intent. If any unexpected M
+prefix appears on a non-target file, STOP. This catches drift
+where ruff --fix touches something adjacent you didn't intend.
+
+PROCESS RULE 7 (commit message form): Use repeated -m "..."
+arguments, never heredoc $msg. Em dashes in commit subjects
+can break PowerShell argument passing. Keep subjects under
+72 chars.
+
+PROCESS RULE 8 (transient push retry): On push failure with
+"aborted session" / "RPC failed" / "Could not resolve host",
+wait 3s and retry ONCE. If second attempt fails, report to
+user — do not loop. Commit is safe locally; retry later.
+
+§9 — First actions in the new window
+  cd "C:\Users\M5 E60\janissary-project\janissary"
+  & ".\.venv\Scripts\Activate.ps1"
+  $PWD
+  git --no-pager status -sb       # expect: ## main...origin/main
+  git rev-parse --short HEAD      # expect: 7ce755a or newer
+  python -m pytest -q              # expect: 581 passed
+  ruff check .                     # expect: All checks passed
+  ruff format --check .            # expect: 110 files already formatted
+
+If HEAD or test count differs, stop and diagnose before
+continuing.
+
+Then READ, in this order, BEFORE proposing any code:
+  1. docs/handover/session-0.3.txt (this file)
+  2. docs/decisions/ADR-007-finding-identity-scheme.md
+  3. docs/decisions/ADR-008-sarif-enterprise-parity.md
+  4. docs/decisions/ADR-003-pathtraver-ceiling.md (amended)
+  5. docs/decisions/ADR-006-traversal-collapse-oracle.md
+  6. src/janissary/finding_identity.py
+  7. src/janissary/sarif_rules.py
+  8. src/janissary/engine/scanner.py (ScanFinding)
+  9. src/janissary/agent/finding_store.py (Finding, FindingStore)
+ 10. src/janissary/cli.py (_write_sarif, _summary_to_dict)
+
+§10 — Do NOT
+- Begin next-phase work without explicit scope agreement from
+  the user. 0.3 completed; the roadmap decision belongs to
+  the operator, not the assistant.
+- Modify ADR-007 or ADR-008 thresholds, VOLATILE_PARAMS,
+  rule catalog entries, CWE mappings, or security-severity
+  scores without an ADR amendment.
+- Change ADR-003 ceiling without the evidence gate (Docker).
+- Regenerate the committed benchmark artifact. It is on the
+  scoring path for CI; changing it invalidates F1 across
+  history.
+- Push on top of a red CI state. Process Rule 2.
+- Use <placeholder> syntax in commit messages.
+- Use heredoc $msg for git commit.
+- Force-push.
+- Skip Process Rule 1 (pre-commit gate) under any circumstance.
+  The two red commits this session cost more time than the
+  gate would have.
+
+§11 — Phase 0.3 is done; next-scope menu (no decision made)
+Options in descending estimated enterprise value:
+
+1. SARIF schema validation — validate _write_sarif output
+   against the official SARIF 2.1.0 JSON schema using
+   `jsonschema` in a test. Catches drift in real time. Small
+   scope (1 test, 1 fixture). Does not require network.
+
+2. GitHub Code Scanning upload integration test — confirm
+   that the SARIF our tool produces is accepted by GitHub's
+   code scanning API. Requires GitHub token + upload URL.
+   Probably out of scope for a unit/integration test; more
+   of an e2e check run manually when the enterprise user
+   needs it.
+
+3. Agent findings into SARIF — requires _write_sarif to
+   accept either ScanSummary or a list of agent.Finding.
+   Signature change. Meaningful scope (~1-2 sessions). Value:
+   the CLI `agent` command currently emits JSON but not
+   SARIF; enterprises using `agent` (orchestrated scans) would
+   get parity.
+
+4. Phase 2.2 (traversal payloads) — BLOCKED on Docker evidence
+   gate. Do not start until Docker is available and ADR-003
+   revisit trigger conditions are satisfiable.
+
+5. Phase 2.x WAF-block 200 FP fix — BLOCKED on WAF-aware
+   target availability. Documented class, deferred.
+
+6. Next phase not yet scoped — if the roadmap calls for
+   something not in the above, it needs a §11-style scope
+   discovery before code.
+
+My recommendation: option 1 (SARIF schema validation) if
+continuing on the 0.3 theme; then a pause for roadmap input
+from the operator before option 3 or 6. But this is a
+roadmap decision, not an assistant decision.
+
+§12 — Loose ends (not blockers)
+- fa58641, 354f843 red in history. Fix-forwarded. Per §7
+  tolerance.
+- ASCENSION dashboard pace badge — local only, unrelated.
+- Benchmark artifact regeneration requires Docker. Not
+  scheduled.
+- ADR-003 revisit trigger 1 remains open pending evidence.
+- ADR-007 D5 legacy-store silent-dedupe behavior is
+  documented but not test-covered.
+- WAF-block 200 FP class documented but unfixed.
+- Two clean fix-forward commits this session (0ca0466 for
+  ruff format; process rule 1 exists because of them). No
+  further action needed — the rules prevent recurrence.
