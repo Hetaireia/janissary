@@ -6,6 +6,15 @@ from unittest.mock import MagicMock
 
 from janissary.recon import admin as a
 
+import hashlib as _hashlib
+from janissary.detection import normalize_body as _normalize_body
+from janissary.engine.dom_hash import fingerprint as _fingerprint
+from janissary.recon.admin import AdminProfile as _AdminProfile
+from janissary.recon.admin_struct import (
+    compute_root_state,
+    should_discard_admin_hit,
+)
+
 
 class FakeResp:
     def __init__(self, status=200, text="", headers=None):
@@ -228,20 +237,10 @@ def test_profile_to_dict_roundtrip():
 # ADR-005 structural gating helpers
 # ---------------------------------------------------------------------------
 
-import hashlib as _hashlib
-
-from janissary.detection import normalize_body as _normalize_body
-from janissary.engine.dom_hash import fingerprint as _fingerprint
-from janissary.recon.admin import AdminProfile as _AdminProfile
-from janissary.recon.admin_struct import (
-    compute_root_state,
-    should_discard_admin_hit,
-)
-
 CANARY_ROOT = "<html><body><p>Alice</p></body></html>"
 CANARY_DIFF_TEXT = "<html><body><p>Bob</p></body></html>"
 CANARY_DIFF_STRUCT = "<html><body><div><p>Alice</p></div></body></html>"
-SPA_INDEX = "<html><body><div id=\"app\"></div><script src=\"a.js\"></script></body></html>"
+SPA_INDEX = '<html><body><div id="app"></div><script src="a.js"></script></body></html>'
 
 
 def _fp_sig(body):
@@ -255,8 +254,10 @@ def _fp_sig(body):
 def test_should_discard_exact_match():
     fp, sig = _fp_sig(CANARY_ROOT)
     v = should_discard_admin_hit(
-        response_text=CANARY_ROOT, response_content_type="text/html",
-        root_fingerprint=fp, root_signature_hex=sig,
+        response_text=CANARY_ROOT,
+        response_content_type="text/html",
+        root_fingerprint=fp,
+        root_signature_hex=sig,
     )
     assert v.discard is True
     assert v.reason == "spa_catchall_admin"
@@ -267,8 +268,10 @@ def test_should_discard_exact_match():
 def test_should_discard_same_skeleton_diff_text_not_discarded():
     fp, sig = _fp_sig(CANARY_ROOT)
     v = should_discard_admin_hit(
-        response_text=CANARY_DIFF_TEXT, response_content_type="text/html",
-        root_fingerprint=fp, root_signature_hex=sig,
+        response_text=CANARY_DIFF_TEXT,
+        response_content_type="text/html",
+        root_fingerprint=fp,
+        root_signature_hex=sig,
     )
     assert v.discard is False
     assert v.root_signature_match is False
@@ -277,8 +280,10 @@ def test_should_discard_same_skeleton_diff_text_not_discarded():
 def test_should_discard_different_structure_not_discarded():
     fp, sig = _fp_sig(CANARY_ROOT)
     v = should_discard_admin_hit(
-        response_text=CANARY_DIFF_STRUCT, response_content_type="text/html",
-        root_fingerprint=fp, root_signature_hex=sig,
+        response_text=CANARY_DIFF_STRUCT,
+        response_content_type="text/html",
+        root_fingerprint=fp,
+        root_signature_hex=sig,
     )
     assert v.discard is False
 
@@ -286,8 +291,10 @@ def test_should_discard_different_structure_not_discarded():
 def test_should_discard_non_html_not_discarded():
     fp, sig = _fp_sig(CANARY_ROOT)
     v = should_discard_admin_hit(
-        response_text=CANARY_ROOT, response_content_type="application/json",
-        root_fingerprint=fp, root_signature_hex=sig,
+        response_text=CANARY_ROOT,
+        response_content_type="application/json",
+        root_fingerprint=fp,
+        root_signature_hex=sig,
     )
     assert v.discard is False
 
@@ -300,14 +307,14 @@ def test_compute_root_state_none():
 
 def test_compute_root_state_non_html():
     r = FakeResp(status=200, text="{}", headers={"content-type": "application/json"})
-    fp, sig, reason = compute_root_state(r)
+    fp, _sig, reason = compute_root_state(r)
     assert fp is None
     assert reason == "disabled_no_html_root"
 
 
 def test_compute_root_state_empty_body():
     r = FakeResp(status=200, text="", headers={"content-type": "text/html"})
-    fp, sig, reason = compute_root_state(r)
+    fp, _sig, reason = compute_root_state(r)
     assert fp is None
     assert reason == "disabled_no_html_root"
 
@@ -320,7 +327,9 @@ def test_compute_root_state_valid():
 
 
 def test_arming_field_in_to_dict():
-    p = _AdminProfile(target="http://t/", arming={"enabled": False, "reason": "disabled_no_root"})
+    p = _AdminProfile(
+        target="http://t/", arming={"enabled": False, "reason": "disabled_no_root"}
+    )
     d = p.to_dict()
     assert "arming" in d
     assert d["arming"]["enabled"] is False
