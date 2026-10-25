@@ -2,6 +2,7 @@
 
 Pure helpers: no requests, no side effects.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -28,7 +29,7 @@ class DiscardVerdict:
 
 
 def compute_root_state(
-    home: "requests.Response | None",
+    home: requests.Response | None,
 ) -> tuple[StructuralFingerprint | None, str | None, str]:
     if home is None or home.status_code != 200:
         return None, None, "disabled_no_root"
