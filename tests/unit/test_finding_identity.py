@@ -103,7 +103,7 @@ def test_fingerprint_format():
     )
     assert fp.startswith(FP_PREFIX)
     assert len(fp) == len(FP_PREFIX) + FP_HEX_WIDTH
-    hex_part = fp[len(FP_PREFIX):]
+    hex_part = fp[len(FP_PREFIX) :]
     assert all(c in "0123456789abcdef" for c in hex_part)
 
 
@@ -227,9 +227,7 @@ def test_fingerprint_ignores_query_order():
 
 
 def test_fingerprint_empty_components():
-    fp = compute_fingerprint(
-        target="", discriminator="", category="", finding_type=""
-    )
+    fp = compute_fingerprint(target="", discriminator="", category="", finding_type="")
     assert fp.startswith(FP_PREFIX)
 
 
