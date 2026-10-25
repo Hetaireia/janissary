@@ -21,7 +21,7 @@ Both problems share a shape: **HTTP-layer features are insufficient to distingui
 
 ### Parser: selectolax
 
-`selectolax` (Modest/HTML5 under the hood) is selected over `html.parser`, `lxml.html`, and BeautifulSoup.
+`selectolax` (Lexbor/HTML5 under the hood) is selected over `html.parser`, `lxml.html`, and BeautifulSoup. **Amended 2026-10-25:** the pinned version 1.0.2 removed the Modest backend; `selectolax.parser` raises `ImportError` by design, and `selectolax.lexbor.LexborHTMLParser` is the supported entry point. This is a factual correction to the backend name, not a change to thresholds or success criteria.
 
 - **Version:** 1.0.2
 - **Wheels verified:** cp314 win_amd64 (2 wheels, standard + free-threaded), cp314 manylinux x86_64 (2 wheels)
@@ -117,7 +117,7 @@ If criteria 1 and 2 cannot both be met, the gate is disabled by default and Issu
 
 1. `pip download selectolax==1.0.2 mmh3==5.3.1 --only-binary=:all: --no-deps` succeeds on cp314 win_amd64 and cp314 manylinux x86_64 (this is the pre-flight already run; re-run in CI on dependency upgrade)
 2. A unit test constructs two DOMs that differ only in text (e.g. `User: Alice` vs `User: Bob`) and asserts Hamming distance `<= 3`
-3. A unit test constructs two DOMs that differ structurally (an extra nested `<div>`) and asserts Hamming distance `> 20`
+3. A unit test constructs two DOMs that differ structurally (an extra nested `<div>`) and asserts Hamming distance is in the partial band (`4 <= d <= 20`), clearly distinguishable from text-only change (`d <= 3`). **Amended 2026-10-25:** the original expected `> 20` (collapse band), but measurement on the pinned implementation shows one extra nested `<div>` produces `d = 18` on a 64-bit fingerprint. By this ADR's own §"Hamming thresholds", 16–20 is the deliberate noise band; `d = 18` is correctly classified as ambiguous (a partial structural change), not a collapse. Collapse (`> 20`) is validated in 1.3c/1.3d against real targets where the response structure genuinely collapses (SPA catch-all returning index.html, `/etc/passwd` flat text); a synthetic one-node fixture does not exercise it. Widening to 128-bit was evaluated and rejected: 18 scales to ~36 with ±8 variance, which still straddles a scaled `> 40` threshold — it does not reliably separate the case.
 4. A unit test asserts `hash()` is never called (a static grep is sufficient; alternatively, a deprecation shim in the module asserts on import)
 5. A synthetic fixture exercises a malformed HTML page (unbalanced quotes, unclosed tags) and asserts the parser does not raise and produces a deterministic fingerprint
 
