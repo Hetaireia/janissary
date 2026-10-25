@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import re
@@ -149,10 +150,8 @@ def main() -> int:
     _merge(run1, run2, merged)
     print(f"[recovery] merged: {merged}", flush=True)
 
-    try:
+    with contextlib.suppress(OSError):
         retry_csv.unlink()
-    except OSError:
-        pass
 
     return 0
 

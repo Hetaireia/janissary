@@ -1,4 +1,8 @@
-import json, csv, collections, sys, argparse
+import argparse
+import collections
+import csv
+import json
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -26,7 +30,8 @@ def family(cat):
     return cat.split("-")[0]
 
 def score(run_dir, cases_csv, label="full"):
-    cases = list(csv.DictReader(open(cases_csv, encoding="utf-8", newline="")))
+    with open(cases_csv, encoding="utf-8", newline="") as fh:
+        cases = list(csv.DictReader(fh))
     by_path = {c["urlpath"]: c for c in cases}
     excluded = load_excluded()
 
@@ -34,13 +39,16 @@ def score(run_dir, cases_csv, label="full"):
     n_find = n_wrong = n_orphan = 0
     mismatches = collections.Counter()
 
-    for line in open(f"{run_dir}/findings.jsonl", encoding="utf-8"):
+    findings_path = Path(run_dir) / "findings.jsonl"
+    for line in findings_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
-        if not line: continue
+        if not line:
+            continue
         n_find += 1
         d = json.loads(line)
         p = urlparse(d["url"]).path
-        if p.startswith("/benchmark"): p = p[len("/benchmark"):]
+        if p.startswith("/benchmark"):
+            p = p[len("/benchmark"):]
         if p not in by_path:
             n_orphan += 1
             continue
@@ -61,10 +69,18 @@ def score(run_dir, cases_csv, label="full"):
                 continue
             vuln = c["vulnerable"].strip().lower() == "true"
             detected = family(cat) in correct_on_path.get(c["urlpath"], set())
-            if vuln and detected:      TP += 1; per_cat[cat]["TP"] += 1
-            elif vuln and not detected: FN += 1; per_cat[cat]["FN"] += 1
-            elif not vuln and detected: FP += 1; per_cat[cat]["FP"] += 1
-            else:                       TN += 1; per_cat[cat]["TN"] += 1
+            if vuln and detected:
+                TP += 1
+                per_cat[cat]["TP"] += 1
+            elif vuln and not detected:
+                FN += 1
+                per_cat[cat]["FN"] += 1
+            elif not vuln and detected:
+                FP += 1
+                per_cat[cat]["FP"] += 1
+            else:
+                TN += 1
+                per_cat[cat]["TN"] += 1
         P = TP/(TP+FP) if TP+FP else 0
         R = TP/(TP+FN) if TP+FN else 0
         F1 = 2*P*R/(P+R) if P+R else 0
@@ -127,9 +143,9 @@ if __name__ == "__main__":
     if args.min_f1 is not None or args.max_fp is not None:
         _, FP, _, _, _, _, F1 = dast
         fail = []
-        if args.min_f1 is not None and F1 < args.min_f1:
+        if args.min_f1 is not None and args.min_f1 > F1:
             fail.append(f"F1 {F1:.3f} < --min-f1 {args.min_f1}")
-        if args.max_fp is not None and FP > args.max_fp:
+        if args.max_fp is not None and args.max_fp < FP:
             fail.append(f"FP {FP} > --max-fp {args.max_fp}")
         if fail:
             for msg in fail:

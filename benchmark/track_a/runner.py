@@ -176,7 +176,8 @@ def _run_subprocess_tree(
                 capture_output=True,
             )
         else:
-            import os, signal
+            import os
+            import signal
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             except Exception:
