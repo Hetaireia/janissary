@@ -69,6 +69,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
                 "response_time": f.response_time,
                 "reflection_context": f.reflection_context,
                 "response_content_type": f.response_content_type,
+                "fingerprint": f.fingerprint,
             }
             for f in summary.findings
         ],
@@ -945,6 +946,7 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
         results.append(
             {
                 "ruleId": f"{f.category}:{f.finding_type}",
+                "partialFingerprints": {"finding/v1": f.fingerprint},
                 "level": "error" if f.severity in ("critical", "high") else "warning",
                 "message": {"text": f.detail},
                 "locations": [

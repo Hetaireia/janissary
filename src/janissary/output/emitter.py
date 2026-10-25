@@ -37,6 +37,7 @@ _REQUIRED_FINDING_KEYS = frozenset(
         "method",
         "raw_request",
         "raw_response",
+        "fingerprint",
     }
 )
 
@@ -169,8 +170,9 @@ def _normalize_finding(finding: Any) -> dict:
     cls = m.get("class") or m.get("bug_class") or m.get("category")
     param = m.get("parameter") or m.get("param")
     out: dict = {
-        "id": _coerce_str(m.get("id")),
+        "id": _coerce_str(m.get("id") or m.get("fingerprint")),
         "class": _coerce_str(cls),
+        "fingerprint": _coerce_str(m.get("fingerprint")),
         "title": _coerce_str(m.get("title")),
         "severity": _coerce_str(m.get("severity")),
         "confidence": _coerce_str(m.get("confidence")),
