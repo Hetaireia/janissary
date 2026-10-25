@@ -27,7 +27,9 @@ Eight design decisions were resolved pre-code. All eight were locked on
 All three, each independently sufficient. Combined:
 `min_dist > 20 AND (tiny_body OR no_markup OR known_file_sig)`.
 
-- **tiny_body:** payload body length < 10% of baseline mean length.
+- **tiny_body:** payload body length < 10% of baseline mean length, status < 500,
+  and body contains `:` or `/` (anti-FP against generic small
+  error/WAF-block responses; ADR-006 D1 sub-tightening, 2026-10-26).
 - **no_markup:** payload body contains no `<` character AND body
   contains at least one traversal-content marker from
   `{root:, daemon:, /bin/, /etc/, /usr/, 127.0.0.1}` (case-insensitive).
@@ -137,7 +139,9 @@ root_signature=None, verify collapse oracle runs.
 ### D8. 1.3d / 1.3e boundary
 
 **1.3d ships:**
-- engine/collapse_oracle.py (pure helper + classifier)
+- detection/collapse_oracle.py (pure helper + classifier; follows
+  existing oracle placement — all check_*_oracle live in
+  janissary/detection/)
 - Wiring in scanner.py payload loop
 - ScanSummary.baselines[param]["arming"] populated from
   compute_arming_state (1.3b dead code finally called)

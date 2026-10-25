@@ -28,6 +28,8 @@ from janissary.detection import (
     check_weakrand_oracle,
     check_xpath_error_oracle,
 )
+from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
+from janissary.engine.baseline_struct import compute_arming_state
 from janissary.output.raw_http import (
     serialize_request,
     serialize_response,
@@ -472,6 +474,17 @@ class Scanner:
                 "has_oracle": baseline.has_oracle,
             }
 
+            arming = compute_arming_state(baseline)
+            summary.baselines[param]["arming"] = {
+                "armed": arming.armed,
+                "reason": arming.reason.value,
+                "sample_count": arming.sample_count,
+                "hamming_max": arming.hamming_max,
+                "has_root_signature": arming.root_signature is not None,
+                "emitted_count": 0,
+                "emitted_by_reason": {},
+            }
+
             if baseline.is_static and not quiet:
                 _say(f"  [{param}] baseline is static - timing gates disabled")
 
@@ -495,6 +508,50 @@ class Scanner:
                     continue
 
                 snapshot = ResponseSnapshot.from_response(r)
+
+                # Collapse oracle (ADR-006, Phase 1.3d): fires when a
+                # payload response structurally collapses from the armed
+                # baseline AND an auxiliary signal corroborates. D5
+                # pass-through: no-op when arming.armed is False.
+                if arming.armed:
+                    collapse_raw = check_traversal_collapse_oracle(
+                        baseline=baseline,
+                        arming=arming,
+                        snapshot=snapshot,
+                        response_status=r.status_code,
+                        payload_value=value,
+                        payload_name=name,
+                    )
+                    for cf in collapse_raw:
+                        col_req = getattr(r, "request", None)
+                        col_finding = ScanFinding(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            category=cf["category"],
+                            severity=cf["severity"],
+                            finding_type=cf["type"],
+                            detail=cf["detail"],
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(col_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(col_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(col_finding)
+                        summary.finding_count += 1
+                        tag = cf["reason"] or "collapse_unknown"
+                        by = summary.baselines[param]["arming"]["emitted_by_reason"]
+                        by[tag] = by.get(tag, 0) + 1
+                        summary.baselines[param]["arming"]["emitted_count"] += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {name} -> traversal_collapse "
+                                f"| {cf['detail'][:80]}"
+                            )
 
                 # Trustbound session-sink oracle: per-scan high-entropy
                 # marker payload; fires only when the marker is echoed
