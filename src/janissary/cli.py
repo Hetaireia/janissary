@@ -940,28 +940,68 @@ def cmd_agent(args: argparse.Namespace) -> int:
 
 
 def _write_sarif(summary: ScanSummary, path: str) -> None:
-    """Emit a minimal SARIF 2.1.0 document."""
-    results = []
+    """Emit a SARIF 2.1.0 document with enterprise metadata (ADR-008)."""
+    from janissary.sarif_rules import (
+        TOOL_NAME,
+        TOOL_URI,
+        cwe_taxonomy,
+        rule_for,
+        sarif_level,
+        security_severity,
+    )
+
+    # Dedup (category, finding_type) pairs into a rules catalog for this scan.
+    rule_order: list[tuple[str, str]] = []
+    rule_index: dict[str, int] = {}
     for f in summary.findings:
+        rid = f"{f.category}:{f.finding_type}"
+        if rid not in rule_index:
+            rule_index[rid] = len(rule_order)
+            rule_order.append((f.category, f.finding_type))
+    rules = [rule_for(cat, ft).to_sarif() for cat, ft in rule_order]
+
+    results: list[dict] = []
+    for f in summary.findings:
+        rid = f"{f.category}:{f.finding_type}"
         results.append(
             {
-                "ruleId": f"{f.category}:{f.finding_type}",
+                "ruleId": rid,
+                "ruleIndex": rule_index[rid],
                 "partialFingerprints": {"finding/v1": f.fingerprint},
-                "level": "error" if f.severity in ("critical", "high") else "warning",
+                "level": sarif_level(f.severity),
                 "message": {"text": f.detail},
                 "locations": [
                     {
                         "physicalLocation": {
-                            "artifactLocation": {"uri": summary.target},
+                            "artifactLocation": {"uri": f.url or summary.target},
                         }
                     }
                 ],
                 "properties": {
                     "param": f.param,
                     "payload": f.payload_name,
+                    "security-severity": f"{security_severity(f.severity):.1f}",
                 },
             }
         )
+
+    invocation: dict = {
+        "executionSuccessful": not summary.aborted,
+        "properties": {
+            "target": summary.target,
+            "params": list(summary.params),
+            "method": summary.method,
+            "totalRequests": summary.total_requests,
+            "findingCount": summary.finding_count,
+        },
+    }
+    if summary.aborted:
+        invocation["toolExecutionNotifications"] = [
+            {
+                "level": "error",
+                "message": {"text": summary.abort_reason or "scan aborted"},
+            }
+        ]
 
     doc = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
@@ -970,11 +1010,14 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
             {
                 "tool": {
                     "driver": {
-                        "name": "JANISSARY",
+                        "name": TOOL_NAME,
                         "version": __version__,
-                        "informationUri": "https://github.com/Hetaireia/janissary",
+                        "informationUri": TOOL_URI,
+                        "rules": rules,
                     }
                 },
+                "invocations": [invocation],
+                "taxonomies": [cwe_taxonomy()],
                 "results": results,
             }
         ],
