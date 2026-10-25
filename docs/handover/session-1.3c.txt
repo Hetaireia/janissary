@@ -1,0 +1,202 @@
+JANISSARY — Session Handover (post-1.3c, pre-1.3d)
+State-of-record, 2026-10-25.
+
+§1 — Where we are right now
+Phase 1.3c is MERGED and CI-green. Phase 1.3d design is the next action.
+
+HEAD:         a964257 (origin/main, in sync)
+CI on a964257: both workflows green (verified 2026-10-25)
+              ci.yml:           40194548881  (5 legs py3.10-3.14)
+              benchmark-gate:   40194548916  (F1=0.921, FP=0, PASS)
+Tests:        487/487 (was 475 pre-1.3c)
+
+F1 metric unchanged at 0.921. Confirms probe_admin is not in the
+scanner scoring path — 1.3c is a recon-output quality fix, not an
+F1-metric mover.
+
+Immediate next: Phase 1.3d (payload-loop emit path). baseline_struct
+from 1.3b is STILL dead code; 1.3d is where it is consumed.
+
+§2 — Commits added this session
+a964257 chore(repo): untrack commit-msg.txt, add to .gitignore [GREEN]
+e4bcb7e fix(recon): 1.3c ruff I001 + format drift          [GREEN]
+2856131 fix(recon): 1.3c ruff compliance                   [RED - superseded]
+93b6732 feat(recon): 1.3c admin probe structural gating    [RED - superseded]
+416b453 docs(adr): ADR-005 amendment - re-scoped           [via 93b6732]
+
+93b6732 and 2856131 are red in history, fix-forwarded in e4bcb7e.
+No revert, no force-push. Within §7 tolerance. Final tree at a964257
+green on both workflows.
+
+§3 — What 1.3c delivered
+- src/janissary/recon/admin_struct.py (NEW, 62 lines)
+    DiscardVerdict (frozen), compute_root_state, should_discard_admin_hit
+    Constants: MAX_HAMMING=3, SIGNATURE_BYTES=4096, SPA_CATCHALL_REASON
+    Pure helpers. No requests, no logging.
+- src/janissary/recon/admin.py (+36 lines)
+    AdminProfile.arming (additive dict)
+    to_dict() includes "arming"
+    run() computes root state from `home` (no extra request), wires
+    filter between _classify and hits.append
+    log = logging.getLogger(__name__) at DEBUG
+- tests/integration/test_admin_spa.py (NEW, 81 lines, 3 tests)
+- tests/unit/test_admin.py (+102 lines, 9 new tests)
+- docs/decisions/ADR-005-gated-corroborator.md (NEW, 85 lines)
+
+§4 — ADRs now in place
+ADR-001, ADR-002, ADR-003, ADR-004: unchanged since 1.3b.
+ADR-005 NEW. D1..D9 + D7 invocation record. Key:
+  D1  Scope: admin-path hit suppression via fingerprint + root sig
+      match. Payload loop untouched.
+  D3  Integration: recon/admin.py:probe_admin, not scanner.py.
+  D5  Disabled filter = field-equal output minus additive arming.
+  D7  RESOLVED - origin is probe_admin, not scanner.py. Synthetic
+      fixture is the certification surface. Manual 39->0 deferred.
+  D9  --min-f1 0.92 --max-fp 0 primary; fresh 3-run advisory (probe_admin
+      not in scoring path); precision wins ties.
+
+§5 — Benchmark state-of-record (unchanged)
+  r1  TP 950 / FN 206 / F1 0.902
+  r2  TP 970 / FN 186 / F1 0.913
+  r3  TP 937 / FN 219 / F1 0.895
+  3-run mean: 0.903 +/- 0.009. Recovery: 0.921 (r1+rec).
+  benchmark-gate on a964257: F1=0.921, FP=0, PASS.
+§6 — Known issues (updated)
+#1 SPA catch-all FPs (39) - 1.3c ships structural gating. Manual 39->0
+   cannot be certified (no artifact; README framing differs from
+   ADR-002). Synthetic fixture substitutes. See ADR-005 D7.
+#2 401 abort - Open, Phase 1.1 -> 1.2
+#4 six-oracle refactor - Deferred 8.x
+#5 --mode ci - Deferred 8.x
+- pre-commit hook broken locally - unchanged, CI is enforcement
+- scanner.py:601 sqli_or_resp - Phase 1 audit
+- tools.env Windows path - blocks 0.1b
+- benchmark image not on registry - blocks 0.1b
+- Pathtraver F1 0.049-0.308 - ADR-003 revisit triggers set
+- 93b6732 + 2856131 red in history - RESOLVED by e4bcb7e
+- commit-msg.txt accidentally tracked - RESOLVED by a964257
+- 1.3c complete - RESOLVED (a964257)
+
+Phase 0: 0.1a DONE, 0.1b DEFERRED, 0.2 COMMITTED (hook broken),
+0.3 NOT STARTED (independent), 0.4 DONE, 0.5 DONE.
+Phase 1: 1.3a MERGED, 1.3b MERGED (dead code), 1.3c MERGED, 1.3d NEXT.
+
+§7 — Environment limitations (2 new)
+Unchanged: pre-commit broken; PowerShell 7 no heredocs; `code <newpath>`
+opens unsaved buffer; `gh run view <numeric>` needs real ID; `<` reserved.
+
+NEW: `$env:TEMP` on this machine resolves to 8.3 short path
+`C:\Users\M5E60~1` that `Remove-Item` cannot reach. Do NOT write
+scratch files to $env:TEMP and try to delete them. Use
+`git commit -m $msg` with `$msg` a here-string. No file at all.
+
+NEW: Bare `throw` in an interactive PowerShell paste does NOT halt
+subsequent pasted lines. Each line runs independently at the prompt.
+Multi-step pastes MUST be wrapped in `& { ... }` with
+`$ErrorActionPreference = 'Stop'` inside. A `throw` inside `& { }`
+halts the block. Use this pattern for every multi-step paste.
+
+§8 — Session lessons (prior all still apply)
+NEW:
+1. `& { }` wrapper for all multi-step pastes (see §7).
+2. `git commit -m $msg`, never `-F file` when the file lives in the
+   repo tree. `git add -A` picks up message files.
+3. No `<placeholder>` syntax in paste blocks. `$var` assigned in the
+   same block, always.
+4. Run `ruff check .` AND `pytest -q` LOCALLY before every commit.
+   Local pre-commit hook is broken; manual run is the substitute.
+5. When ruff finds a category across files, `ruff check --fix .` and
+   `ruff format .` project-wide, then verify. Per-file fixes leave drift.
+6. When an amend/fix-forward supersedes pushed commits, reference
+   prior hashes in the new commit message. e4bcb7e references
+   93b6732 and 2856131.
+7. ADR-005 D7 scope caveat worked: when G2 established the 39 FPs
+   were in probe_admin, not scanner.py, the caveat let us re-scope
+   instead of shipping a dead discard path. Write scope caveats.
+
+§9 — First actions in the new window
+  cd "C:\Users\M5 E60\janissary-project\janissary"
+  & ".\.venv\Scripts\Activate.ps1"
+  $PWD
+  git --no-pager status -sb        # expect: ## main...origin/main
+  git rev-parse --short HEAD        # expect: a964257
+  python -m pytest -q               # expect: 487 passed
+
+If HEAD or test count differs, stop and diagnose before continuing.
+
+Then READ, in this order, BEFORE proposing 1.3d code:
+  1. docs/handover/session-1.3c.txt (this file)
+  2. docs/decisions/ADR-005-gated-corroborator.md
+  3. docs/decisions/ADR-004-structural-arming-and-root-signature.md
+  4. docs/decisions/ADR-002-dom-structural-hashing.md
+     (§Combined signal, §Hamming thresholds, §Success criteria)
+  5. src/janissary/engine/baseline_struct.py
+  6. src/janissary/engine/scanner.py (payload loop, oracle sites)
+  7. tests/unit/test_scanner_baseline.py
+  8. tests/integration/test_scanner.py
+
+Then propose resolutions for §11. Do NOT write 1.3d code until those
+are reviewed and locked.
+
+§10 — Do NOT
+- Begin 1.3d before resolving §11
+- Wire the emit path without a fresh 3-run (F1 rule ACTIVE)
+- Re-open ADR-003 or ADR-005 without a revisit trigger
+- Use <<'EOF' in PowerShell
+- Paste code with <placeholder> syntax
+- Run multi-step pastes without & { } wrapper
+- Write message files to the repo tree
+- Force-push to fix CI
+
+§11 — Phase 1.3d design decisions (unresolved)
+1.3d implements the >20 collapse path from ADR-002 §Combined signal:
+`distance > 20 AND auxiliary signal`. This is where baseline_struct
+(1.3b, dead code) finally gets consumed.
+
+1. Auxiliary signal sources. ADR-002 lists three: body length <10% of
+   baseline, no `<` in body, known-file signature (e.g. /etc/passwd
+   format). In scope for 1.3d - all three, or subset? Recommend all
+   three, each gated separately.
+
+2. Integration point in scanner.py. 1.3c established post-process-
+   raw_findings as the pattern for admin. Same pattern for payload
+   loop, or build a new oracle that fires on collapse + auxiliary?
+
+3. baseline_struct consumption. compute_arming_state returns armed,
+   reason, fingerprints, root_signature, sample_count, hamming_max.
+   1.3d needs armed + fingerprints + root_signature. Does the API
+   need to change?
+
+4. New finding_type or reuse. ADR-002 says "confirm traversal or
+   similar". Recommend a dedicated finding_type (e.g.
+   traversal_collapse) mapping to pathtraver category, kept distinct
+   from pathtraver_existence_oracle.
+
+5. >20 threshold validation. ADR-002 verification plan notes a
+   synthetic one-node fixture does not exercise collapse. 1.3d MUST
+   have a real collapse fixture (/etc/passwd flat text vs a real
+   HTML baseline) before merging.
+
+6. Benchmark acceptance. Pathtraver F1 currently 0.049-0.308. Does
+   1.3d aim for the pathtraver ceiling, or is that 2.2? Recommend
+   1.3d = emit-only (recall on genuine collapse); 2.2 = payload
+   coverage. Both required for the ceiling.
+
+7. D5 pass-through contract for 1.3d. When armed=False or
+   root_signature is None (ADR-004 D4), 1.3d must not emit. Contract
+   = findings equal to pre-1.3d. Confirm scope extends to emit.
+
+8. 1.3e boundary. Which tests go in 1.3d vs 1.3e? Recommend 1.3d
+   ships unit + integration for emit; 1.3e ships void-tag fixture,
+   swallowed-attribute fixture, and the 3-run F1 rerun.
+
+Resolve all 8 before writing 1.3d code.
+
+§12 — Loose ends (not blockers)
+- 93b6732, 2856131 red in history. Within §7 tolerance.
+- commit-msg.txt untracked and gitignored as of a964257.
+- README §Known Issues could reference ADR-005 as the 1.3c deliverable.
+  Optional, deferred.
+- ADR-002 §Success criteria wording conflicts with ADR-005 D7
+  invocation (deferred to synthetic-only). ADR-005 is newer; if a
+  conflict remains, ADR-005 wins.
