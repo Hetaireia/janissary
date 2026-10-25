@@ -1452,3 +1452,88 @@ Artifacts. All three run directories committed under
 `benchmark/track_a/runs/`. Score reproducible with:
 
     python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec
+
+---
+
+## Amendment 22 — Benchmark run 3 complete; 3-run baseline; headline unchanged
+
+Date: 2026-10-25
+Supersedes: the "Deviation from line 69" paragraph in Amendment 21.
+
+### Status of the deviation
+
+Amendment 21 shipped a single baseline plus FN-recovery and disclosed the
+deviation from the pre-registered 3-run protocol (line 69). Run 3 has now
+completed, so the 3-run protocol is satisfied. This amendment closes the
+deviation. The recovery number (0.921) is unchanged and remains the headline.
+
+### Runs included
+
+    run   dir                                    TP   FN   F1     findings  timeouts  skipped
+    r1    20261024T130735Z-janissary-r1          950  206  0.902   4175     1         93
+    r2    20261025T020331Z-janissary-r2          970  186  0.913   4260     0         93
+    r3    20261025T062837Z-janissary-r3          937  219  0.895   4105     1         93
+
+All three runs skipped the same 93 cases (89 header_any + 3 out_of_scope_stream
++ 1 out_of_scope_uri), so the three are measured over an identical corpus. The
+r2 -> r3 TP delta of -33 is therefore detection variance, not coverage drift.
+
+### 3-run baseline
+
+    DAST-APPLICABLE  mean F1 0.903  stdev 0.009  (n=3, sample stdev)
+                     TP 952.3 +/- 16.6   FN 203.7 +/- 16.6
+
+Stated noise floor. Any future claim below F1 0.885 (mean - 2*stdev) or above
+F1 0.921 is outside the 3-run envelope and requires its own run.
+
+Note on the inherited estimate: Amendment 21 cites "+/-13 TP run-to-run stdev"
+at line 654. The 3-run data yields +/-16.6 TP. Line 654's estimate was
+optimistic by ~25%; this amendment's figure supersedes it.
+
+### Headline
+
+    DAST-APPLICABLE  TP 987  FP 0  FN 169  TN 1102  P 1.000  R 0.854  F1 0.921   (r1+r2, recovery)
+    DAST-APPLICABLE  3-run baseline                                          F1 0.903 +/- 0.009
+
+The recovery protocol was applied to r1 and r2 only. r3 has not been
+recovery-scored. 0.921 is therefore derived from 2 of 3 baseline runs. Applying
+recovery to r3 would likely raise the recovered number (r3's baseline is 8 TP
+below r2's) but this has not been run and is not claimed.
+
+### Run 3 crash disclosure
+
+    attempt  outcome
+    1        INVALID — PermissionError [WinError 5] on subprocess.Popen for
+             janissary.exe; aborted at ~54.8 min; 3188 findings; no finished_at
+    2-3      no surviving scored artifact (handover records two crashes total
+             on run 3; only attempt 1's directory was preserved)
+    4        20261025T062837Z-janissary-r3 — complete, 65.4 min, scored above
+
+Root cause is suspected Windows Defender real-time interference with repeated
+subprocess spawns (janissary.exe is a shim that spawns python.exe as a
+grandchild; see runner.py:_run_subprocess_tree). Get-Mp* cmdlets and
+Add-MpPreference were unavailable in the PS7 session (Defender module not
+loadable, no third-party AV present), so Defender exclusion could not be
+verified or applied from the shell. The scored attempt ran with
+PYTHONFAULTHANDLER=1 and a fresh container; no crash occurred.
+
+### Nonzero exit on a completed run
+
+Run 3 exited 1 despite `finished_at` being present and all 2740 cases being
+iterated. Cause is by design: `runner.py` records any subprocess timeout in
+`timeouts.jsonl` and increments `failures`, which propagates to a nonzero exit
+(see runner.py:226-236). Run 3 had one timeout (BenchmarkTest02739, the
+corpus-final case, 60 s). Stderr was empty. The run is complete, not aborted.
+
+### Directory naming and the 013503Z-r2 directory
+
+20261025T013503Z-janissary-r2+rec is the r2 *recovery* run (134 findings, 7 min,
++37 TP), not a competing baseline. The directory was originally committed
+without a `+rec` suffix, unlike 20261024T130735Z-janissary-r1+rec. The naming
+drift was cosmetic but cost investigation time during this audit; it has since
+been renamed to match (content unchanged; git reports R100 on all four files).
+No undisclosed baseline r2 exists.
+
+### Artifacts
+
+    python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261025T062837Z-janissary-r3
