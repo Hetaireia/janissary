@@ -1,0 +1,14 @@
+{
+  "case_count": 2740,
+  "cases_csv": "benchmark\\track_a\\case_vectors.csv",
+  "exit_code": 1,
+  "finished_at": "2026-10-24T14:09:05Z",
+  "harness_commit": "1b4cf6cd632ca723da1b2112629df088784ca894",
+  "run_number": 1,
+  "started_at": "2026-10-24T13:07:35Z",
+  "target_base": "http://127.0.0.1:8080/benchmark",
+  "target_version": "20cbf3d11123347e47ed89541e6942836def53f7",
+  "tool": "janissary",
+  "tool_version": "7.3.0",
+  "track": "track_a"
+}
