@@ -25,7 +25,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 > **The Strategic Wedge:** JANISSARY is the only open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
 
 
-**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Single-pass baseline F1 0.902; FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
 **WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
 
@@ -96,17 +96,20 @@ triage, with the receipts attached.
 
 ## Benchmark
 
-JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full results, methodology, and the class-aware definition are in `BENCHMARK.md`. The current run is `benchmark/track-a/runs/merged-am19-recovered`.
+JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full results, methodology, and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committed under `benchmark/track_a/runs/`; the recovered run is `20261024T130735Z-janissary-r1+rec`.
 
 | Metric | Value |
 |---|---|
 | Precision | 1.000 |
-| Recall | 0.851 |
-| F1 | 0.920 |
-| TP / FP / FN | 984 / 0 / 172 |
-| Categories at F1 1.000 | 18 |
+| Recall | 0.854 |
+| F1 | 0.921 |
+| TP / FP / FN | 987 / 0 / 169 |
+| Categories at F1 1.000 | 20 |
+| 3-run unassisted baseline F1 | 0.903 ± 0.009 (n=3) |
 
-Reproduce: `python benchmark/track_a/score_dast_aware.py benchmark/track-a/runs/merged-am19-recovered`
+Reproduce: `python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec`
+
+The F1 0.921 figure applies the FN-recovery protocol to the first two baseline runs; the third baseline run (`20261025T062837Z-janissary-r3`, F1 0.895) has not been recovery-scored. Full detail in `BENCHMARK.md` Amendment 22.
 
 The weakest category is path traversal (F1 0.049–0.308), documented in `docs/pathtraver.md` as a property of the benchmark target, not a scanner gap.
 
