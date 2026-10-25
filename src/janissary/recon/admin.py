@@ -16,11 +16,20 @@ it, and does it disclose anything useful.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
 import requests
+
+from janissary.recon.admin_struct import (
+    SPA_CATCHALL_REASON,
+    compute_root_state,
+    should_discard_admin_hit,
+)
+
+log = logging.getLogger(__name__)
 
 DEFAULT_UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -174,6 +183,7 @@ class AdminProfile:
     hits: list[AdminHit] = field(default_factory=list)
     paths_probed: int = 0
     notes: list[str] = field(default_factory=list)
+    arming: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -182,6 +192,7 @@ class AdminProfile:
             "paths_probed": self.paths_probed,
             "hits": [h.to_dict() for h in self.hits],
             "notes": list(self.notes),
+            "arming": dict(self.arming),
         }
 
 
@@ -237,6 +248,14 @@ class AdminProbe:
             return profile
         profile.reachable = True
 
+        root_fp, root_sig, arming_reason = compute_root_state(home)
+        profile.arming = {
+            "enabled": root_fp is not None,
+            "reason": arming_reason,
+            "discarded_count": 0,
+            "discarded_by_reason": {},
+        }
+
         for platform, paths in self.paths.items():
             for path in paths:
                 url = urljoin(self.target, path)
@@ -246,6 +265,23 @@ class AdminProbe:
                     continue
                 hit = self._classify(platform, path, r)
                 if hit is not None:
+                    if profile.arming["enabled"]:
+                        ct = (r.headers.get("content-type") or "").lower()
+                        verdict = should_discard_admin_hit(
+                            response_text=r.text or "",
+                            response_content_type=ct,
+                            root_fingerprint=root_fp,
+                            root_signature_hex=root_sig,
+                        )
+                        if verdict.discard:
+                            profile.arming["discarded_count"] += 1
+                            by = profile.arming["discarded_by_reason"]
+                            by[SPA_CATCHALL_REASON] = by.get(SPA_CATCHALL_REASON, 0) + 1
+                            log.debug(
+                                "discarded admin hit platform=%s path=%s hamming=%s sig_match=%s",
+                                platform, path, verdict.hamming, verdict.root_signature_match,
+                            )
+                            continue
                     profile.hits.append(hit)
 
         return profile
