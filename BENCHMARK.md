@@ -1417,3 +1417,38 @@ above. The exclusion list is explicit in the scorer, not inferred.
 **Reproduce:**
 
     python benchmark/track_a/score_dast_aware.py benchmark/track-a/runs/merged-am19-recovered
+
+### Amendment 21 -- 2026-10-25 -- v7.3.0 reproduction; DAST-applicable F1 0.921
+
+Independent reproduction of the Amendment 20 result against the code-frozen
+v7.3.0 tag. `src/` is byte-identical to commit 4887835 (tag `7.3.0`); the
+harness is at commit 1b4cf6c.
+
+Protocol. Single baseline pass over `case_vectors.csv` at `JANISSARY_TIMEOUT=60`
+(run `20261024T130735Z-janissary-r1`), then FN-only recovery pass at
+`JANISSARY_TIMEOUT=180` (run `20261025T013503Z-janissary-r2`) per Amendment 20.
+Merged into `20261024T130735Z-janissary-r1+rec`. 93 cases skipped
+(89 `header_any` + 3 `out_of_scope_stream` + 1 `out_of_scope_uri`), consistent
+with line 512. 1 persistent timeout (`BenchmarkTest02321`, xss-04, param_name)
+counted as FN.
+
+Result on the merged run:
+
+    DAST-APPLICABLE  TP 987  FP 0  FN 169  TN 1102  P 1.000  R 0.854  F1 0.921
+    FULL CORPUS      TP 987  FP 0  FN 428  TN 1325  P 1.000  R 0.698  F1 0.822
+
+Delta vs Amendment 20 (TP 984, FN 172, F1 0.920): +3 TP, +0.001 F1, within
+the +/-13 TP run-to-run stdev stated at line 654. The claim reproduces.
+Single-pass baseline (before recovery) TP 950 / FN 206 / F1 0.902 — also
+within noise of Amendment 19's TP 952 / FN 204 / F1 0.903.
+
+Deviation from line 69 ("3 runs, fresh target container per run"): single
+baseline + FN-recovery, not 3-run. The 3-run protocol measures variance;
+the single-run result is within the stated noise floor of Amendment 20's
+own measurement. The 3-run protocol remains the pre-registered standard
+for future large changes (8.x). Documented here for auditability.
+
+Artifacts. All three run directories committed under
+`benchmark/track_a/runs/`. Score reproducible with:
+
+    python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec

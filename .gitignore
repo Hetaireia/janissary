@@ -119,3 +119,4 @@ zap.yaml
 benchmark/track_a/tools.env
 release-state.json
 release/out/
+benchmark/track_a/tools_recovery.env
