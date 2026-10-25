@@ -1,0 +1,44 @@
+name: Benchmark Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  score-committed:
+    name: Score committed r1+rec (deterministic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          allow-prereleases: true
+
+      - name: Score and enforce threshold
+        run: |
+          python --version
+          python benchmark/track_a/score_dast_aware.py \
+            "benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec" \
+            --min-f1 0.92 \
+            --max-fp 0
+
+      # Phase 0.1b (deferred): end-to-end nightly gate.
+      # Blocked on two items:
+      #   1. Publish janissary/owasp-benchmark:20cbf3d-ldapfix to GHCR
+      #      (currently local-only; docker manifest inspect fails auth).
+      #   2. Parameterize benchmark/track_a/tools.env, which hardcodes a
+      #      Windows JANISSARY_BIN path.
+      # Once unblocked: start container, run 500-case stratified subset,
+      # score with --min-f1 0.88 --max-fp 0, schedule nightly.
