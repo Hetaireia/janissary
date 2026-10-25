@@ -65,6 +65,8 @@ tools/ascension.ps1
 ASCENSION.html
 WORKFLOW.html
 
+.pre-commit-cache/
+
 # session handover notes (working documents, not published)
 JANISSARY-Session-Handover-*.txt
 JANISSARY-Session-Handover.txt
