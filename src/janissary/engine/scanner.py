@@ -102,7 +102,6 @@ def _say(*args, **kwargs) -> None:
 # -------------------------------------------------------------------
 
 
-
 # Finding types the analyzer emits without any category-specific gate.
 # They are corroborators, not detectors: on a target that 500s for any
 # unknown input, every payload class produces the same observation, so
@@ -111,11 +110,14 @@ def _say(*args, **kwargs) -> None:
 # findings *when the baseline is noisy or non-2xx*. On a stable 2xx
 # baseline a large length delta is real signal and is emitted. See
 # WORKFLOW.md, "Structural misattribution".
-CORROBORATOR_ONLY_TYPES = frozenset({
-    "status_change",
-    "length_anomaly",
-    "length_shrink",
-})
+CORROBORATOR_ONLY_TYPES = frozenset(
+    {
+        "status_change",
+        "length_anomaly",
+        "length_shrink",
+    }
+)
+
 
 def build_url(base: str, param: str, value: str) -> str:
     """Inject `param=value` into the URL, preserving other parameters."""
@@ -225,7 +227,12 @@ class Scanner:
         self.detect_waf = detect_waf
         self.inject_in = inject_in.lower()
         if self.inject_in not in {
-            "auto", "query", "body", "cookie", "header", "param-name",
+            "auto",
+            "query",
+            "body",
+            "cookie",
+            "header",
+            "param-name",
         }:
             raise ValueError(f"invalid inject_in: {inject_in!r}")
 
@@ -653,10 +660,7 @@ class Scanner:
                         # (db_error, response contains passwd-like
                         # content), not length/status proxies.
                         continue
-                    if (
-                        f.get("type") == "payload_reflected"
-                        and category != "xss"
-                    ):
+                    if f.get("type") == "payload_reflected" and category != "xss":
                         # Reflection on a non-xss probe is not evidence
                         # of that probe's category. The endpoint echoed
                         # our input; it did not execute SQL, read a file,
@@ -759,7 +763,6 @@ class Scanner:
                     summary.findings.append(finding)
                     summary.finding_count += 1
 
-
             # Paired-probe: LDAP injection oracle.
             if ldap_wild_snap is not None:
                 oracle = check_ldap_injection_oracle(
@@ -809,8 +812,7 @@ class Scanner:
             # Paired-probe: pathtraver existence oracle.
             if traversal_snap is not None:
                 noexist_path = (
-                    "../../../etc/passwd_janissary_noexist_"
-                    + self._traversal_nonce
+                    "../../../etc/passwd_janissary_noexist_" + self._traversal_nonce
                 )
                 try:
                     r2 = self._paced_request(self.target, param, noexist_path)
@@ -834,9 +836,7 @@ class Scanner:
                             payload_value=noexist_path,
                             category="traversal",
                             severity=f.get("severity", "critical"),
-                            finding_type=f.get(
-                                "type", "pathtraver_existence_oracle"
-                            ),
+                            finding_type=f.get("type", "pathtraver_existence_oracle"),
                             detail=f.get("detail", ""),
                             response_status=r2.status_code,
                             response_length=len(r2.text or ""),

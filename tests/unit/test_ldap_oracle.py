@@ -1,4 +1,5 @@
 """LDAP injection oracle regression tests."""
+
 from janissary.detection import Baseline, ResponseSnapshot, check_ldap_injection_oracle
 
 
@@ -22,10 +23,13 @@ def _baseline(bodies):
 
 
 def test_ldap_oracle_fires_on_expansion():
-    baseline = _baseline([
-        "LDAP query results:<br>Record found with name Ms Bar<br>"
-        "Address: The streetz 4 Ms bar<br>"
-    ] * 10)
+    baseline = _baseline(
+        [
+            "LDAP query results:<br>Record found with name Ms Bar<br>"
+            "Address: The streetz 4 Ms bar<br>"
+        ]
+        * 10
+    )
     wild = _snap(
         "LDAP query results:<br>Record found with name Ms Bar<br>"
         "LDAP query results:<br>Record found with name foo<br>"
@@ -38,12 +42,10 @@ def test_ldap_oracle_fires_on_expansion():
 
 
 def test_ldap_oracle_silent_on_same_count():
-    baseline = _baseline([
-        "LDAP query results:<br>Record found with name Ms Bar<br>"
-    ] * 10)
-    wild = _snap(
-        "LDAP query results:<br>Record found with name Ms Bar<br>"
+    baseline = _baseline(
+        ["LDAP query results:<br>Record found with name Ms Bar<br>"] * 10
     )
+    wild = _snap("LDAP query results:<br>Record found with name Ms Bar<br>")
     findings = check_ldap_injection_oracle(baseline, wild)
     assert findings == []
 

@@ -1,4 +1,5 @@
 """Output-region oracle category-gating regression tests."""
+
 from janissary.detection import Baseline, DifferentialAnalyzer, ResponseSnapshot
 
 
@@ -62,9 +63,7 @@ def test_sql_result_rows_silent_on_non_sqli_payload():
         payload_value="; id",
         payload_category="cmdi",
     )
-    sql_output = (
-        "<html>Your results are:<br>row1<br>row2<br></html>"
-    )
+    sql_output = "<html>Your results are:<br>row1<br>row2<br></html>"
     findings = a.analyze(_snap(sql_output))
     types = [f["type"] for f in findings]
     assert "sql_result_rows" not in types

@@ -213,10 +213,10 @@ _SQL_RESULTS_END = re.compile(r"</p>", re.I)
 def _strip_tags(s: str) -> str:
     return re.sub(r"<[^>]+>", "", s or "")
 
+
 def _norm_region(s: str) -> str:
     """Normalize region text for baseline-vs-payload comparison."""
     return " ".join(s.lower().split())
-
 
 
 def _region_after(body: str, header_match, stops) -> str:
@@ -507,7 +507,6 @@ class DifferentialAnalyzer:
             ]
         return []
 
-
     # -- Gate 2: Reflection ----------------------------------------
 
     def _check_reflection(self, snapshot: ResponseSnapshot) -> list[dict]:
@@ -747,9 +746,7 @@ class DifferentialAnalyzer:
 # presence of either string alone.
 
 _PATHTRAVER_EXISTS = re.compile(r"file already exists", re.I)
-_PATHTRAVER_NOEXIST = re.compile(
-    r"file (?:doesn't|does not) exist yet", re.I
-)
+_PATHTRAVER_NOEXIST = re.compile(r"file (?:doesn't|does not) exist yet", re.I)
 
 
 def _pathtraver_signal(body: str):
@@ -791,10 +788,7 @@ def check_pathtraver_oracle(
     signals leak from the payload or the baseline.
     """
     for pv in (payload_exists, payload_noexist):
-        if (
-            _PATHTRAVER_EXISTS.search(pv or "")
-            or _PATHTRAVER_NOEXIST.search(pv or "")
-        ):
+        if _PATHTRAVER_EXISTS.search(pv or "") or _PATHTRAVER_NOEXIST.search(pv or ""):
             return []
 
     # Only the EXISTS string in baseline is poison. The NOEXIST
@@ -815,8 +809,7 @@ def check_pathtraver_oracle(
             "severity": "critical",
             "detail": (
                 "Path existence oracle: existing-path payload reported "
-                "'" + sig_a + "', nonexistent-path payload reported '"
-                + sig_b + "'"
+                "'" + sig_a + "', nonexistent-path payload reported '" + sig_b + "'"
             ),
             "evidence": sig_a + "|" + sig_b,
         }
@@ -906,6 +899,7 @@ def check_xpath_error_oracle(baseline, quote_snapshot, or_snapshot):
         }
     ]
 
+
 # ===================================================================
 # WEAKRAND RNG-CLASS ORACLE
 # ===================================================================
@@ -963,6 +957,7 @@ def check_weakrand_oracle(baseline, snapshot):
             "evidence": body[start : start + 90],
         }
     ]
+
 
 # ===================================================================
 # TRUSTBOUND SESSION-SINK ORACLE
@@ -1025,7 +1020,6 @@ def check_trustbound_oracle(baseline, snapshot, marker):
 # this one; no additional request is issued.
 
 
-
 def _iter_set_cookies(response):
     """Return the response's Set-Cookie headers as a list of strings.
 
@@ -1078,8 +1072,6 @@ def check_securecookie_oracle(baseline, response, marker):
     return []
 
 
-
-
 # ===================================================================
 # LDAP INJECTION ORACLE
 # ===================================================================
@@ -1095,8 +1087,7 @@ _LDAP_RECORD_PATTERN = re.compile(r"Record found with name", re.I)
 
 def check_ldap_injection_oracle(baseline, wildcard_snapshot):
     base_counts = [
-        len(_LDAP_RECORD_PATTERN.findall(s.body))
-        for s in baseline.snapshots
+        len(_LDAP_RECORD_PATTERN.findall(s.body)) for s in baseline.snapshots
     ]
     if not base_counts:
         return []

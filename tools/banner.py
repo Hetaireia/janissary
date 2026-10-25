@@ -5,6 +5,7 @@ tagline and the "Created by Oracle Mode" maker's mark.
 
 Honours NO_COLOR and non-TTY stdout by emitting plain text.
 """
+
 from __future__ import annotations
 
 import contextlib

@@ -182,20 +182,26 @@ def cmd_scan(args: argparse.Namespace) -> int:
         params_source = "explicit --params"
     else:
         from urllib.parse import parse_qs, urlparse
+
         detected = list(parse_qs(urlparse(args.url).query).keys())
         if detected:
             params = detected
             params_source = "URL query string"
         else:
             params = [
-                "id", "name", "q", "search", "query",
-                "user", "username", "email",
+                "id",
+                "name",
+                "q",
+                "search",
+                "query",
+                "user",
+                "username",
+                "email",
             ]
             params_source = "built-in defaults"
         if not args.quiet:
             print(
-                f"[*] No --params given; using {params_source}: "
-                f"{', '.join(params)}",
+                f"[*] No --params given; using {params_source}: {', '.join(params)}",
                 file=sys.stderr,
             )
 
@@ -869,6 +875,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
     auth_cfg = auth_from_args(args)
     _orig_session_init = requests.Session.__init__
     if not auth_cfg.is_empty:
+
         def _auth_init(self, *a, **kw):
             _orig_session_init(self, *a, **kw)
             apply_to_session(self, auth_cfg)
@@ -1000,7 +1007,13 @@ def build_parser() -> argparse.ArgumentParser:
     scan = sub.add_parser("scan", help="scan an HTTP endpoint")
     scan.add_argument("-u", "--url", default=None, help="target URL")
     scan.add_argument(
-        "-p", "--params", default=None, help=("comma-separated parameter names; if omitted, derived from ""the URL query string, or a small built-in default set")
+        "-p",
+        "--params",
+        default=None,
+        help=(
+            "comma-separated parameter names; if omitted, derived from "
+            "the URL query string, or a small built-in default set"
+        ),
     )
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(

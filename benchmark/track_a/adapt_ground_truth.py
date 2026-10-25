@@ -28,8 +28,10 @@ from pathlib import Path
 
 def adapt(input_path: Path, output_path: Path) -> int:
     written = 0
-    with input_path.open("r", encoding="utf-8", newline="") as fin, \
-         output_path.open("w", encoding="utf-8", newline="") as fout:
+    with (
+        input_path.open("r", encoding="utf-8", newline="") as fin,
+        output_path.open("w", encoding="utf-8", newline="") as fout,
+    ):
         reader = csv.reader(fin)
         writer = csv.writer(fout)
         writer.writerow(["testname", "category", "vulnerable", "cwe"])

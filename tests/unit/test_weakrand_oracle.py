@@ -49,15 +49,9 @@ def make_baseline(bodies):
 
 BENIGN = "Welcome to the benchmark page."
 
-VULN_RANDOM = (
-    "Weak Randomness Test java.util.Random.nextFloat() executed"
-)
-VULN_MATH = (
-    "Weak Randomness Test java.lang.Math.random() executed"
-)
-SAFE_SECURE = (
-    "Weak Randomness Test java.security.SecureRandom.nextInt(int) executed"
-)
+VULN_RANDOM = "Weak Randomness Test java.util.Random.nextFloat() executed"
+VULN_MATH = "Weak Randomness Test java.lang.Math.random() executed"
+SAFE_SECURE = "Weak Randomness Test java.security.SecureRandom.nextInt(int) executed"
 BOTH = (
     "Weak Randomness Test java.util.Random.nextFloat() executed "
     "and java.security.SecureRandom.nextInt(int) executed"

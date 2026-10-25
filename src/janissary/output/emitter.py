@@ -188,9 +188,7 @@ def _normalize_finding(finding: Any) -> dict:
         "timestamp": _coerce_str(m.get("timestamp")) or _iso_now(),
     }
     return {
-        k: v
-        for k, v in out.items()
-        if v is not None or k in _REQUIRED_FINDING_KEYS
+        k: v for k, v in out.items() if v is not None or k in _REQUIRED_FINDING_KEYS
     }
 
 

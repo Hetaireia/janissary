@@ -13,8 +13,9 @@ def test_hsqldb_patterns_present():
         "org.hsqldb.HsqlException: foo",
     ]
     for s in samples:
-        assert any(p.search(s) for p in DB_ERROR_PATTERNS["hsqldb"]), \
+        assert any(p.search(s) for p in DB_ERROR_PATTERNS["hsqldb"]), (
             f"HSQLDB pattern missing for: {s}"
+        )
 
 
 def test_hsqldb_patterns_do_not_match_shell_errors():
@@ -22,8 +23,9 @@ def test_hsqldb_patterns_do_not_match_shell_errors():
     shell = "sh: 1: Syntax error: Unterminated quoted string"
     for dbms, patterns in DB_ERROR_PATTERNS.items():
         for p in patterns:
-            assert not p.search(shell), \
+            assert not p.search(shell), (
                 f"{dbms} pattern {p.pattern!r} matches shell error"
+            )
 
 
 def test_db_error_forces_sqli_category(tmp_path):

@@ -41,10 +41,7 @@ def make_baseline(bodies):
     return b
 
 
-EXISTS_BODY = (
-    "Access to file: ../../../../etc/passwd created."
-    " And file already exists."
-)
+EXISTS_BODY = "Access to file: ../../../../etc/passwd created. And file already exists."
 NOEXIST_BODY = (
     "Access to file: ../../../../etc/passwd_janissary_noexist_abc123 created."
     " But file doesn't exist yet."
