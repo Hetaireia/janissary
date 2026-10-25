@@ -1,0 +1,246 @@
+JANISSARY — Session Handover (post-1.3e, pre-0.3)
+State-of-record, 2026-10-26.
+
+§1 — Where we are right now
+Phases 1.3c, 1.3d, and 1.3e are MERGED and CI-green. Structural
+gating is complete end-to-end. Next action: Phase 0.3 scope
+discovery (stable finding fingerprint).
+
+HEAD:         2f8ce12 (origin/main, in sync)
+CI on 2f8ce12: both workflows green (verified 2026-10-26)
+              ci.yml:          5 legs py3.10-3.14
+              benchmark-gate:  F1=0.921, FP=0, PASS
+Tests:        507/507 (was 475 at session open)
+
+Benchmark: F1 unchanged at 0.921 across all code states this session.
+1.3c/d/e are non-metric on OWASP Java corpus. Pathtraver F1 remains
+0.049-0.308 (ADR-003 amendment; evidence gate blocked on Docker).
+
+§2 — Commits added this session (post-1.3b handover)
+2f8ce12  test: 1.3e hardening                          [GREEN]
+e908cb2  docs(adr): ADR-003 amendment                  [GREEN]
+93a5679  docs: session handover post-1.3d              [GREEN]
+97ffd8d  fix(tests): 1.3d collapse tests               [GREEN]
+9d3202d  feat(detection): 1.3d collapse oracle         [RED - superseded]
+e9e9598  docs(adr): ADR-006                            [GREEN]
+e83f6ed  docs: session handover post-1.3c              [GREEN]
+a964257  chore: untrack commit-msg.txt                 [GREEN]
+e4bcb7e  fix: ruff I001 + format drift                 [GREEN]
+2856131  fix: ruff compliance                          [RED - superseded]
+93b6732  feat(recon): 1.3c admin probe gating          [RED - superseded]
+416b453  docs(adr): ADR-005 amendment                  [RED-then-fixed with 93b6732]
+7a2bade  docs: handover 1.3b                           [session-open baseline]
+
+Three red commits in trunk: 2856131, 93b6732, 9d3202d. All fix-
+forwarded. No reverts. No force-pushes. Within §7 tolerance.
+
+§3 — What shipped this session
+1.3c — recon/admin.py structural gating (ADR-005)
+  - detection-corroborator-style gate on probe_admin
+  - src/janissary/recon/admin_struct.py (62 lines)
+  - src/janissary/recon/admin.py +36 lines
+  - tests/integration/test_admin_spa.py (3 tests)
+  - tests/unit/test_admin.py +9 tests
+  - Manual 39->0 deferred (ADR-005 D7); synthetic fixture is the
+    certification surface
+
+1.3d — traversal collapse oracle (ADR-006)
+  - src/janissary/detection/collapse_oracle.py (120 lines)
+  - src/janissary/engine/scanner.py +57 lines
+  - baseline_struct (1.3b) consumed for the first time — dead code
+    era ended 2026-10-26
+  - tests/unit/test_collapse_oracle.py (13 tests)
+  - tests/integration/test_scanner_collapse.py (4 tests)
+  - tests/fixtures/real_html_form.html + etc_passwd.txt
+  - ScanSummary.baselines[param]["arming"] populated
+
+1.3e — regression hardening (test-only)
+  - tests/test_dom_hash.py +3 tests (void tags, malformed determinism)
+  - tests/unit/test_collapse_oracle.py +4 tests (boundary d19/d21,
+    WAF-block FP documented, passwd-without-root marker robustness)
+  - tests/integration/test_scanner_collapse.py +1 test (SPA dual-
+    direction: 1.3c suppresses admin + 1.3d emits traversal_collapse)
+  - Zero production code changes
+  - Known FP class documented: 200-status WAF block with ":" or "/"
+    fires collapse_tiny_body; deferred to Phase 2.x
+
+§4 — ADRs now in place
+ADR-001..002: unchanged.
+ADR-003 AMENDED 2026-10-26 (e908cb2): revisit trigger 1 fired at
+  1.3d merge; evidence gate blocked (Docker down); ceiling stands;
+  2.2 entry blocked on evidence.
+ADR-004: unchanged since 1.3b.
+ADR-005: unchanged since 1.3c merge.
+ADR-006: unchanged since 1.3d merge (D6 amended post-merge).
+
+§5 — Benchmark state-of-record
+  r1  TP 950 / FN 206 / F1 0.902
+  r2  TP 970 / FN 186 / F1 0.913
+  r3  TP 937 / FN 219 / F1 0.895
+  3-run mean: 0.903 +/- 0.009. Recovery: 0.921 (r1+rec).
+
+benchmark-gate on 2f8ce12: F1=0.921, FP=0, PASS.
+Same F1 on 5 code states this session (e4bcb7e, e83f6ed, 9d3202d,
+97ffd8d, 2f8ce12). 1.3c/d/e are non-metric on this corpus.
+
+Artifact of record: benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec
+(19MB findings.jsonl, tracked in git, manifest harness_commit=1b4cf6c).
+CI scores this static artifact — not a live scan. Fresh scan requires
+Docker image janissary/owasp-benchmark:20cbf3d-ldapfix, which was
+offline during 2026-10-26.
+
+§6 — Known issues (updated)
+#1 SPA catch-all FPs (39) - 1.3c filter + 1.3d oracle deployed.
+   Manual 39->0 deferred (ADR-005 D7). Synthetic fixture substitutes.
+#2 401 abort - Open, Phase 1.1 -> 1.2
+#4 six-oracle refactor - Deferred 8.x
+#5 --mode ci - Deferred 8.x
+- pre-commit hook broken locally - CI is enforcement
+- scanner.py:601 sqli_or_resp - Phase 1 audit
+- tools.env Windows path - blocks 0.1b
+- benchmark image not on registry - blocks 0.1b
+- Pathtraver F1 0.049-0.308 - ADR-003 amended 2026-10-26. 2.2 entry
+  blocked on Docker evidence gate
+- WAF-block tiny_body FP class - documented in test_waf_block_200_
+  fires_as_tiny_body; distinct category deferred to 2.x
+- 2856131, 93b6732, 9d3202d red in history - RESOLVED by fix-forwards
+- 1.3c complete - RESOLVED (a964257)
+- 1.3d complete - RESOLVED (97ffd8d)
+- 1.3e complete - RESOLVED (2f8ce12)
+
+Phase 0: 0.1a DONE, 0.1b DEFERRED, 0.2 COMMITTED (hook broken),
+0.3 NOT STARTED (next scope discovery), 0.4 DONE, 0.5 DONE.
+Phase 1: 1.3a/b/c/d/e MERGED. Phase 2.2 blocked on Docker.
+
+§7 — Environment limitations (new this session)
+Unchanged: pre-commit broken; PS7 no heredocs; code <newpath> opens
+unsaved buffer; gh run view needs numeric ID; < reserved.
+
+NEW: git commit -m $msg with heredoc $msg is fragile. Use repeated
+-m "..." arguments or write $msg to a file outside the repo via
+[System.IO.Path]::GetTempFileName(). Em dashes in subjects can break
+argument passing.
+
+NEW: Bare `git push origin main` (no output capture) can fail silently
+with no error text in the terminal. Always capture: $out = git push
+origin main 2>&1; print $out; check $LASTEXITCODE.
+
+NEW: Set-Content does not halt sequence on failure inside & { }. A
+throw must be followed by a loud ">>> STOP" line and any subsequent
+paste must re-verify preconditions before acting.
+
+NEW: `git status --porcelain` gives M / ?? / D prefixes with no
+summary — critical for diagnosing "why didn't git add work".
+
+NEW: $env:TEMP resolves to 8.3 short path that Remove-Item cannot
+reach. Use [System.IO.Path]::GetTempFileName().
+
+NEW: transient 0xc0000005 git crash in gh run view during CI poll
+loop — cosmetic, next poll recovers.
+
+NEW: file paths drift between sessions. test_dom_hash.py is at
+tests/test_dom_hash.py, not tests/unit/. Always Test-Path before
+assuming.
+
+NEW: ResponseSnapshot has NO status_code field. Fields: status,
+body, normalized, fingerprint, length, normalized_length, elapsed,
+content_type. BaselineArmingState: armed, reason, fingerprints
+(tuple of int), root_signature, sample_count, hamming_max.
+
+§8 — Session lessons (prior all still apply)
+NEW this session:
+1. Heredoc -m $msg is fragile; use multi -m args.
+2. Em dash in commit subject can break PS7 argument passing.
+3. Prefer full-file rewrites (Set-Content) over surgical edits when
+   the file is under 100 lines.
+4. & { } wrapper is necessary but not sufficient: explicit pre-flight
+   checks at start of every commit/push paste.
+5. STOP markers must be loud, use Write-Host -ForegroundColor Red.
+6. Line-count thresholds must be computed against expected length,
+   not guessed above. Two "STOP" cycles this session were false
+   positives from over-guessed thresholds (60 for a 54-line paste;
+   220 for a 203-line handover).
+7. Use `return` not `throw` inside & { } for non-fatal failure paths
+   — throw exits the block but the terminal stays "failed"-looking;
+   return leaves state visible for user.
+8. When append-only passes a threshold, verify with
+   Select-String -Pattern '^def test_' count, not just line count.
+9. subprocess per-case harness (benchmark/track_a/runner.py) means
+   payload changes in scanner.py DEFAULT_PAYLOADS flow to benchmark
+   without harness edits.
+
+§9 — First actions in the new window
+  cd "C:\Users\M5 E60\janissary-project\janissary"
+  & ".\.venv\Scripts\Activate.ps1"
+  $PWD
+  git --no-pager status -sb        # expect: ## main...origin/main
+  git rev-parse --short HEAD        # expect: 2f8ce12 or handover hash
+  python -m pytest -q               # expect: 507 passed
+
+If HEAD or test count differs, stop and diagnose before continuing.
+
+Then READ, in this order, BEFORE proposing 0.3 code:
+  1. docs/handover/session-1.3e.txt (this file)
+  2. docs/decisions/ADR-003-pathtraver-ceiling.md (amended)
+  3. docs/decisions/ADR-006-traversal-collapse-oracle.md
+  4. src/janissary/detection/fingerprint.py (if it exists)
+  5. tests/unit/test_fingerprint.py
+  6. src/janissary/engine/grouping.py
+  7. src/janissary/engine/finding_store.py
+
+Then propose resolutions for §11. Do NOT write 0.3 code until those
+are reviewed and locked.
+
+§10 — Do NOT
+- Begin 0.3 before resolving §11
+- Speculatively add traversal payloads (Phase 2.2) while Docker is down
+- Modify ADR-006 thresholds or MARKERS without an ADR amendment
+- Change ADR-003 ceiling without the evidence gate
+- Use <placeholder> syntax
+- Use heredoc $msg for git commit
+- Force-push
+
+§11 — Phase 0.3 scope discovery (unresolved — to be investigated)
+Phase 0.3 is "stable finding fingerprint" per the 1.3b handover. It
+has never been designed. This section lists the questions to answer
+before proposing decisions.
+
+1. What does "stable finding fingerprint" mean? Candidate: hash over
+   (param, payload_family, finding_type, normalized_url, canonical_
+   response_signature) such that the same vulnerability found twice
+   across scans gets the same ID. If the existing
+   src/janissary/detection/fingerprint.py already does this, 0.3 is
+   an extension not a new build.
+2. What is the current fingerprint strategy? Read
+   detection/fingerprint.py + tests/unit/test_fingerprint.py.
+3. What consumes fingerprints today? finding_store, grouping, agent
+   adapters? Map the call sites.
+4. What causes fingerprint instability across scans? Response body
+   tokens that rotate (nonces, timestamps, IDs), random ports,
+   session IDs in URLs. The "stable" part requires canonicalization.
+5. Is the target duplicate-detection (same finding twice in one
+   scan) or cross-scan identity (same finding across runs)? These
+   are different requirements.
+6. Does 0.3 interact with the enterprise roadmap? Reopening findings
+   across scheduled scans, deduplication in dashboards, SARIF
+   fingerprints for CI integration — these all need stable identity.
+   If yes, 0.3 requirements come from Phase 6 design, not from a
+   standalone spec.
+7. Benchmark impact: 0.3 is expected to be metric-neutral (grouping
+   already exists). Confirm no F1 regression risk.
+8. Scope boundary: 0.3 ships the fingerprint scheme + tests. Does
+   it also ship a migration for existing finding stores, or is that
+   a follow-on?
+
+Resolve these into concrete decisions in the next session's §11-style
+list before any 0.3 code.
+
+§12 — Loose ends (not blockers)
+- 2856131, 93b6732, 9d3202d red in history. Within §7 tolerance.
+- ASCENSION dashboard pace badge session 2026-10-26 — local only,
+  not tracked, unrelated to repo state.
+- Benchmark artifact regeneration requires Docker. Not scheduled.
+- ADR-003 revisit trigger 1 remains open pending evidence.
+- The WAF-block 200 FP class is documented but unfixed. Deferred to
+  Phase 2.x. No action until a WAF-aware target is available for
+  testing.
