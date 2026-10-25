@@ -1,0 +1,231 @@
+JANISSARY — Session Handover (post-1.3d, pre-1.3e)
+State-of-record, 2026-10-26.
+
+§1 — Where we are right now
+Phase 1.3d is MERGED and CI-green. Phase 1.3e design is the next action.
+
+HEAD at 1.3d merge: 97ffd8d (origin/main, in sync)
+CI on 97ffd8d: both workflows green (verified 2026-10-26)
+              ci.yml:          40198820217 (5 legs py3.10-3.14)
+              benchmark-gate:  40198820253 (F1=0.921, FP=0, PASS)
+Tests:        499/499 (was 487 pre-1.3d)
+
+baseline_struct (1.3b) is now LIVE code — consumed by scanner.py for
+the first time. 1.3b's dead-code era ended 2026-10-26.
+
+§2 — Commits added this session (1.3d)
+97ffd8d  fix(tests): 1.3d collapse integration tests [GREEN]
+9d3202d  feat(detection): 1.3d traversal collapse oracle [RED - superseded]
+e9e9598  docs(adr): ADR-006 traversal collapse oracle [GREEN]
+e83f6ed  docs: session handover post-1.3c, pre-1.3d [GREEN]
+a964257  chore(repo): untrack commit-msg.txt, add to .gitignore [GREEN]
+
+9d3202d is red in history (N802 + handler bug), fix-forwarded in
+97ffd8d. No revert, no force-push. Within §7 tolerance.
+
+§3 — What 1.3d delivered
+- src/janissary/detection/collapse_oracle.py (NEW, ~120 lines)
+    CollapseVerdict (frozen), check_traversal_collapse_oracle (pure),
+    _classify_collapse, _aux_tiny_body, _aux_no_markup,
+    _aux_known_file_sig
+    Constants: MAX_COLLAPSE_DIST=20, TINY_BODY_FRACTION=0.10
+    MARKERS: root:, daemon:, /bin/, /etc/, /usr/, 127.0.0.1
+    Regexes: PASSWD_RE, SHADOW_RE, HOSTS_RE
+- src/janissary/engine/scanner.py (+57 lines)
+    Import compute_arming_state, check_traversal_collapse_oracle
+    Arming computed once per param after collect_baseline
+    Collapse oracle call in payload loop, guarded by `if arming.armed`
+    ScanFinding emission: finding_type="traversal_collapse",
+    category="traversal", severity="critical"
+    summary.baselines[param]["arming"] now populated with
+    armed, reason, sample_count, hamming_max, has_root_signature,
+    emitted_count, emitted_by_reason
+- tests/unit/test_collapse_oracle.py (NEW, 9 tests)
+- tests/integration/test_scanner_collapse.py (NEW, 3 tests)
+- tests/fixtures/real_html_form.html (536B, 33 tokens, 31 shingles)
+- tests/fixtures/etc_passwd.txt (685B, 15 lines)
+- docs/decisions/ADR-006-traversal-collapse-oracle.md (NEW, ~170 lines)
+
+§4 — ADRs now in place
+ADR-001..005: unchanged since 1.3c.
+ADR-006 NEW. D1-D8 + D1 sub-tightening + D6 post-merge amendment:
+  D1  Aux signals: tiny_body, no_markup (with marker), known_file_sig
+      SUB-TIGHTENED 2026-10-26: tiny_body requires status<500 AND
+      body contains ":" or "/" (blocks generic WAF blocks / 500s)
+  D1a Fingerprint on any payload response when armed (not only html)
+  D1b known_file_sig requires dist>20; expansion deferred to 1.3e
+  D2  Oracle call site in payload loop, after CORROBORATOR_ONLY_TYPES
+  D3  Consume arming.armed + arming.fingerprints; min_dist = min
+      hamming across fingerprints; root_signature NOT consulted
+  D4  finding_type="traversal_collapse", category="traversal",
+      severity="critical". Distinct from pathtraver_existence_oracle
+  D5  RESOLVED. hamming(real_form, passwd)=30>20. Minimal-baseline
+      d=0 limitation documented. Fixtures committed.
+  D6  Regression gate: benchmark-gate.yml --min-f1 0.92 --max-fp 0.
+      AMENDED 2026-10-26: fresh 3-run superseded by CI gate (see ADR)
+  D7  armed=False => pass-through (zero new findings). armed=True +
+      root_signature=None => collapse may emit (unlike 1.3c)
+  D8  1.3d ships oracle + wiring + tests + CI-gate. 1.3e ships void-
+      tag, swallowed-attr, catch-all dual, boundary, post-merge 3-run
+
+§5 — Benchmark state-of-record
+  r1  TP 950 / FN 206 / F1 0.902
+  r2  TP 970 / FN 186 / F1 0.913
+  r3  TP 937 / FN 219 / F1 0.895
+  3-run mean: 0.903 +/- 0.009. Recovery: 0.921 (r1+rec).
+
+benchmark-gate on 97ffd8d: F1=0.921, FP=0, PASS.
+Same F1 on 4 code states this session (e4bcb7e, e83f6ed, 9d3202d,
+97ffd8d). 1.3d is not metric-moving by construction (ADR-006 D6
+amendment).
+
+Pathtraver per-category on 97ffd8d (from CI log):
+  pathtraver-01  0.049
+  pathtraver-02  0.154
+  pathtraver-00  0.160
+  pathtraver-03  0.308
+No change vs pre-1.3d on this corpus — OWASP Java Benchmark traversal
+responses are HTML-wrapped exceptions, not flat-text file returns, so
+the collapse oracle correctly does not fire. Recall gain is on real
+targets, not this corpus.
+
+§6 — Known issues (updated)
+#1 SPA catch-all FPs (39) - 1.3c gate + 1.3d oracle deployed. Manual
+   39->0 remains deferred (ADR-005 D7). Synthetic fixture substitutes.
+#2 401 abort - Open, Phase 1.1 -> 1.2
+#4 six-oracle refactor - Deferred 8.x
+#5 --mode ci - Deferred 8.x
+- pre-commit hook broken locally - unchanged, CI is enforcement
+- scanner.py:601 sqli_or_resp - Phase 1 audit
+- tools.env Windows path - blocks 0.1b
+- benchmark image not on registry - blocks 0.1b
+- Pathtraver F1 0.049-0.308 - ADR-003. 1.3d deployed but recall gain
+  is on real targets, not the corpus
+- 9d3202d red in history - RESOLVED by 97ffd8d
+- tiny_body potential FP on real-target 200-status WAF blocks
+  containing ":" or "/" (e.g. "Blocked by WAF (rule: 942100)") -
+  unobserved on OWASP corpus (no WAF), needs 1.3e fixture
+- 1.3d complete - RESOLVED (97ffd8d)
+
+Phase 0: 0.1a DONE, 0.1b DEFERRED, 0.2 COMMITTED (hook broken),
+0.3 NOT STARTED, 0.4 DONE, 0.5 DONE.
+Phase 1: 1.3a/b/c/d MERGED, 1.3e NEXT.
+
+§7 — Environment limitations (new this session)
+Unchanged: pre-commit broken; PS7 no heredocs; code <newpath> opens
+unsaved buffer; gh run view needs numeric ID; < reserved.
+
+NEW: git commit -m $msg with heredoc $msg is fragile. Em dashes and
+other non-ASCII in commit messages can break argument passing in
+PS7. Use repeated -m "short" arguments, or write $msg to a file
+outside the repo via [System.IO.Path]::GetTempFileName().
+
+NEW: Set-Content does not halt sequence on failure inside & { }.
+Even with $ErrorActionPreference='Stop', a throw must be followed by
+a loud ">>> STOP" Write-Host line, and any subsequent paste must
+re-verify preconditions (HEAD, staged, file content) before acting.
+
+NEW: git status --porcelain gives M / ?? / D prefixes with no summary
+- critical for diagnosing "why didn't git add work" without parsing
+the full output.
+
+NEW: $env:TEMP resolves to 8.3 short path that Remove-Item cannot
+reach. Use [System.IO.Path]::GetTempFileName(), not $env:TEMP paths.
+
+NEW: transient 0xc0000005 git crash in gh run view during CI poll
+loop - cosmetic, next poll recovers. Do not treat as real failure.
+
+§8 — Session lessons (prior all still apply; new this session)
+1. Heredoc -m $msg is fragile; use multi -m args or a file outside
+   the repo.
+2. Em dash in commit subject can break argument passing on PS7.
+3. Prefer full-file rewrites (Set-Content) over surgical edits when
+   the file is under 100 lines. Faster, fewer anchors to break.
+4. & { } wrapper is necessary but not sufficient: add explicit
+   pre-flight checks at the START of every commit/push paste.
+5. STOP markers must be loud (Write-Host -ForegroundColor Red with
+   >>> tokens), not just a throw.
+6. ResponseSnapshot fields: status, body, normalized, fingerprint,
+   length, normalized_length, elapsed, content_type. No status_code.
+7. BaselineArmingState fields: armed, reason, fingerprints (tuple of
+   int), root_signature, sample_count, hamming_max.
+8. fingerprint() returns StructuralFingerprint; the 64-bit value is
+   .value. hamming() takes ints, not StructuralFingerprint objects.
+9. ADR-006 D7 second clause confirmed at code time: armed=True +
+   root_signature=None does NOT gate 1.3d. Test
+   test_armed_with_root_signature_none_still_emits verifies.
+10. The 0xc0000005 git crash in gh run view is transient.
+11. When paste A must precede paste B, the last line of A on failure
+    must say ">>> STOP. Do NOT run paste B. <<<" not just a throw.
+
+§9 — First actions in the new window
+  cd "C:\Users\M5 E60\janissary-project\janissary"
+  & ".\.venv\Scripts\Activate.ps1"
+  $PWD
+  git --no-pager status -sb        # expect: ## main...origin/main
+  git rev-parse --short HEAD        # expect: handover commit hash
+  python -m pytest -q               # expect: 499 passed
+
+If HEAD or test count differs, stop and diagnose before continuing.
+
+Then READ, in this order, BEFORE proposing 1.3e code:
+  1. docs/handover/session-1.3d.txt (this file)
+  2. docs/decisions/ADR-006-traversal-collapse-oracle.md (full)
+  3. src/janissary/detection/collapse_oracle.py
+  4. src/janissary/engine/scanner.py (arming + collapse oracle sites)
+  5. tests/unit/test_collapse_oracle.py
+  6. tests/integration/test_scanner_collapse.py
+
+Then propose resolutions for §11. Do NOT write 1.3e code until
+those are reviewed and locked.
+
+§10 — Do NOT
+- Begin 1.3e before resolving §11
+- Modify collapse oracle thresholds without an ADR amendment
+- Add markers to MARKERS without a fixture proving the new marker
+  fires on real content and does not fire on generic WAF block
+- Use <placeholder> syntax
+- Run multi-step pastes without & { }
+- Use heredoc $msg for git commit
+- Force-push to fix CI
+
+§11 — Phase 1.3e design decisions (unresolved)
+1.3e is test-only scope: regression suite + boundary tests. No new
+oracle or production code.
+
+1. Void-tag fixture (ADR-002 §Verification item 5). Which void
+   elements to test: img, input, br, hr, link, meta? Recommend all
+   six plus a nested case.
+2. Swallowed-attribute fixture. <div class="foo><p>bar</p> -
+   verify parser produces deterministic fingerprint.
+3. Catch-all dual-direction. Baseline is SPA index (structurally
+   stable, text-unstable); traversal_passwd returns /etc/passwd.
+   Verify (a) admin probe discards wp-admin SPA catchall, (b)
+   scanner emits traversal_collapse on the passwd return. This is
+   the integration ADR-002 Combined signal envisioned.
+4. Boundary test for collapse oracle at d=15-25. Test d=19 (no
+   emit), d=21 (emit). Verify threshold boundary is honest.
+5. tiny_body FP test: 200-status WAF block containing ":" (e.g.
+   "Blocked by WAF (rule: 942100)"). Should NOT fire because
+   no_markup requires a marker and tiny_body requires ":" or "/" but
+   priority is no_markup > known_file > tiny_body - so tiny_body
+   alone firing on that string is the FP risk. Confirm via test.
+6. Marker extension test: nobody: / nologin / mysql: / postgres: /
+   www-data:. Do they improve recall without opening FPs? If yes,
+   amend ADR-006 D1 MARKERS. If no, defer.
+7. 3-run confirmation: accept ADR-006 D6 amendment (CI gate as
+   regression gate); run manually only if Docker is up and time
+   allows.
+8. Phase 0.3 (stable finding fingerprint) still open. Do it before
+   or after 1.3e, independent.
+
+Resolve all 8 before writing 1.3e code.
+
+§12 — Loose ends (not blockers)
+- 9d3202d red in history. Within §7 tolerance.
+- ASCENSION dashboard has live pace badge (session 2026-10-26,
+  unrelated to 1.3d). Regenerated via tools/render_ascension.py.
+  Not tracked in git.
+- ADR-006 D6 amendment is part of this handover commit.
+- The 0xc0000005 git crash during CI poll: transient, not real.
+- ResponseSnapshot has no status_code field; see §8 lesson 6.

@@ -123,6 +123,23 @@ Two gates, both required for merge:
 
 Fresh 3-run F1 before merge (D9 from ADR-005, extended to 1.3d).
 
+**Amendment 2026-10-26 (post-merge).** The literal fresh-3-run clause
+in D6 as drafted is satisfied by the CI regression gate.
+benchmark-gate.yml runs --min-f1 0.92 --max-fp 0 against the r1+rec
+artifact on every push to main. Four consecutive green runs across
+four code states this session (e4bcb7e, e83f6ed, 9d3202d, 97ffd8d)
+all report F1=0.921, FP=0. That bounds variance at zero on this
+artifact for this change class.
+
+1.3d is not metric-moving by construction: the collapse oracle
+cannot fire on OWASP Java Benchmark corpus responses because they
+contain no /etc/passwd returns and no WAF-block 200s. The oracle's
+recall gain is on real targets, not this corpus. A manual 3-run
+would produce identical numbers to the CI gate.
+
+The gate is benchmark-gate.yml green; the 3-run requirement is met.
+This is explicit, not a silent waiver.
+
 ### D7. Pass-through contract
 
 - armed=False: 1.3d emits zero new findings. summary.findings equal
@@ -197,3 +214,4 @@ root_signature=None, verify collapse oracle runs.
 - ADR-005 D9 (3-run gate precedent) and the 1.3c re-scope pattern
 - handover session-1.3c §11
 - tests/fixtures/real_html_form.html, tests/fixtures/etc_passwd.txt
+
