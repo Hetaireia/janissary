@@ -26,7 +26,6 @@ untouched.
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import json
 import os
 import tempfile
@@ -35,6 +34,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from janissary.finding_identity import compute_fingerprint
 
 FINDING_KEYS: tuple[str, ...] = (
     "target",
@@ -46,6 +47,7 @@ FINDING_KEYS: tuple[str, ...] = (
     "payload",
     "response_status",
     "recorded_at",
+    "fingerprint",
 )
 
 
@@ -60,21 +62,23 @@ class Finding:
     payload: str = ""
     response_status: int | None = None
     recorded_at: str = ""
+    fingerprint: str = ""
     extra: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.recorded_at:
             self.recorded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        if not self.fingerprint:
+            self.fingerprint = compute_fingerprint(
+                target=self.target or "",
+                discriminator=self.discriminator or "",
+                category=self.category or "",
+                finding_type=self.finding_type or "",
+            )
 
     def dedup_key(self) -> str:
-        parts = [
-            self.target or "",
-            self.category or "",
-            self.finding_type or "",
-            self.discriminator or "",
-        ]
-        blob = "|".join(parts).encode("utf-8")
-        return hashlib.sha256(blob).hexdigest()[:32]
+        # ADR-007: identity is the stable cross-scan fingerprint.
+        return self.fingerprint
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -96,6 +100,7 @@ class Finding:
             "payload",
             "response_status",
             "recorded_at",
+            "fingerprint",
         }
         base = {k: data.get(k) for k in known if k in data}
         extra = {k: v for k, v in data.items() if k not in known}

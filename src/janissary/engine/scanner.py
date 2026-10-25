@@ -30,6 +30,7 @@ from janissary.detection import (
 )
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
 from janissary.engine.baseline_struct import compute_arming_state
+from janissary.finding_identity import compute_fingerprint
 from janissary.output.raw_http import (
     serialize_request,
     serialize_response,
@@ -175,6 +176,18 @@ class ScanFinding:
     method: str = "GET"
     raw_request: str | None = None
     raw_response: str | None = None
+
+    # Stable cross-scan identity (ADR-007). Populated in __post_init__.
+    fingerprint: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.fingerprint:
+            self.fingerprint = compute_fingerprint(
+                target=self.url or "",
+                discriminator=self.param or "",
+                category=self.category or "",
+                finding_type=self.finding_type or "",
+            )
 
 
 @dataclass
