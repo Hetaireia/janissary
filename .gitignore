@@ -126,3 +126,6 @@ benchmark/track_a/tools.env
 release-state.json
 release/out/
 benchmark/track_a/tools_recovery.env
+
+# commit message scratch (see e4bcb7e fixup)
+commit-msg.txt
