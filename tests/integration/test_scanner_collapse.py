@@ -22,7 +22,6 @@ class FakeResponse:
         self.headers = headers or {"content-type": "text/html"}
         self.elapsed = timedelta(seconds=0.01)
         self.cookies = {}
-        self.request = None
 
 
 class FakeSession:
@@ -39,7 +38,10 @@ class FakeSession:
 
 
 def _handler(url: str):
-    if "etc/passwd" in url or "passwd_janissary_noexist" in url:
+    u = url.lower()
+    if "noexist" in u:
+        return FakeResponse(200, REAL_FORM, {"content-type": "text/html"})
+    if "passwd" in u:
         return FakeResponse(200, PASSWD, {"content-type": "text/plain"})
     return FakeResponse(200, REAL_FORM, {"content-type": "text/html"})
 
@@ -75,7 +77,7 @@ def _force_unarmed(monkeypatch):
     def fake_arming(baseline):
         return BaselineArmingState(
             armed=False,
-            reason=AimingReason_fallback(),
+            reason=ArmingReason.UNARMED_DISPERSION,
             fingerprints=(),
             root_signature=None,
             sample_count=0,
@@ -85,20 +87,13 @@ def _force_unarmed(monkeypatch):
     monkeypatch.setattr(scanner_mod, "compute_arming_state", fake_arming)
 
 
-def AimingReason_fallback():
-    from janissary.engine.baseline_struct import ArmingReason
-
-    return ArmingReason.UNARMED_DISPERSION
-
-
 def _collapse_count(summary):
     return sum(1 for f in summary.findings if f.finding_type == "traversal_collapse")
 
 
 def test_armed_emits_collapse(monkeypatch):
     _force_armed(monkeypatch)
-    sc = _make_scanner()
-    summary = sc.scan(quiet=True)
+    summary = _make_scanner().scan(quiet=True)
     assert _collapse_count(summary) >= 1
     first = next(f for f in summary.findings if f.finding_type == "traversal_collapse")
     assert first.category == "traversal"
@@ -110,14 +105,12 @@ def test_armed_emits_collapse(monkeypatch):
 
 def test_unarmed_passes_through(monkeypatch):
     _force_unarmed(monkeypatch)
-    sc = _make_scanner()
-    summary = sc.scan(quiet=True)
+    summary = _make_scanner().scan(quiet=True)
     assert _collapse_count(summary) == 0
 
 
 def test_armed_with_root_signature_none_still_emits(monkeypatch):
     """ADR-006 D7: collapse path does not consult root_signature."""
-    _force_armed(monkeypatch)  # already sets root_signature=None
-    sc = _make_scanner()
-    summary = sc.scan(quiet=True)
+    _force_armed(monkeypatch)
+    summary = _make_scanner().scan(quiet=True)
     assert _collapse_count(summary) >= 1
