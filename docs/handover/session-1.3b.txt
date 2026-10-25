@@ -1,0 +1,307 @@
+JANISSARY — Session Handover (post-1.3b, pre-1.3c)
+State-of-record, 2026-10-25 (late session).
+
+§1 — Where we are right now
+Phase 1.3b is MERGED and CI-green. Phase 1.3c design is the next action.
+
+HEAD:         f29341e (origin/main, in sync)
+CI on f29341e: both workflows success (verified 2026-10-25)
+              ci.yml: 5 legs green (py3.10/3.11/3.12/3.13/3.14) — run 40191124498
+              benchmark-gate.yml: green — run 40191124510
+Tests:        475/475 passing (was 458 pre-1.3b)
+Ruff:         check + format clean on new files
+Note on 6e12040: red in history (two tests in that commit's test file
+                 were built on a wrong premise — Lexbor auto-inserts
+                 html/head/body, so shingle_count == 0 is unreachable via
+                 parseable HTML). Fix-forward in f29341e supersedes it,
+                 no revert, no force-push. Within §7 tolerance.
+
+Phase 0 status (unchanged from prior handover except 0.3):
+  0.1a Benchmark gate           DONE (46599a8)
+  0.1b End-to-end nightly       DEFERRED (GHCR publish + tools.env parameterization)
+  0.2  Pre-commit hooks         COMMITTED (c60d252) but hook crashes on this machine
+  0.3  Stable finding fingerprint NOT STARTED (independent of 1.3a/1.3b/1.3c)
+  0.4  ADR log                  DONE (c57f35a) — ADR-001, 002, 003
+  0.5  Pathtraver ceiling       DONE via ADR-003
+
+1.3b delivered (still dead code until 1.3c):
+  src/janissary/engine/baseline_struct.py  — compute_arming_state, BaselineArmingState,
+                                              ArmingReason (5 codes), 3 constants
+  tests/test_baseline_struct.py             — 17 tests
+  docs/decisions/ADR-004-structural-arming-and-root-signature.md
+                                              — D1..D6, cross-cutting
+  Tests 458 → 475.
+
+Immediate next action: Phase 1.3c — gated corroborator. Resolve §11 below
+before writing code. Read ADR-002 §Integration point: baseline phase,
+§Combined signal requirement, and ADR-004 D1..D6 first.
+
+§2 — Commits added this session
+  f29341e  fix(dom): 1.3b test fixtures — monkeypatch empty-skeleton; ADR-004 D6 note
+  6e12040  feat(dom): 1.3b structural arming + root signature (ADR-004)  [red — superseded]
+
+f29341e: 2 files, ~55 insertions, ~23 deletions.
+6e12040: 3 files, 705 insertions, 0 deletions.
+
+Benchmark state-of-record (unchanged — 1.3b does not change F1, no rerun needed):
+  r1  20261024T130735Z-janissary-r1      TP 950 / FN 206 / F1 0.902
+  r2  20261025T020331Z-janissary-r2      TP 970 / FN 186 / F1 0.913
+  r3  20261025T062837Z-janissary-r3      TP 937 / FN 219 / F1 0.895
+  3-run mean: F1 0.903 +/- 0.009
+  Recovery:   F1 0.921 (TP 987 / FN 169), applied to r1+r2 only
+
+§3 — Key paths, versions, environment
+  Repo:      C:\Users\M5 E60\janissary-project\janissary
+  Package:   src/janissary/ (engine/, detection/, credentials/, ...)
+  Python:    3.14.7 system, .venv at repo root, editable install
+  Ruff:      0.16.9
+  Pytest:    9.1.1
+  Pre-commit 4.7.0 (installed, NOT functional — see §8)
+  Shell:     PowerShell 7.6.7
+  Git auth:  2FA, HTTPS remote
+
+New dependencies (pinned in pyproject.toml, unchanged from 1.3a):
+  selectolax == 1.0.2   (Lexbor backend — see ADR-002 §Parser amendment)
+  mmh3       == 5.3.1
+
+Image (LOCAL ONLY, not on registry): janissary/owasp-benchmark:20cbf3d-ldapfix
+
+§4 — ADRs now in place
+ADR-001 — benchmark methodology. Unchanged. Amendments 19–22 subordinate.
+ADR-002 — DOM structural hashing. Two amendments (2026-10-25):
+  §Parser: Modest → Lexbor.
+  §Verification #3: one-node change at d=18, not >20. Partial band.
+ADR-003 — pathtraver ceiling. Unchanged, no revisit trigger fired.
+ADR-004 — structural arming + root signature. NEW. D1..D6:
+  D1  Reuse Baseline.snapshots in place; zero extra requests; stale "5"
+      in ADR-002 superseded by whatever Scanner.baseline_count produces
+      (default 10, floor 3).
+  D2  MIN_ARMING_SAMPLES = 3 (matches Scanner.baseline_count floor).
+  D3  root_signature = sha256(normalize_body(body).encode("utf-8")[:4096])
+      — truncation applied after normalization. Preserves reflected text
+      so 1.3c discard path is safe. Canary test in 1.3b.
+  D4  Root sample = unique mode of ResponseSnapshot.fingerprint; else None.
+      root_signature == None does not unarm; only disables the 1.3c discard.
+  D5  Armed == False ⇒ 1.3c output is byte-for-byte identical to pre-1.3b.
+      Contract tested in 1.3c.
+  D6  Arming predicate precedence:
+      NO_HTML > INSUFFICIENT > EMPTY_SKELETON > DISPERSION > ARMED
+      Note: EMPTY_SKELETON is unreachable via parseable HTML (Lexbor auto-
+      inserts html/head/body). Defensive guard; tested via monkeypatch.
+
+Public API of engine/dom_hash.py (unchanged from 1.3a):
+  fingerprint(html) -> StructuralFingerprint(value, token_count, shingle_count)
+  .distance(other) -> int
+  extract_skeleton(html) -> list[str]
+  simhash_tokens(tokens) -> StructuralFingerprint
+  hamming(a, b) -> int
+  HASH_BACKEND: str
+  Gate semantics: shingle_count == 0 means empty skeleton — callers gate
+  on shingle_count > 0.
+
+Public API of engine/baseline_struct.py (new in 1.3b, dead code until 1.3c):
+  compute_arming_state(baseline: Baseline) -> BaselineArmingState
+  BaselineArmingState(armed, reason, fingerprints, root_signature,
+                      sample_count, hamming_max)  — frozen
+  ArmingReason  — str Enum: armed | unarmed_no_html_samples |
+                  unarmed_insufficient_samples | unarmed_empty_skeleton |
+                  unarmed_dispersion
+  Constants: MIN_ARMING_SAMPLES=3, MAX_ARMING_HAMMING=3, ROOT_SIGNATURE_BYTES=4096
+
+§5 — Roadmap status
+Phase 0: 0.3 (stable finding fingerprint) still open and independent.
+Phase 1: 1.3a MERGED, 1.3b MERGED. 1.3c NEXT.
+  Ordering: 1.3c -> 1.3d -> 1.3e -> 1.1/1.2.
+Phase 2: unchanged; 2.2 re-scoped as 1.3d-confirmed.
+Phase 3: unchanged (entry-gated).
+Cut order if Phase 1 slips: 1.6 -> 1.7 -> 1.8. Never cut 1.1-1.5.
+  1.3a  skeleton + SimHash + Hamming primitives         MERGED 2570036
+  1.3b  baseline variance index + arming + root sig     MERGED f29341e
+  1.3c  gated corroborator (targets Issue #1 39 SPAs)   NEXT
+  1.3d  >20 collapse path (traversal, WAF-block)        unblocked by 1.3c
+  1.3e  regression suite + benchmark rerun              unblocked by 1.3d
+
+§6 — Launch strategy (unchanged)
+HN warm-up independent of code. README + release note reference 0.921 with
+2-of-3 disclosure. Neither 1.3a nor 1.3b changes any number in the README.
+
+§7 — Known issues (updated)
+  #1  SPA catch-all FPs (39)                Open — Phase 1.3c. Primitives ready.
+  #2  401 abort                             Open — Phase 1.1 → 1.2
+  #4  Six-oracle refactor                   Deferred to 8.x
+  #5  --mode ci                             Deferred to 8.x
+  —   pre-commit hook crashes locally       Documented in c60d252 (§8)
+  —   scanner.py:601 sqli_or_resp           Phase 1 audit — possible SQLi gap
+  —   tools.env Windows path                Blocks Phase 0.1b
+  —   benchmark image not on registry       Blocks Phase 0.1b
+  —   Pathtraver F1 0.049–0.308             ADR-003, revisit triggers set
+  —   CI red for >=6 commits                RESOLVED (1c29c96)
+  —   README reproduce path                 RESOLVED (a46d061)
+  —   Release note missing disclosure       RESOLVED (PATCH 419643791)
+  —   1.3a complete                         RESOLVED (2570036)
+  —   1.3b complete                         RESOLVED (f29341e)
+  —   6e12040 red in history                RESOLVED (f29341e supersedes)
+
+F1 rule: 1.3b is dead code — dom_hash and baseline_struct are not imported
+by scanner.py. HANDOVER §10's rule "Do NOT add a feature that changes F1
+without a fresh 3-run" is safely bypassed. **1.3c is where this rule first
+bites.** Any wiring that changes finding emission is F1-affecting.
+
+CI annotations (informational only, unchanged from prior handover):
+  Node.js 20 deprecated on checkout@v4 / setup-python@v5 — future bump.
+  ubuntu-latest migrating to Ubuntu 26 beginning 2026-10-19 — phase may
+  be partial; current runs green. No action today.
+
+§8 — Environment limitations (unchanged, plus TWO new)
+Pre-commit still broken locally. CI remains enforcement path.
+
+NEW: `code <new-path>` opens an unsaved buffer without creating the file.
+If you then `git commit -F <file>` without saving, it fails with
+"could not read log file '<file>': No such file or directory".
+Always `New-Item -ItemType File -Path <file> -Force | Out-Null` before
+`code <file>` when the file is new.
+
+NEW: `gh run view <RUN_ID>` needs a real numeric ID. Copy from
+`gh run list` output, not from a chat message placeholder. In PowerShell,
+`<` is reserved (`<RUN_ID>` produces ParserError).
+
+PowerShell 7 does not support bash heredocs. `<<'EOF'` fails with
+ParserError. Commit via message file in repo directory:
+  New-Item -ItemType File -Path 'commit-msg.txt' -Force | Out-Null
+  code 'commit-msg.txt'    # paste, save
+  Test-Path commit-msg.txt # must be True
+  git commit -F commit-msg.txt
+  Remove-Item commit-msg.txt
+
+§9 — Session lessons (prior lessons still apply; new entries)
+Bash syntax is not PowerShell syntax. Code goes into a file, opened by
+`code <path>`, pasted from the copy button. Never drag-select a fenced
+block from chat.
+
+mmh3.__version__ does not exist. Use importlib.metadata.version("mmh3").
+selectolax.__version__ works but is inconsistent — use importlib.metadata
+uniformly.
+
+ruff format is lazy-write: first --check reports "would reformat", first
+format reports "files reformatted", second --check is clean. Trust the
+second run.
+
+Wheel probe: --platform manylinux2014_x86_64 with cp314 may silently
+succeed with no output. Do not read empty output as "missing".
+
+gh run watch picks runs without --workflow. Use
+`gh run list --workflow=ci.yml --limit 3` then `gh run view <id>`.
+
+git diff opens a pager. Use `git --no-pager diff`.
+
+NEW: Lexbor's HTML5 parser auto-inserts html/head/body. Any parseable
+HTML string produces shingle_count >= 1; shingle_count == 0 is only
+reachable for empty/invalid input or after future changes to
+extract_skeleton/SHINGLE_SIZE. Test such guards via monkeypatch.
+
+NEW: When a test failure traces to a wrong test fixture (module is
+correct), fix-forward with a targeted edit script rather than a revert.
+Revert costs 2 extra commits and adds no safety over fix-forward when CI
+is red only on the test step.
+
+§10 — First actions in the new window
+  cd "C:\Users\M5 E60\janissary-project\janissary"
+  & ".\.venv\Scripts\Activate.ps1"
+  $PWD
+  git --no-pager status -sb          # expect: ## main...origin/main
+  git rev-parse --short HEAD          # expect: f29341e
+  python -m pytest -q                 # expect: 475 passed
+  gh run list --workflow=ci.yml --limit 2
+
+Then Phase 1.3c design decisions (see §11 below) — resolve all before
+writing code. Read:
+  docs/decisions/ADR-002-dom-structural-hashing.md §Integration point
+  docs/decisions/ADR-002-dom-structural-hashing.md §Combined signal
+  docs/decisions/ADR-004-structural-arming-and-root-signature.md D1..D6
+  tests/unit/test_scanner_baseline.py (existing baseline harness)
+  tests/integration/test_scanner.py    (how findings are emitted end-to-end)
+
+Do NOT:
+  Begin 1.3c before resolving §11.
+  Wire the discard path without proving D5 (unarmed == pass-through).
+  Skip the 3-run F1 rerun before merging 1.3c — that rule is ACTIVE now.
+  Re-open ADR-003 without a revisit trigger.
+  Use <<'EOF' in PowerShell.
+  Paste fenced code into the terminal.
+  Force-push to fix a CI failure.
+
+§11 — Phase 1.3c design decisions (unresolved)
+1.3b's arming state is now available but not consumed. 1.3c wires the
+discard half of ADR-002 §Combined signal requirement. Resolve before
+coding; consider whether each needs an ADR-005 or a sub-amendment.
+
+1. Finding-type scope of the discard path.
+   Options:
+     (a) Only CORROBORATOR_ONLY_TYPES (status_change, length_anomaly,
+         length_shrink) — narrowest, targets Issue #1 directly.
+     (b) All finding types with structural evidence — broader, risks
+         losing TPs.
+     (c) Only findings whose baseline is text-unstable
+         (is_stable_body == False) — orthogonal signal.
+   Recommendation: (a) AND (c). When the baseline is text-stable, the
+   existing differential already discriminates; structural is redundant.
+   When the baseline is text-unstable, the 39 SPA catch-all FPs occur —
+   exactly the structural gate's target.
+
+2. Root signature match semantics.
+   ADR-002 §Combined signal says "matches the stored root signature".
+   Literal SHA-256 equality, or allow any tolerance?
+   Recommendation: exact equality. Root is one canonical hash; any
+   tolerance reintroduces the churn the signature exists to reject.
+
+3. Integration point in scanner.py.
+   Options:
+     (a) Post-process raw_findings from DifferentialAnalyzer.analyze()
+         when arming.armed — filter before ScanFinding is constructed.
+     (b) Filter at emission time (after ScanFinding).
+     (c) Filter inside DifferentialAnalyzer (requires passing arming in).
+   Recommendation: (a). Keeps the hook one-shot per payload response,
+   makes the "gate transparent when unarmed" check trivially
+   implementable as an identity function.
+
+4. ScanSummary schema.
+   Where does arming state surface?
+     (a) Add "arming" key inside ScanSummary.baselines[param] (existing
+         per-param dict).
+     (b) New top-level ScanSummary.arming: dict[param, dict].
+     (c) Don't surface; log only.
+   Recommendation: (a). Keeps per-param metadata together; consumers
+   already iterate baselines[param].
+
+5. Discard observability.
+   When the gate discards a finding, log at DEBUG, count in summary,
+   both, or neither? Recommendation: both. A "discarded_count" per
+   (param, reason) gives visibility without noise; DEBUG logs remain
+   available for debugging.
+
+6. Reproducing the 39 SPAs locally.
+   Does the local benchmark image (janissary/owasp-benchmark:20cbf3d-
+   ldapfix) include the SPA routes that produce the 39 catch-all FPs?
+   Is there a synthetic SPA fixture in tests/integration/?
+   Resolve before coding — the "0/39 FPs" success criterion from
+   ADR-002 §Success criteria must be verifiable pre-merge.
+
+7. Emit-path scope.
+   ADR-002 §Combined signal has an "Emit:" clause (distance > 20 AND
+   auxiliary signal). Is 1.3c supposed to ship both discard and emit,
+   or only discard with emit deferred to 1.3d?
+   Recommendation: discard only in 1.3c. 1.3d ships the emit half
+   (already written into the roadmap). Confirms the phase boundaries
+   ADR-004 §Consequences assumed.
+
+8. Benchmark acceptance criteria for 1.3c.
+   ADR-002 §Success criteria says `--min-f1 0.92 --max-fp 0` on the
+   r1+rec artifact. 0.92 exceeds the 3-run mean of 0.903 ± 0.009.
+   Confirm: is the criterion 0.92 (recovery level) or "F1 within
+   tolerance of 0.903 baseline" or both? Also: is the 39-SPA check
+   covered by an in-repo test, or by a manual benchmark run, or both?
+   Resolve before merge.
+
+Start next window by pasting this handover, then reading ADR-002
+§Integration point + §Combined signal, ADR-004 D1..D6, and
+tests/unit/test_scanner_baseline.py.
