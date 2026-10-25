@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib as _hashlib
 from unittest.mock import MagicMock
 
-from janissary.recon import admin as a
-
-import hashlib as _hashlib
 from janissary.detection import normalize_body as _normalize_body
 from janissary.engine.dom_hash import fingerprint as _fingerprint
+from janissary.recon import admin as a
 from janissary.recon.admin import AdminProfile as _AdminProfile
 from janissary.recon.admin_struct import (
     compute_root_state,

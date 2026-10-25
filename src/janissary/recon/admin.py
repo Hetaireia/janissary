@@ -279,7 +279,10 @@ class AdminProbe:
                             by[SPA_CATCHALL_REASON] = by.get(SPA_CATCHALL_REASON, 0) + 1
                             log.debug(
                                 "discarded admin hit platform=%s path=%s hamming=%s sig_match=%s",
-                                platform, path, verdict.hamming, verdict.root_signature_match,
+                                platform,
+                                path,
+                                verdict.hamming,
+                                verdict.root_signature_match,
                             )
                             continue
                     profile.hits.append(hit)

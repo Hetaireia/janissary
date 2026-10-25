@@ -1,4 +1,5 @@
 """Integration tests for admin probe structural gating (ADR-005, Phase 1.3c)."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -28,7 +29,9 @@ class FakeSession:
         pass
 
 
-SPA_INDEX = "<html><body><div id='root'></div><script src='bundle.js'></script></body></html>"
+SPA_INDEX = (
+    "<html><body><div id='root'></div><script src='bundle.js'></script></body></html>"
+)
 SPA_CT = {"content-type": "text/html"}
 LOGIN_HTML = '<html><body><form><input type="password" name="p"></form></body></html>'
 TOTAL_PATHS = sum(len(paths) for paths in ADMIN_PATHS.values())
@@ -56,16 +59,25 @@ def test_spa_target_produces_zero_hits():
     assert profile.hits == []
     assert profile.arming["enabled"] is True
     assert profile.arming["discarded_count"] == TOTAL_PATHS
-    assert profile.arming["discarded_by_reason"].get("spa_catchall_admin", 0) == TOTAL_PATHS
+    assert (
+        profile.arming["discarded_by_reason"].get("spa_catchall_admin", 0)
+        == TOTAL_PATHS
+    )
     assert len(session.calls) == 1 + TOTAL_PATHS
 
 
 def test_mixed_target_suppresses_fakes_keeps_real():
     session = FakeSession(_mixed)
     profile = probe_admin("http://t/", session=session)
-    wp = [h for h in profile.hits if h.platform == "wordpress" and h.path == "/wp-admin/"]
+    wp = [
+        h for h in profile.hits if h.platform == "wordpress" and h.path == "/wp-admin/"
+    ]
     assert len(wp) == 1, f"expected 1 wordpress hit, got {profile.hits}"
-    other = [h for h in profile.hits if not (h.platform == "wordpress" and h.path == "/wp-admin/")]
+    other = [
+        h
+        for h in profile.hits
+        if not (h.platform == "wordpress" and h.path == "/wp-admin/")
+    ]
     assert other == [], f"expected other paths suppressed, got {other}"
     assert profile.arming["discarded_count"] == TOTAL_PATHS - 1
 
