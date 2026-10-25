@@ -34,6 +34,11 @@ jobs:
           allow-prereleases: true
           cache: pip
 
+      - name: ADR-002 dependency pre-flight
+        run: |
+          python -m pip download selectolax==1.0.2 mmh3==5.3.1 \
+            --only-binary=:all: --no-deps -d "${{ runner.temp }}/pip-preflight"
+
       - name: Install
         run: |
           python -m pip install --upgrade pip
@@ -42,5 +47,8 @@ jobs:
       - name: Ruff check
         run: ruff check .
 
+      - name: Ruff format
+        run: ruff format --check .
+        
       - name: Pytest
         run: pytest -q
