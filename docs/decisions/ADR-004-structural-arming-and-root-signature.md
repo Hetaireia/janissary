@@ -98,6 +98,17 @@ Given HTML baseline samples:
 - Hamming distance uses `dom_hash.hamming` on 64-bit SimHash values.
 - `root_signature` is populated per D4 independently of `armed`.
 
+**Note on `UNARMED_EMPTY_SKELETON`.** Lexbor's HTML5 parser auto-inserts
+`html`, `head`, and `body` for any input string, so `shingle_count == 0` is
+unreachable via valid HTML — the smallest possible skeleton is
+`["html", "head", "body"]` (3 tokens → 1 shingle). This check is therefore
+**defensive**: it fires only if `extract_skeleton` ever returns fewer than
+`SHINGLE_SIZE` tokens (empty input, or a future change to `SHINGLE_SIZE` /
+`extract_skeleton`). The test path uses a monkeypatched `dom_fingerprint`
+returning `StructuralFingerprint(shingle_count=0)` directly, since no HTML
+fixture can trigger it. Documented here so future maintainers do not
+mistake the guard for dead code.
+
 ## Consequences
 
 - **1.3b** ships `engine/baseline_struct.py` with `compute_arming_state`,

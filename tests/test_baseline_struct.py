@@ -16,15 +16,13 @@ from janissary.detection import Baseline, ResponseSnapshot
 from janissary.detection.analyzer import normalize_body
 from janissary.engine.baseline_struct import (
     MAX_ARMING_HAMMING,
-    MIN_ARMING_SAMPLES,
     ROOT_SIGNATURE_BYTES,
     ArmingReason,
     BaselineArmingState,
     compute_arming_state,
 )
+from janissary.engine.dom_hash import StructuralFingerprint, hamming
 from janissary.engine.dom_hash import fingerprint as dom_fingerprint
-from janissary.engine.dom_hash import hamming
-
 
 # ---------------------------------------------------------------------------
 # Fixture
@@ -118,8 +116,20 @@ def test_unarmed_when_content_type_not_html():
 # ---------------------------------------------------------------------------
 
 
-def test_unarmed_when_all_skeletons_empty():
-    # script is in IGNORED_TAGS; no non-ignored tags => shingle_count == 0.
+def test_unarmed_when_skeleton_is_empty(monkeypatch):
+    """Defensive: shingle_count == 0 is unreachable via Lexbor-parseable HTML.
+
+    Lexbor auto-inserts html/head/body, so every parseable HTML string yields
+    at least 3 tokens and shingle_count >= 1. This guard fires only if
+    extract_skeleton ever returns fewer than SHINGLE_SIZE tags (empty input,
+    or a future change to SHINGLE_SIZE / extract_skeleton). Tested via
+    monkeypatch. See ADR-004 §D6.
+    """
+    empty = StructuralFingerprint(value=0, token_count=0, shingle_count=0)
+    monkeypatch.setattr(
+        "janissary.engine.baseline_struct.dom_fingerprint",
+        lambda _body: empty,
+    )
     baseline = Baseline(
         snapshots=[
             _snap(body="<script>var a = 1;</script>"),
@@ -131,11 +141,6 @@ def test_unarmed_when_all_skeletons_empty():
     assert state.armed is False
     assert state.reason == ArmingReason.UNARMED_EMPTY_SKELETON
     assert state.sample_count == 3
-
-
-# ---------------------------------------------------------------------------
-# 5. Insufficient samples
-# ---------------------------------------------------------------------------
 
 
 def test_unarmed_when_insufficient_samples():
@@ -334,18 +339,6 @@ def test_compute_arming_state_does_not_raise_on_empty_baseline():
             ArmingReason.UNARMED_INSUFFICIENT_SAMPLES,
             2,
         ),
-        (
-            "empty_skeleton_beats_dispersion",
-            [
-                _snap(body="<script>alert(1)</script>"),  # empty skeleton
-                _snap(body="<html><body><div><p>a</p></div></body></html>"),
-                _snap(
-                    body="<html><body><table><tr><td>b</td></tr></table></body></html>"
-                ),
-            ],
-            ArmingReason.UNARMED_EMPTY_SKELETON,
-            3,
-        ),
     ],
     ids=lambda v: v if isinstance(v, str) else "",
 )
@@ -359,6 +352,34 @@ def test_reason_precedence(case, snapshots, expected_reason, expected_sample_cou
 # ---------------------------------------------------------------------------
 # 14. Frozen state
 # ---------------------------------------------------------------------------
+
+
+def test_empty_skeleton_beats_dispersion(monkeypatch):
+    """Empty-skeleton check runs before dispersion check (ADR-004 §D6)."""
+    empty = StructuralFingerprint(value=0, token_count=0, shingle_count=0)
+    fp_a = StructuralFingerprint(
+        value=0x0000000000000000, token_count=5, shingle_count=3
+    )
+    fp_b = StructuralFingerprint(
+        value=0xFFFFFFFFFFFFFFFF, token_count=5, shingle_count=3
+    )
+    # hamming(0x0, 0xFFFF...) = 64 > MAX_ARMING_HAMMING, so if the empty-skeleton
+    # check did NOT fire first, this baseline would be UNARMED_DISPERSION.
+    sequence = iter([empty, fp_a, fp_b])
+    monkeypatch.setattr(
+        "janissary.engine.baseline_struct.dom_fingerprint",
+        lambda _body: next(sequence),
+    )
+    baseline = Baseline(
+        snapshots=[
+            _snap(body="<script>var a = 1;</script>"),
+            _snap(body="<html><body><div>a</div></body></html>"),
+            _snap(body="<html><body><section>b</section></body></html>"),
+        ]
+    )
+    state = compute_arming_state(baseline)
+    assert state.armed is False
+    assert state.reason == ArmingReason.UNARMED_EMPTY_SKELETON
 
 
 def test_armed_state_is_frozen():
