@@ -114,3 +114,38 @@ def test_armed_with_root_signature_none_still_emits(monkeypatch):
     _force_armed(monkeypatch)
     summary = _make_scanner().scan(quiet=True)
     assert _collapse_count(summary) >= 1
+
+
+SPA_INDEX = "<html><body><div id='app'></div></body></html>"
+
+
+def _dual_handler(url: str):
+    u = url.lower()
+    if "passwd" in u:
+        return FakeResponse(200, PASSWD, {"content-type": "text/plain"})
+    return FakeResponse(200, SPA_INDEX, {"content-type": "text/html"})
+
+
+def test_spa_dual_direction(monkeypatch):
+    """ADR-002 Combined signal: same target suppresses admin FPs (1.3c)
+    and emits traversal_collapse on /etc/passwd returns (1.3d)."""
+    from janissary.recon.admin import probe_admin
+
+    # Part A: admin probe on SPA target -> zero hits (1.3c filter)
+    session_a = FakeSession(_dual_handler)
+    admin_profile = probe_admin("http://t/", session=session_a)
+    assert admin_profile.hits == []
+
+    # Part B: scanner on same target -> emits traversal_collapse (1.3d)
+    _force_armed(monkeypatch)
+    session_b = FakeSession(_dual_handler)
+    scanner = Scanner(
+        target="http://t/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session_b,
+        delay=0.0,
+        detect_waf=False,
+    )
+    summary = scanner.scan(quiet=True)
+    assert _collapse_count(summary) >= 1

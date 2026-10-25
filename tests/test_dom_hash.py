@@ -208,3 +208,42 @@ def test_fingerprint_frozen() -> None:
 
 def test_shingle_size_constant() -> None:
     assert SHINGLE_SIZE == 3
+
+
+# ---------------------------------------------------------------------------
+# ADR-002 verification — void tags, malformed HTML (1.3e hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_void_tags_have_no_closing_tokens():
+    from janissary.engine.dom_hash import extract_skeleton
+
+    html = (
+        '<html><body><img src="x"><input type="text">'
+        '<br><hr><link rel="stylesheet"><meta charset="utf-8">'
+        "<p>text</p></body></html>"
+    )
+    tokens = extract_skeleton(html)
+    for v in ("img", "input", "br", "hr", "link", "meta"):
+        assert f"<{v}>" in tokens, f"missing opening <{v}>"
+        assert f"</{v}>" not in tokens, f"unexpected closing </{v}>"
+
+
+def test_nested_void_tags_preserve_order():
+    from janissary.engine.dom_hash import extract_skeleton
+
+    html = '<html><body><div><img src="x"><span>text</span></div></body></html>'
+    tokens = extract_skeleton(html)
+    assert "</img>" not in tokens
+    assert tokens.index("<div>") < tokens.index("<img>") < tokens.index("<span>")
+    assert "</div>" in tokens
+
+
+def test_swallowed_attribute_is_deterministic():
+    from janissary.engine.dom_hash import fingerprint
+
+    malformed = '<html><body><div class="foo><p>bar</p></body></html>'
+    fp1 = fingerprint(malformed)
+    fp2 = fingerprint(malformed)
+    assert fp1.value == fp2.value
+    assert fp1.shingle_count >= 1
