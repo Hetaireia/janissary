@@ -1,25 +1,55 @@
-# Pre-commit hooks for JANISSARY.
+# Pre-commit hooks for JANISSARY — all local, no network fetch required.
 # Install: pip install -e ".[dev]" && pre-commit install
 # Run manually: pre-commit run --all-files
-# Docs: https://pre-commit.com
+#
+# Rule 1 (handover session-0.3): whole-tree gate, fixed order.
+# All hooks use language: system and resolve binaries from PATH.
+# Requirement: run git commit from an activated venv (standard dev workflow
+# for this repo). Remote `repo:`-style hooks are intentionally absent
+# because GitHub clones hang on first fetch in this environment.
+# Ruff version pinning is enforced by pyproject.toml.
+#
+# Escape hatch (explicit, not silent): SKIP=pytest-full git commit ...
 
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.9
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--fix]
-      - id: ruff-format
+      - id: ruff-check-fix
+        name: ruff check --fix (whole tree)
+        entry: ruff
+        args: [check, --fix, .]
+        language: system
+        pass_filenames: false
+        always_run: true
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-toml
-      - id: check-merge-conflict
-      - id: check-added-large-files
-        args: [--maxkb=5000]
-        # Run artifacts are intentionally large and force-added per run.
-        exclude: ^benchmark/track_a/runs/
+      - id: ruff-format
+        name: ruff format (whole tree)
+        entry: ruff
+        args: [format, .]
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-check-verify
+        name: ruff check (verify)
+        entry: ruff
+        args: [check, .]
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: ruff-format-verify
+        name: ruff format --check (verify)
+        entry: ruff
+        args: [format, --check, .]
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: pytest-full
+        name: pytest -q (full suite)
+        entry: pytest
+        args: [-q]
+        language: system
+        pass_filenames: false
+        always_run: true
