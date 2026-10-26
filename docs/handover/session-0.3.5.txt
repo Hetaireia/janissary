@@ -2,13 +2,13 @@
 UPDATE (session-0.3.5 continuation, same window, post-amendment)
 ===============================================================================
 
-Rule 1 amendment EXECUTED as commit 0e9ad0a.
+Rule 1 amendment EXECUTED as commit 66c17bc.
 
 The body below is preserved verbatim as the previous session wrote it at
 handover time. Lines reading "DECIDED, NOT YET EXECUTED" or "executes
 first thing next window" describe the state BEFORE this window. The
 executed state of record is the commit above and the config at that SHA.
-The current Rule 1 is described in .pre-commit-config.yaml at 0e9ad0a
+The current Rule 1 is described in .pre-commit-config.yaml at 66c17bc
 (ruff at commit, pytest at push, both whole-tree).
 
 ===============================================================================
