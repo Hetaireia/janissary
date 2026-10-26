@@ -354,3 +354,17 @@ roadmap decision, not an assistant decision.
 - Two clean fix-forward commits this session (0ca0466 for
   ruff format; process rule 1 exists because of them). No
   further action needed — the rules prevent recurrence.
+
+Addendum 2026-10-26 (post-handover): Operator issued a standing order granting
+the assistant delegated roadmap authority with an enterprise-first mandate.
+See docs/handover/STANDING-ORDER.md. This order is binding on all subsequent
+sessions and supersedes the "Do NOT" delegation boundary in this document
+where the two conflict. The prohibition on force-push, on benchmark artifact
+regeneration, on ADR-003 ceiling changes without the Docker gate, and on
+Process Rule 1 bypass remain in force under the standing order itself.
+
+Follow-on flagged this session: ruff version drift. pyproject declares
+ruff>=0.4, .pre-commit-config.yaml pins v0.16.9, local venv unknown, CI
+resolves pyproject. Three potentially different versions means local-green
+and CI-red can diverge. Recommend pinning all three to one version in a
+future session; deferred here to avoid format churn while SARIF work lands.
