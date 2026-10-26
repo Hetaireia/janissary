@@ -913,18 +913,22 @@ def cmd_agent(args: argparse.Namespace) -> int:
         print(f"[*] Findings written to {args.store}")
 
     if args.export:
-        import json as _json
+        if args.export.lower().endswith((".sarif", ".sarif.json")):
+            # ADR-009 D10: SARIF export for agent findings.
+            _write_sarif(store.all(), args.export)
+        else:
+            import json as _json
 
-        with open(args.export, "w", encoding="utf-8") as fh:
-            _json.dump(
-                {
-                    "run": result.to_dict(),
-                    "summary": store.summary(),
-                    "findings": [f.to_dict() for f in store.all()],
-                },
-                fh,
-                indent=2,
-            )
+            with open(args.export, "w", encoding="utf-8") as fh:
+                _json.dump(
+                    {
+                        "run": result.to_dict(),
+                        "summary": store.summary(),
+                        "findings": [f.to_dict() for f in store.all()],
+                    },
+                    fh,
+                    indent=2,
+                )
         print(f"[*] Results exported to {args.export}")
 
     sys.stdout = real_stdout
