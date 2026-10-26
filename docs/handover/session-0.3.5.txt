@@ -337,6 +337,88 @@ J. ruff-format can crash with STATUS_ACCESS_VIOLATION on Windows.
    consistently, investigate the ruff install (version, wheel arch,
    antivirus interference).
 
+K. git-spawned pre-commit hook hangs; direct invocation is fine.
+   Symptom: git commit blocks with no output. Observed 89.5s with
+   SIGINT at the operator's hand (exit 130); HEAD did not advance.
+   Same session, same config, same venv:
+     python -m pre_commit run --all-files -> 1.6s, all Passed
+     python -m pre_commit run --hook-stage push --all-files -> 13.8s,
+     Passed.
+   The divergence is the git -> sh.exe -> python -mpre_commit chain.
+   Both endpoints are healthy in isolation. Every hung commit leaves
+   at least one orphaned sh.exe whose parent git.exe is dead; that
+   orphan must be killed manually before the next attempt (this
+   occurred twice in session 0.3.5).
+
+   Evidence gathered in session 0.3.5 diagnostic runs:
+   - No orphaned git/sh/python at test time (before the hang)
+   - No held .lock files under .git/ or %USERPROFILE%\.cache\pre-commit\
+     (verified via exclusive [IO.File]::Open, not mere existence)
+   - Windows Defender not running (WinDefend service absent)
+   - 64-bit cmd.exe missing (separate gotcha L); NOT a cause — git,
+     ruff, pytest, and sh.exe do not depend on it (proven: gate 1 and
+     gate 2 both passed in session 0.3.5 with cmd.exe absent)
+   - Pre-commit cache path contains a space:
+     C:\Users\M5 E60\.cache\pre-commit
+   - Git for Windows 2.55.0.windows.5
+   - Python 3.14.7 in venv
+
+   Workaround applied in session 0.3.5, PERMANENT until diagnosed:
+   run both gate stages in foreground via
+     python -m pre_commit run [--hook-stage push] --all-files
+   then commit and push with --no-verify. Rule 1 coverage is
+   preserved: same config, same hooks, same whole-tree scope. Only
+   the spawn mechanism changes. Gate output MUST be tee'd to a log
+   (C:\diag\gate-run-*.log) for audit.
+
+   Fix candidates for a future session, in order of cheapness:
+   1.  = "C:\pchome" — eliminate the space in
+      path; git-for-Windows sh.exe has known edge cases with spaces.
+   2. GIT_TRACE=1 on a throwaway commit — names the exact exec
+      boundary where git blocks.
+   3. Reinstall Git for Windows — the sh.exe wrapper is the only
+      component that diverges between direct and git-spawned paths.
+   4. Check for third-party endpoint agents doing I/O interception
+      without registering with SecurityCenter2.
+
+L. 64-bit cmd.exe missing from C:\Windows\System32.
+   Observed session 0.3.5: Test-Path 'C:\Windows\System32\cmd.exe'
+   = False, while C:\Windows\SysWOW64\cmd.exe = True. C:\WINDOWS\system32\cmd.exe
+   still points to the missing file.
+
+   Diagnostic state at observation:
+   - System32 exists, file count 4658 (intact — not corruption)
+   - schtasks.exe, fsutil.exe, dism.exe, sfc.exe, notepad.exe,
+     wscript.exe all present in System32
+   - WinSxS has both amd64 copies:
+     amd64_microsoft-windows-commandprompt_31bf3856ad364e35_
+     10.0.26100.1591 and _10.0.26100.8328
+   - WinDefend service not running; Get-MpComputerStatus and
+     Get-MpPreference unavailable; SecurityCenter2 timestamp stale
+     (12 Jul 2026)
+   - OS: Windows 11 Pro, 10.0.26200 (Insider Dev channel)
+
+   Narrow, targeted removal — not System32-wide. Most likely causes:
+   Defender false-positive quarantine (but Defender is not running,
+   so who quarantined it?), a debloat/hardening script, or an
+   enterprise policy applied destructively.
+
+   Fix: DISM /Online /Cleanup-Image /RestoreHealth then
+   sfc /scannow, both elevated. Expected 15-30 min combined. Do NOT
+   copy from WinSxS manually — ACLs are owned by TrustedInstaller
+   and direct copies are reverted by the servicing stack on next
+   update.
+
+   Impact on JANISSARY: none. git, ruff, pytest, and the sh-based
+   pre-commit hook do not depend on cmd.exe. Session 0.3.5 shipped
+   with cmd.exe absent. Defer fix to its own maintenance window.
+
+   Also investigate: why Defender is non-functional on this machine.
+   A Windows 11 Pro install with WinDefend absent and a system
+   binary removed is not standard. Check GPO / Intune / third-party
+   AV management BEFORE restoring Defender — restore will conflict
+   with any active AV manager.
+
 =============================================================================
 FIRST ACTIONS IN THE NEW WINDOW
 =============================================================================
