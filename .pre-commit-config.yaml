@@ -1,15 +1,20 @@
 # Pre-commit hooks for JANISSARY — all local, no network fetch required.
-# Install: pip install -e ".[dev]" && pre-commit install
+# Install: pip install -e ".[dev]" && pre-commit install && pre-commit install --hook-type pre-push
 # Run manually: pre-commit run --all-files
+#               pre-commit run --hook-stage push --all-files
 #
-# Rule 1 (handover session-0.3): whole-tree gate, fixed order.
+# Rule 1 (amended in session-0.3.5): whole-tree gate at two stages.
+#   commit -> ruff (check --fix, format, check, format --check)
+#   push   -> pytest (full suite)
 # All hooks use language: system and resolve binaries from PATH.
-# Requirement: run git commit from an activated venv (standard dev workflow
-# for this repo). Remote `repo:`-style hooks are intentionally absent
-# because GitHub clones hang on first fetch in this environment.
+# Requirement: run git commit / git push from an activated venv.
+# Remote `repo:`-style hooks are intentionally absent — GitHub clones hang
+# on first fetch in this environment.
 # Ruff version pinning is enforced by pyproject.toml.
 #
-# Escape hatch (explicit, not silent): SKIP=pytest-full git commit ...
+# Escape hatch (explicit, not silent): SKIP=pytest-full git push ...
+
+default_stages: [commit]
 
 repos:
   - repo: local
@@ -21,6 +26,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [commit]
 
       - id: ruff-format
         name: ruff format (whole tree)
@@ -29,6 +35,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [commit]
 
       - id: ruff-check-verify
         name: ruff check (verify)
@@ -37,6 +44,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [commit]
 
       - id: ruff-format-verify
         name: ruff format --check (verify)
@@ -45,6 +53,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [commit]
 
       - id: pytest-full
         name: pytest -q (full suite)
@@ -53,3 +62,4 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [push]
