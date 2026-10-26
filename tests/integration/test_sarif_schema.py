@@ -17,6 +17,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+from janissary.agent.finding_store import Finding
 from janissary.cli import _write_sarif
 from janissary.engine.scanner import ScanFinding, ScanSummary
 
@@ -168,3 +169,142 @@ def test_write_sarif_security_severity_is_schema_valid_string(tmp_path, sarif_sc
         sev = r["properties"]["security-severity"]
         assert isinstance(sev, str)
         assert 0.0 <= float(sev) <= 10.0
+
+
+# --- ADR-009: agent findings path -------------------------------------
+
+
+def _agent_finding(**kw) -> Finding:
+    base = {
+        "target": "https://example.test/search?q=1",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "db_error",
+        "detail": "SQL error signature observed",
+        "discriminator": "q",
+        "payload": "' OR 1=1--",
+        "response_status": 500,
+    }
+    base.update(kw)
+    return Finding(**base)
+
+
+def _write_and_load_agent(
+    tmp_path: Path, findings: list, name: str = "out.sarif"
+) -> dict:
+    out = tmp_path / name
+    _write_sarif(findings, str(out))
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_write_sarif_agent_findings_validates_against_schema(tmp_path, sarif_schema):
+    findings = [
+        _agent_finding(),
+        _agent_finding(
+            category="xss",
+            finding_type="reflected_xss",
+            severity="medium",
+            target="https://example.test/greet",
+        ),
+        _agent_finding(
+            category="traversal",
+            finding_type="pathtraver_existence_oracle",
+            severity="critical",
+            target="https://example.test/file",
+        ),
+        _agent_finding(
+            category="unknown_cat",
+            finding_type="unknown_ft",
+            severity="low",
+            target="https://example.test/x",
+        ),
+    ]
+    doc = _write_and_load_agent(tmp_path, findings, "agent.sarif")
+    _assert_schema_valid(sarif_schema, doc)
+    run = doc["runs"][0]
+    assert len(run["results"]) == 4
+    assert len(run["tool"]["driver"]["rules"]) == 4
+    for r in run["results"]:
+        assert "finding/v1" in r["partialFingerprints"]
+
+
+def test_write_sarif_agent_empty_findings_validates(tmp_path, sarif_schema):
+    doc = _write_and_load_agent(tmp_path, [], "empty-agent.sarif")
+    _assert_schema_valid(sarif_schema, doc)
+    run = doc["runs"][0]
+    assert run["results"] == []
+    assert run["tool"]["driver"]["rules"] == []
+    inv = run["invocations"][0]
+    assert inv["executionSuccessful"] is True
+    assert inv["properties"]["findingCount"] == 0
+    assert "target" not in inv["properties"]
+    assert "targets" not in inv["properties"]
+
+
+def test_write_sarif_agent_single_target_invocation_metadata(tmp_path):
+    findings = [
+        _agent_finding(target="https://example.test/a"),
+        _agent_finding(
+            target="https://example.test/a",
+            category="xss",
+            finding_type="reflected_xss",
+        ),
+    ]
+    doc = _write_and_load_agent(tmp_path, findings, "agent-single.sarif")
+    inv = doc["runs"][0]["invocations"][0]
+    assert inv["properties"]["target"] == "https://example.test/a"
+    assert "targets" not in inv["properties"]
+    assert inv["properties"]["findingCount"] == 2
+
+
+def test_write_sarif_agent_multi_target_invocation_metadata(tmp_path):
+    findings = [
+        _agent_finding(target="https://example.test/a"),
+        _agent_finding(target="https://example.test/b"),
+    ]
+    doc = _write_and_load_agent(tmp_path, findings, "agent-multi.sarif")
+    inv = doc["runs"][0]["invocations"][0]
+    assert inv["properties"]["target"] is None
+    assert inv["properties"]["targets"] == [
+        "https://example.test/a",
+        "https://example.test/b",
+    ]
+
+
+def test_write_sarif_agent_fingerprint_preserved(tmp_path):
+    findings = [
+        _agent_finding(fingerprint="jfv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        _agent_finding(fingerprint="jfv1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+    ]
+    doc = _write_and_load_agent(tmp_path, findings, "agent-fp.sarif")
+    results = doc["runs"][0]["results"]
+    assert (
+        results[0]["partialFingerprints"]["finding/v1"]
+        == "jfv1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
+    assert (
+        results[1]["partialFingerprints"]["finding/v1"]
+        == "jfv1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    )
+
+
+def test_write_sarif_agent_extra_property_collision_reserved_wins(tmp_path):
+    f = _agent_finding(
+        severity="high",
+        extra={"security-severity": "0.0", "custom-key": "custom-value"},
+    )
+    doc = _write_and_load_agent(tmp_path, [f], "agent-collision.sarif")
+    props = doc["runs"][0]["results"][0]["properties"]
+    assert props["security-severity"] == "7.5"
+    assert props["custom-key"] == "custom-value"
+
+
+def test_write_sarif_scan_summary_backwards_compatible(tmp_path, sarif_schema):
+    summary = _summary([])
+    summary.findings.append(_finding(finding_type="db_error"))
+    doc = _write_and_load(tmp_path, summary, "scan-compat.sarif")
+    _assert_schema_valid(sarif_schema, doc)
+    assert doc["runs"][0]["tool"]["driver"]["rules"][0]["id"] == "sqli:db_error"
+    props = doc["runs"][0]["results"][0]["properties"]
+    assert "param" in props
+    assert "payload" in props
