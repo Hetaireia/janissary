@@ -939,18 +939,34 @@ def cmd_agent(args: argparse.Namespace) -> int:
     return 1 if result.new_findings else 0
 
 
-def _write_sarif(summary: ScanSummary, path: str) -> None:
-    """Emit a SARIF 2.1.0 document with enterprise metadata (ADR-008)."""
+class _SarifRunInput:
+    """Normalized SARIF run input — shared shape for scan and agent paths."""
+
+    __slots__ = ("invocation", "results", "rules", "taxonomies")
+
+    def __init__(
+        self,
+        *,
+        rules: list[dict],
+        results: list[dict],
+        invocation: dict,
+        taxonomies: list[dict],
+    ) -> None:
+        self.rules = rules
+        self.results = results
+        self.invocation = invocation
+        self.taxonomies = taxonomies
+
+
+def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
+    """Normalize a ScanSummary into a SARIF run input (ADR-008)."""
     from janissary.sarif_rules import (
-        TOOL_NAME,
-        TOOL_URI,
         cwe_taxonomy,
         rule_for,
         sarif_level,
         security_severity,
     )
 
-    # Dedup (category, finding_type) pairs into a rules catalog for this scan.
     rule_order: list[tuple[str, str]] = []
     rule_index: dict[str, int] = {}
     for f in summary.findings:
@@ -1003,6 +1019,93 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
             }
         ]
 
+    return _SarifRunInput(
+        rules=rules,
+        results=results,
+        invocation=invocation,
+        taxonomies=[cwe_taxonomy()],
+    )
+
+
+def _from_agent_findings(findings: list) -> _SarifRunInput:
+    """Normalize a list[agent.Finding] into a SARIF run input (ADR-009)."""
+    from janissary.sarif_rules import (
+        cwe_taxonomy,
+        rule_for,
+        sarif_level,
+        security_severity,
+    )
+
+    rule_order: list[tuple[str, str]] = []
+    rule_index: dict[str, int] = {}
+    for f in findings:
+        rid = f"{f.category}:{f.finding_type}"
+        if rid not in rule_index:
+            rule_index[rid] = len(rule_order)
+            rule_order.append((f.category, f.finding_type))
+    rules = [rule_for(cat, ft).to_sarif() for cat, ft in rule_order]
+
+    results: list[dict] = []
+    for f in findings:
+        rid = f"{f.category}:{f.finding_type}"
+        meta = rule_for(f.category, f.finding_type)
+        message_text = f.detail or meta.short_description
+
+        props: dict = dict(getattr(f, "extra", None) or {})
+        props["security-severity"] = f"{security_severity(f.severity):.1f}"
+        if f.response_status is not None:
+            props["response-status"] = f.response_status
+        if f.payload:
+            props["attack-payload"] = f.payload
+        if f.discriminator:
+            props["discriminator"] = f.discriminator
+        if f.recorded_at:
+            props["recorded-at"] = f.recorded_at
+
+        results.append(
+            {
+                "ruleId": rid,
+                "ruleIndex": rule_index[rid],
+                "partialFingerprints": {"finding/v1": f.fingerprint},
+                "level": sarif_level(f.severity),
+                "message": {"text": message_text},
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": f.target},
+                        }
+                    }
+                ],
+                "properties": props,
+            }
+        )
+
+    invocation_props: dict = {"findingCount": len(findings)}
+    if findings:
+        targets = sorted({f.target for f in findings if f.target})
+        if len(targets) == 1:
+            invocation_props["target"] = targets[0]
+        elif len(targets) > 1:
+            invocation_props["target"] = None
+            invocation_props["targets"] = targets
+
+    invocation: dict = {
+        "executionSuccessful": True,
+        "properties": invocation_props,
+    }
+
+    return _SarifRunInput(
+        rules=rules,
+        results=results,
+        invocation=invocation,
+        taxonomies=[cwe_taxonomy()],
+    )
+
+
+def _render_sarif(run_input: _SarifRunInput, path: str) -> None:
+    """Render a normalized SARIF run input to disk."""
+    from janissary.sarif_rules import TOOL_NAME, TOOL_URI
+
     doc = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
@@ -1013,17 +1116,30 @@ def _write_sarif(summary: ScanSummary, path: str) -> None:
                         "name": TOOL_NAME,
                         "version": __version__,
                         "informationUri": TOOL_URI,
-                        "rules": rules,
+                        "rules": run_input.rules,
                     }
                 },
-                "invocations": [invocation],
-                "taxonomies": [cwe_taxonomy()],
-                "results": results,
+                "invocations": [run_input.invocation],
+                "taxonomies": run_input.taxonomies,
+                "results": run_input.results,
             }
         ],
     }
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2)
+
+
+def _write_sarif(source: ScanSummary | list, path: str) -> None:
+    """Emit SARIF 2.1.0 (ADR-008 scan path, ADR-009 agent path)."""
+    if isinstance(source, ScanSummary):
+        run_input = _from_scan_summary(source)
+    elif isinstance(source, list):
+        run_input = _from_agent_findings(source)
+    else:
+        raise TypeError(
+            f"_write_sarif: unsupported source type {type(source).__name__}"
+        )
+    _render_sarif(run_input, path)
 
 
 # -------------------------------------------------------------------
