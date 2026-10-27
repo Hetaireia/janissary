@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.5.0] - 2026-10-28
+
+### Added
+
+- **SSRF detection via Burp-compatible collaborator** (ADR-012). `janissary scan --collaborator <URL>` enables out-of-band Server-Side Request Forgery detection: five OOB-detectable payloads (http, https, gopher, dict, dns_only) are sent per parameter after the differential payload loop, and hits from the collaborator are reported as findings. Compatible with Burp Pro, interactsh, and ProjectDiscovery interact.sh through the standard poll protocol. Unique subdomain per payload (`jns-<16hex>`) gives deterministic attribution.
+- **New finding categories**: `ssrf:collaborator_hit` (CWE-918, critical) for HTTP/HTTPS fetches by the target, and `ssrf:dns_only_resolution` (CWE-918, info) for DNS-only resolutions that did not establish TCP. The DNS-only class is visible with `--verbose`; it indicates a target that resolves arbitrary hostnames but does not fully SSRF.
+- **New CLI flags on `scan`**: `--collaborator URL` (Burp-compatible poll endpoint) and `--ssrf-timeout N` (outer wait, default 10s).
+- **New module** `src/janissary/integrations/collaborator.py` exposes `CollaboratorClient`, `CollaboratorError`, `SsrfHit`, `SsrfPayload`, and `SSRF_PAYLOADS`.
+
+### Changed
+
+- `Scanner.__init__` accepts `collaborator` and `ssrf_timeout` kwargs. Both default to no-collaborator / 10.0, so existing callers see no behavior change.
+- `Scanner.scan` runs `_ssrf_phase` at the end of each parameter's payload loop only when a collaborator is configured. Zero additional requests when the flag is absent.
+
+### Notes
+
+- Test count: 611 → 619 (+8, four client primitives in `tests/unit/test_ssrf.py` and four scanner-integration tests).
+- Benchmark neutral by construction: OWASP Benchmark has zero SSRF cases and the benchmark harness passes no `--collaborator`, so `_ssrf_phase` is a no-op on the scoring path. F1=0.921, FP=0 unchanged from 7.4.0. Verified by `test_scanner_ssrf_no_collaborator_no_ssrf_findings`.
+- Scope delta from ADR-012 D2: the design listed 8 payloads; three (`metadata_http`, `metadata_v6`, `file`) cannot be detected via collaborator OOB and require response-body inspection. They are deferred to a follow-up response-body detection path. The five shipped (http, https, gopher, dict, dns_only) cover the standard blind-SSRF case that is the majority of modern bug-bounty findings.
+- No breaking changes. All new behavior is opt-in via `--collaborator`.
+
 ## [7.4.0] - 2026-10-27
 
 ### Added
