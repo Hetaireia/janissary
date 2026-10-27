@@ -1,5 +1,12 @@
 """Third-party integrations and protocol clients."""
 
+from .collaborator import (
+    SSRF_PAYLOADS,
+    CollaboratorClient,
+    CollaboratorError,
+    SsrfHit,
+    SsrfPayload,
+)
 from .graphql import (
     ARG_PAYLOADS,
     INTROSPECTION_QUERY,
@@ -50,6 +57,11 @@ from .xmlrpc import (
 
 __all__ = [
     "ARG_PAYLOADS",
+    "SSRF_PAYLOADS",
+    "CollaboratorClient",
+    "CollaboratorError",
+    "SsrfHit",
+    "SsrfPayload",
     "AUTH_METHODS",
     "INTROSPECTION_QUERY",
     "METHODS_OF_INTEREST",
