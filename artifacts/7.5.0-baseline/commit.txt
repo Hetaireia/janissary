@@ -7,3 +7,4 @@ timestamp_utc=2026-10-27T21:45:04Z
 host=VR4TT
 user=M5 E60
 git=git version 2.46.2.windows.1
+phase0_exit_commit=8f810605f758eb54e5c1de4fd236d002b66ee995
