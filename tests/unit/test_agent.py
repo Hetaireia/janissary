@@ -38,17 +38,33 @@ class FakeResponse:
 
 
 class FakeSession:
-    """Minimal session stub for ADR-011 threading tests."""
+    """Minimal session stub for ADR-011 threading and detection tests."""
 
     def __init__(self):
         self.headers: dict = {}
         self.hooks: dict = {"response": []}
+        self.response_queue: list = []
+
+    def _emit(self, response):
+        for hook in self.hooks.get("response", []):
+            hook(response)
+        return response
 
     def get(self, url, **kwargs):
-        return FakeResponse(200, url)
+        resp = (
+            self.response_queue.pop(0)
+            if self.response_queue
+            else FakeResponse(200, url)
+        )
+        return self._emit(resp)
 
     def post(self, url, **kwargs):
-        return FakeResponse(200, url)
+        resp = (
+            self.response_queue.pop(0)
+            if self.response_queue
+            else FakeResponse(200, url)
+        )
+        return self._emit(resp)
 
 
 def _store() -> FindingStore:
@@ -297,3 +313,107 @@ def test_cmd_agent_has_no_session_monkey_patch():
     src = inspect.getsource(cli.cmd_agent)
     assert "requests.Session.__init__ =" not in src
     assert "_orig_session_init" not in src
+
+
+# ---------------------------------------------------------------------------
+# ADR-011: 401 detection
+# ---------------------------------------------------------------------------
+
+
+def test_agent_installs_hook_only_when_session_and_auth():
+    a1 = Agent(_store(), auth_configured=True)
+    assert a1.session is None
+
+    s2 = FakeSession()
+    Agent(_store(), session=s2, auth_configured=False)
+    assert len(s2.hooks["response"]) == 0
+
+    s3 = FakeSession()
+    Agent(_store(), session=s3, auth_configured=True)
+    assert len(s3.hooks["response"]) == 1
+
+
+def test_agent_response_hook_counts_and_resets():
+    session = FakeSession()
+    a = Agent(_store(), session=session, auth_configured=True)
+    hook = session.hooks["response"][0]
+
+    hook(FakeResponse(401))
+    assert a._consecutive_401s == 1
+    assert a._aborted is False
+
+    hook(FakeResponse(200))
+    assert a._consecutive_401s == 0
+
+    hook(FakeResponse(401))
+    hook(FakeResponse(401))
+    assert a._consecutive_401s == 2
+    assert a._aborted is True
+    assert "401" in a._abort_reason
+
+
+def test_agent_aborts_on_consecutive_401s_when_auth_configured():
+    session = FakeSession()
+    session.response_queue = [FakeResponse(401), FakeResponse(401)]
+
+    def adapter(target, context):
+        s = context["session"]
+        s.get("http://t/a")
+        s.get("http://t/b")
+        return []
+
+    a = Agent(
+        _store(),
+        adapters={"scan": adapter},
+        fingerprinter=lambda target: FakeFP(cms="wordpress"),
+        session=session,
+        auth_configured=True,
+    )
+    result = a.run("http://t/")
+    assert result.aborted is True
+    assert "401" in result.abort_reason
+
+
+def test_agent_does_not_abort_on_401s_when_auth_not_configured():
+    session = FakeSession()
+    session.response_queue = [FakeResponse(401), FakeResponse(401)]
+
+    def adapter(target, context):
+        s = context["session"]
+        s.get("http://t/a")
+        s.get("http://t/b")
+        return []
+
+    a = Agent(
+        _store(),
+        adapters={"scan": adapter},
+        fingerprinter=lambda target: FakeFP(cms="wordpress"),
+        session=session,
+        auth_configured=False,
+    )
+    result = a.run("http://t/")
+    assert result.aborted is False
+
+
+def test_agent_preserves_findings_before_401_abort():
+    session = FakeSession()
+    session.response_queue = [FakeResponse(401), FakeResponse(401)]
+    f1 = _finding(discriminator="q")
+
+    def adapter(target, context):
+        s = context["session"]
+        s.get("http://t/a")
+        s.get("http://t/b")
+        return [f1]
+
+    store = _store()
+    a = Agent(
+        store,
+        adapters={"scan": adapter},
+        fingerprinter=lambda target: FakeFP(cms="wordpress"),
+        session=session,
+        auth_configured=True,
+    )
+    result = a.run("http://t/")
+    assert result.aborted is True
+    assert store.count() == 1

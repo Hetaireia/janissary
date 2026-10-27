@@ -65,6 +65,8 @@ class AgentRun:
 # A module adapter takes (target, context) and returns a list of Finding.
 ModuleAdapter = Callable[[str, dict], list[Finding]]
 
+_AUTH_LOSS_THRESHOLD = 2  # consecutive 401s before abort (ADR-011 D3)
+
 
 def _noop_adapter(target: str, context: dict) -> list[Finding]:
     """Default adapter: do nothing, produce nothing."""
@@ -85,6 +87,7 @@ class Agent:
         allowed_platforms: list[str] | None = None,
         max_modules: int = 8,
         session: Any = None,
+        auth_configured: bool = False,
     ) -> None:
         self.store = store
         self.adapters = dict(adapters or {})
@@ -94,6 +97,33 @@ class Agent:
         )
         self.max_modules = max(1, int(max_modules))
         self.session = session
+        self.auth_configured = auth_configured
+        self._consecutive_401s = 0
+        self._aborted = False
+        self._abort_reason = ""
+        if session is not None and auth_configured:
+            session.hooks.setdefault("response", []).append(self._response_hook)
+
+    # ------------------------------------------------------------------
+
+    def _response_hook(self, response, *args, **kwargs):
+        """ADR-011 D2-D3: count consecutive 401s; flag abort at threshold."""
+        if response.status_code == 401:
+            self._consecutive_401s += 1
+        else:
+            self._consecutive_401s = 0
+        if (
+            self.auth_configured
+            and self._consecutive_401s >= _AUTH_LOSS_THRESHOLD
+            and not self._aborted
+        ):
+            self._aborted = True
+            self._abort_reason = (
+                f"auth expired: {self._consecutive_401s} consecutive "
+                f"HTTP 401 responses "
+                f"(last url={getattr(response, 'url', '?')})"
+            )
+        return response
 
     # ------------------------------------------------------------------
 
@@ -138,6 +168,10 @@ class Agent:
 
     def run(self, target: str, extra_platforms: list[str] | None = None) -> AgentRun:
         result = AgentRun(target=target)
+        # Reset abort state from any prior run (ADR-011 D2).
+        self._consecutive_401s = 0
+        self._aborted = False
+        self._abort_reason = ""
 
         platforms, waf = self._fingerprint(target)
         if extra_platforms:
@@ -187,6 +221,10 @@ class Agent:
             added = self.store.extend(findings)
             result.new_findings += added
             result.modules_run.append(module)
+            if self._aborted:  # ADR-011 D5: break after current module
+                result.aborted = True
+                result.abort_reason = self._abort_reason
+                break
 
         result.total_findings = self.store.count()
         return result
