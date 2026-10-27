@@ -84,6 +84,7 @@ class Agent:
         fingerprinter: Callable[[str], Any] | None = None,
         allowed_platforms: list[str] | None = None,
         max_modules: int = 8,
+        session: Any = None,
     ) -> None:
         self.store = store
         self.adapters = dict(adapters or {})
@@ -92,6 +93,7 @@ class Agent:
             list(allowed_platforms) if allowed_platforms is not None else None
         )
         self.max_modules = max(1, int(max_modules))
+        self.session = session
 
     # ------------------------------------------------------------------
 
@@ -163,7 +165,12 @@ class Agent:
             return result
 
         # Run each module in order.
-        context: dict = {"platforms": platforms, "waf": waf, "target": target}
+        context: dict = {
+            "platforms": platforms,
+            "waf": waf,
+            "target": target,
+            "session": self.session,
+        }
         for module in result.plan:
             adapter = self.adapters.get(module)
             if adapter is None:

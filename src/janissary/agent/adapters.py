@@ -25,6 +25,7 @@ def admin_adapter(target: str, context: dict) -> list[Finding]:
         target,
         timeout=context.get("timeout", 10.0),
         proxies=context.get("proxies"),
+        session=context.get("session"),
     )
     findings: list[Finding] = []
     for hit in profile.hits:
@@ -62,6 +63,7 @@ def xmlrpc_adapter(target: str, context: dict) -> list[Finding]:
         target,
         timeout=context.get("timeout", 10.0),
         proxies=context.get("proxies"),
+        session=context.get("session"),
     )
     findings: list[Finding] = []
     if not profile.reachable:
@@ -104,6 +106,7 @@ def graphql_adapter(target: str, context: dict) -> list[Finding]:
         target,
         timeout=context.get("timeout", 10.0),
         proxies=context.get("proxies"),
+        session=context.get("session"),
     )
     findings: list[Finding] = []
     if not profile.reachable:
@@ -145,6 +148,7 @@ def fingerprint_adapter(target: str, context: dict) -> list[Finding]:
         target,
         timeout=context.get("timeout", 10.0),
         proxies=context.get("proxies"),
+        session=context.get("session"),
     )
     findings: list[Finding] = []
     if fp.cms:
