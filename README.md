@@ -16,16 +16,18 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 
+![JANISSARY demo](docs/demo.gif)
+
 ---
 
 ## Why JANISSARY
 
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
-> **The Strategic Wedge:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
+> **What makes JANISSARY different:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
 
 
-**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
 **WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
 
@@ -60,8 +62,6 @@ SSRF is opt-in: with no `--collaborator`, the SSRF phase is a no-op and adds zer
 ---
 
 ## See it work
-
-![JANISSARY demo](docs/demo.gif)
 
 One real SQL injection, scanned with `janissary scan`:
 
@@ -268,6 +268,8 @@ janissary agent https://app.example.com --attack-confirm \
 leaked secret inside a response body is often the actual bug. Use this
 before pasting scan output into a bug report.
 
+Scans with ``--cookie`` or ``--bearer`` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and ``abort_reason`` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
+
 ### Machine-readable output
 
 `--json` emits one envelope document to stdout. `--jsonl` emits one
@@ -286,6 +288,8 @@ janissary scan -u "https://target.example/?q=1" -p q --jsonl | jq -c .
 Every finding carries `raw_request` and `raw_response` as HTTP/1.1 text
 with CRLF line endings, ready to paste into Burp Repeater.
 
+SARIF 2.1.0 export is available via ``--export *.sarif`` on ``scan`` and ``agent``. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
+
 ---
 
 ## Contributing
@@ -302,6 +306,9 @@ See [SECURITY.md](SECURITY.md).
 - **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to report false positives (e.g., `/wp-admin/`). Future work requires moving beyond status codes to content-length and body-signature differentials.
 - **HTTP 401 Abort Behavior (Issue #2):** A 401 response currently aborts the scan instead of reporting an `auth_required` state. Future work will capture 401/403, continue safe checks, and report the auth state cleanly.
 - **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
+- **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
+- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
+- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
 
 ## License
 
