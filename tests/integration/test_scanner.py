@@ -169,3 +169,173 @@ def test_scanner_aborts_on_preflight_failure():
     assert summary.findings == []
     # only the pre-flight request should have been sent
     assert len(session.calls) == 1
+
+
+# -------------------------------------------------------------------
+# ADR-010: mid-scan auth expiry
+# -------------------------------------------------------------------
+
+
+def _auth_expiry_handler(ok_calls):
+    """Handler that answers `ok_calls` with 200, then 401 forever."""
+
+    class _H:
+        def __init__(self):
+            self.count = 0
+
+        def __call__(self, method, url, data):
+            self.count += 1
+            if self.count <= ok_calls:
+                return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+            return FakeResponse(401, "Unauthorized", {"content-type": "text/html"})
+
+    return _H()
+
+
+def test_scanner_aborts_on_consecutive_401s_when_auth_configured():
+    """ADR-010 D3: 2 consecutive 401s with auth_configured=True -> abort."""
+    session = FakeSession(_auth_expiry_handler(ok_calls=4))
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+        auth_configured=True,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is True
+    assert "auth expired" in summary.abort_reason
+    assert "401" in summary.abort_reason
+
+
+def test_scanner_does_not_abort_on_401s_when_auth_not_configured():
+    """ADR-010 D2: auth_configured=False (default) -> 401s do not abort."""
+    session = FakeSession(_auth_expiry_handler(ok_calls=4))
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is False
+    assert summary.findings == []
+
+
+def test_scanner_does_not_abort_on_single_401_then_200():
+    """ADR-010 D3: threshold is 2; one 401 followed by 200 does not abort."""
+
+    class _H:
+        def __init__(self):
+            self.count = 0
+
+        def __call__(self, method, url, data):
+            self.count += 1
+            if self.count <= 4:
+                return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+            if self.count == 5:
+                return FakeResponse(401, "Unauthorized", {"content-type": "text/html"})
+            return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+
+    session = FakeSession(_H())
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+        auth_configured=True,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is False
+
+
+def test_scanner_aborts_on_second_consecutive_401_not_first():
+    """ADR-010 D3: abort fires on the 2nd 401, not the 1st."""
+    session = FakeSession(_auth_expiry_handler(ok_calls=4))
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+        auth_configured=True,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is True
+    # preflight (1) + baseline (3) + two 401 payload requests = 6
+    assert summary.total_requests == 6
+
+
+def test_scanner_preserves_findings_before_401_abort():
+    """ADR-010 D4: findings that landed before abort are preserved."""
+
+    class _H:
+        def __init__(self):
+            self.count = 0
+            self.sql_fired = False
+
+        def __call__(self, method, url, data):
+            self.count += 1
+            if self.count <= 4:
+                return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+            blob = str(url) + (" " + str(data) if data else "")
+            if TRIGGER in unquote_plus(blob):
+                self.sql_fired = True
+                return FakeResponse(200, MYSQL_ERROR, {"content-type": "text/html"})
+            if self.sql_fired:
+                return FakeResponse(401, "Unauthorized", {"content-type": "text/html"})
+            return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+
+    session = FakeSession(_H())
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+        auth_configured=True,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is True
+    db_errors = [f for f in summary.findings if f.finding_type == "db_error"]
+    assert len(db_errors) >= 1, (
+        f"expected at least one db_error preserved through abort; "
+        f"got types: {[f.finding_type for f in summary.findings]}"
+    )
+
+
+def test_scanner_401_counter_resets_on_success():
+    """ADR-010 D3: reset-on-success prevents alternating 401/200 firing."""
+
+    class _H:
+        def __init__(self):
+            self.count = 0
+
+        def __call__(self, method, url, data):
+            self.count += 1
+            if self.count <= 4:
+                return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+            if (self.count % 2) == 1:
+                return FakeResponse(401, "Unauthorized", {"content-type": "text/html"})
+            return FakeResponse(200, CLEAN_BODY, {"content-type": "text/html"})
+
+    session = FakeSession(_H())
+    scanner = Scanner(
+        target="http://example.test/search?q=test",
+        params=["q"],
+        baseline_count=3,
+        session=session,
+        delay=0.0,
+        detect_waf=False,
+        auth_configured=True,
+    )
+    summary = scanner.scan(quiet=True)
+    assert summary.aborted is False

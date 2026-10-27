@@ -239,6 +239,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         detect_waf=not args.no_waf,
         session=auth_session,
         inject_in=args.inject_in,
+        auth_configured=not auth_cfg.is_empty,
     )
 
     if not args.quiet:

@@ -228,6 +228,7 @@ class Scanner:
         detect_waf: bool = True,
         pacer_config: PacerConfig | None = None,
         inject_in: str = "auto",
+        auth_configured: bool = False,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -238,6 +239,8 @@ class Scanner:
         self.stealth = stealth
         self.proxies = proxies
         self.session = session or requests.Session()
+        self.auth_configured = auth_configured
+        self._consecutive_401s: int = 0
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
         self.inject_in = inject_in.lower()
@@ -520,6 +523,23 @@ class Scanner:
                 if r is None:
                     continue
 
+                # ADR-010: detect mid-scan auth expiry. Fires only
+                # when auth was configured and two consecutive 401s
+                # arrive. Reset on any non-401 so isolated 401s
+                # (CDN rate limit, session-rotation race) do not abort.
+                if r.status_code == 401:
+                    self._consecutive_401s += 1
+                else:
+                    self._consecutive_401s = 0
+                if self.auth_configured and self._consecutive_401s >= 2:
+                    summary.aborted = True
+                    summary.abort_reason = (
+                        f"auth expired: {self._consecutive_401s} "
+                        f"consecutive HTTP 401 responses "
+                        f"(param={param}, last payload={name})"
+                    )
+                    break
+
                 snapshot = ResponseSnapshot.from_response(r)
 
                 # Collapse oracle (ADR-006, Phase 1.3d): fires when a
@@ -770,6 +790,9 @@ class Scanner:
                             f"{finding.severity.upper()}: {finding.finding_type} "
                             f"| {finding.detail[:80]}"
                         )
+
+            if summary.aborted:
+                break
 
             # Paired-probe: sqli quote oracle.
             if sqli_quote_snap is not None and sqli_or_snap is not None:
