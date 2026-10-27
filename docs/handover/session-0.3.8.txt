@@ -1,0 +1,424 @@
+JANISSARY - Session Handover Summary
+Session 0.3.8, 2026-10-27. Follows session-0.3.7.
+Full state of record.
+
+=============================================================================
+STANDING ORDER
+=============================================================================
+
+The assistant holds delegated authority to advance JANISSARY toward the best
+DAST tool on the current and future markets, enterprise-first, with solutions
+automated wherever possible. See docs/handover/STANDING-ORDER.md. Any
+handover omitting this section is invalid; sessions that receive it must
+re-read the standing order before proceeding.
+
+This session exercised the delegation on five decisions (D-1 through D-5
+below), covering scope selection, verification design, and the shutdown call.
+
+=============================================================================
+STATE OF RECORD
+=============================================================================
+
+HEAD            4d2a881  (origin/main, in sync)
+Previous HEAD   b45fe7a  (session-0.3.7 close; session-0.3.8 start)
+
+Commit chain this session (chronological):
+  4d2a881  chore(pre-commit): migrate-config to current stage names
+
+Tests           597/597  (unchanged; config-only commit)
+CI              Green, both workflows, on 4d2a881:
+                  CI              run 40472859367  success
+                  Benchmark Gate  run 40472859683  success
+Benchmark       F1=0.921, FP=0  (unchanged; config not on scoring path)
+Handover        docs/handover/session-0.3.8.txt (this file)
+
+=============================================================================
+WHAT SHIPPED THIS SESSION
+=============================================================================
+
+1. Pre-commit stage-name migration + L4 comment fix
+   Commit 4d2a881. 1 file changed, +7/-7.
+   - pre-commit 4.7.0 migrate-config rewrote:
+       default_stages: [commit]  -> [pre-commit]
+       4x stages: [commit]       -> [pre-commit]  (four ruff hooks)
+       1x stages: [push]         -> [pre-push]    (pytest-full)
+   - Additional fix not in the migration: L4 comment referenced
+     "pre-commit run --hook-stage push --all-files". "push" is NOT
+     in pre-commit 4.7.0's accepted --hook-stage values
+     (commit-msg, post-checkout, post-commit, post-merge,
+     post-rewrite, pre-commit, pre-merge-commit, pre-push,
+     pre-rebase, prepare-commit-msg, manual). Fixed to pre-push.
+     Caught during recon, not by migrate-config.
+   - Comments preserved by ruamel round-trip loader.
+   - Line ending: file was LF before migration, ruamel writes CRLF on
+     Windows, write-back restored LF to avoid perpetual "CRLF will be
+     replaced by LF" warnings.
+   - pre-commit validate-config accepts the migrated config (exit 0).
+   - The six deprecation warnings per gate run from 0.3.7's known-
+     issues row disappear on the next standard (non-bypassed)
+     pre-commit invocation.
+
+Decisions made under the standing order this session
+-----------------------------------------------------
+  D-1  Selected item 1 (pre-commit migrate-config) as session scope,
+       per 0.3.7 next-scope menu. Was the last unblocked hygiene item.
+
+  D-2  Recon before mutation: read pre-commit --version (4.7.0),
+       read migrate-config --help, read the full YAML, backed up to
+       C:\diag\pre-commit-config.yaml.pre-0.3.8.bak, and read the
+       accepted --hook-stage values from `pre-commit run --help`
+       to determine L4 comment staleness.
+
+  D-3  Fixed the broken L4 comment in the same commit as the
+       migration. It's part of the same semantic change (stage
+       renames), and shipping the migration without it would leave
+       a broken usage example in the config that future sessions
+       would cite.
+
+  D-4  Ran the migrate-config/verify/commit cycle in a single block
+       with restore-on-failure. The restore fired three times
+       (Blocks 2, 3, 4). Every failure left the tree in its pre-
+       block state. The alternative (multiple smaller blocks) would
+       have cost the same aborts plus more round trips.
+
+  D-5  Did NOT proceed to item 2 (cmd.exe restore + Defender).
+       Item 2 is OS maintenance (DISM + SFC in elevated shell), no
+       commit, no CI, no handover wrap. It belongs in a standalone
+       maintenance window the operator runs directly. The 0.3.6
+       handover already framed it this way. Closed the session
+       rather than expanding scope into non-repo work.
+
+=============================================================================
+ADRs ADDED / AMENDED
+=============================================================================
+
+None. Config migration is not an ADR-scoped decision.
+
+ADR-007 D1-D8 unchanged. ADRs 003, 005, 006, 008, 009 unchanged.
+
+=============================================================================
+PROCESS RULES - UNCHANGED
+=============================================================================
+
+Rules 1-12 unchanged from session-0.3.6. Rule 10 exercised.
+
+No new rules. Three new gotchas this session (R, S, T). Per the
+0.3.6 "once = gotcha, three = rule" standard, none are promoted to
+rules yet. Watch the count over future sessions.
+
+=============================================================================
+BENCHMARK STATE-OF-RECORD (UNCHANGED)
+=============================================================================
+
+r1  TP 950 / FN 206 / F1 0.902
+r2  TP 970 / FN 186 / F1 0.913
+r3  TP 937 / FN 219 / F1 0.895
+3-run mean: 0.903 +/- 0.009. Recovery: 0.921 (r1+rec).
+
+benchmark-gate on 4d2a881: F1=0.921, FP=0, PASS. Config change is not
+on the scoring path.
+
+Artifact of record (unchanged this session):
+  benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec
+  (19MB findings.jsonl, tracked in git, manifest harness_commit=1b4cf6c)
+
+Do not regenerate.
+
+=============================================================================
+KNOWN ISSUES
+=============================================================================
+
+Item                                            Status
+----------------------------------------------  ----------------------------
+Pre-commit stage-name migration                 DONE (4d2a881)
+Pre-commit wrapper broken (K, K-2)              Bypass active, undiagnosed
+pytest subprocess hangs outside hook (N)        Flaky, CI-green, retry
+0xC0000005 on Windows Dev build (O)             O-live in 0.3.7; not this
+                                                session
+Test helper name divergence (P)                 Documented, no fix needed
+64-bit cmd.exe missing (L)                      Maintenance window item
+Defender non-functional (L)                     Investigation needed first
+Silent git commit non-zero exit (T)             Observed once, retry-clean
+SPA catch-all FPs (39)                          ADR-005 D7, deferred
+401 abort                                       Phase 1.1 -> 1.2, open
+Six-oracle refactor                             Deferred 8.x
+--mode ci                                       Deferred 8.x
+scanner.py:601 sqli_or_resp                     Phase 1 audit
+tools.env Windows path                          Blocks 0.1b
+Benchmark image not on registry                 Blocks 0.1b
+Pathtraver F1 0.049-0.308                       ADR-003 amended, Docker block
+WAF-block tiny_body FP                          Phase 2.x, target block
+fa58641, 354f843 red in history                 Fix-forwarded by 0ca0466
+                                                (session-0.3). No action.
+66c17bc contains config+handover together       Historical artifact; do not
+                                                rebase (see Loose Ends)
+
+=============================================================================
+DEFERRED / BLOCKED (CHANGED FROM SESSION-0.3.7)
+=============================================================================
+
+Removed from deferred list (completed this session):
+  - Pre-commit stage-name migration - 4d2a881.
+
+Newly deferred this session:
+  - Gotcha T root cause (silent git commit non-zero exit with no
+    output). Worked on retry. If it recurs across sessions, capture
+    with GIT_TRACE=1 and inspect. Do not weaken the gate; the
+    retry-once pattern is correct.
+
+Carried forward from session-0.3.7 (unchanged in rationale):
+  - cmd.exe restore + Defender investigation - standalone
+    maintenance window, no JANISSARY dependency. Now the sole
+    remaining hygiene item, but it is not a repo task.
+  - K/K-2 root cause diagnosis (bypass active, no blocker).
+  - Pathtraver F1 - Docker evidence gate.
+  - Phase 2.2 traversal payloads - Docker evidence gate.
+  - WAF-block 200 FP class - Phase 2.x, WAF-aware target required.
+  - Six cosmetic pre-commit-hooks (network-blocked).
+  - ADR-003 revisit trigger 1 (evidence pending).
+  - Six-oracle refactor (8.x).
+  - --mode ci (8.x).
+  - 401 abort (Phase 1.1 -> 1.2).
+
+=============================================================================
+ENVIRONMENT GOTCHAS
+=============================================================================
+
+Session 0.3.5 gotchas A-J remain in force.
+Session 0.3.6 gotchas K-2, M, N, O, P remain in force.
+Session 0.3.7 gotcha Q (PS joins string arrays on interpolation)
+remains in force. New this session:
+
+R. PowerShell aliases override user-defined functions.
+     `function CP(...) { ... }` does not shadow the built-in alias
+     `CP` (which is `Copy-Item`). When called as `(CP $text $pat)`,
+     PowerShell resolves the alias first, invoking `Copy-Item` with
+     `(?m)^\+\s*stages` as a source path, which throws
+     "Cannot find drive" (or similar) under EAP=Stop.
+
+     Observed in session 0.3.8 Block 4: assertion helper function
+     `CP` was shadowed by the alias, causing an unhandled abort at
+     the first assertion in the loop.
+
+     Standard: name helper functions with an approved verb prefix
+     (`Get-`, `Test-`, `ConvertTo-`, etc.) or a non-alias name.
+     `Get-PatternCount`, `Test-ContentMatch`, etc. Avoid short
+     acronyms. Or run `Remove-Item Alias:CP` before defining the
+     function, but the naming standard is more durable.
+
+S. Windows CRLF breaks .NET regex `(?m)$` anchors.
+     In .NET, `(?m)$` matches before `\n` only. On CRLF text, the
+     `\r` sits between the last content character and the anchor,
+     so `--all-files$` does not match `--all-files\r\n`.
+
+     Observed in session 0.3.8 Block 3: L4 pattern
+     `(?m)^(#\s+)pre-commit run --hook-stage push --all-files$`
+     matched 0 times on the CRLF file the migrate-config produced
+     from an originally-LF file.
+
+     Standard: when matching with `^` or `$` anchors, normalize to
+     LF first (`$text -replace "\`r\`n", "\`n"`), or use
+     `(?m)^...#.*?` patterns without `$`. Restore the original
+     line ending when writing back if the pre-state was CRLF; for
+     LF-pre-state files, always write LF regardless of what a
+     Windows tool produced in between.
+
+T. Silent git commit non-zero exit.
+     `git commit --no-verify ...` returned non-zero with no output
+     to stdout or stderr, in session 0.3.8 Block 5. HEAD did not
+     move, no lock was present, index was staged, config was
+     correct. The exact same command succeeded on immediate retry
+     (Block 6) with captured output showing normal success.
+
+     Same class as gotcha N (transient subprocess failure). Not
+     reproducible on demand.
+
+     Standard: retry once. Capture with `git commit ... 2>&1 |
+     Out-String` and print `$commitOut` so the next reader sees
+     what git said, even on failure. The retry-once pattern
+     documented in gotcha N applies.
+
+=============================================================================
+FIRST ACTIONS IN THE NEW WINDOW
+=============================================================================
+
+    cd "C:\Users\M5 E60\janissary-project\janissary"
+    & ".\.venv\Scripts\Activate.ps1"
+    $PWD
+    [Environment]::CurrentDirectory = $PWD.Path
+    git --no-pager status -sb           # expect: ## main...origin/main
+    git rev-parse --short HEAD           # expect: 4d2a881 or newer
+    python -m pytest -q                  # expect: 597 passed
+    ruff check .                         # expect: All checks passed
+
+If any differ, stop and diagnose before continuing.
+
+Then read, in this order:
+
+  docs/handover/STANDING-ORDER.md
+  docs/handover/TEMPLATE.md
+  docs/handover/session-0.3.8.txt      (this file)
+  docs/handover/session-0.3.7.txt
+  .pre-commit-config.yaml              (verify migration landed)
+
+=============================================================================
+DO NOT
+=============================================================================
+
+- Push on red CI (Rule 2).
+- Force-push.
+- Regenerate the committed benchmark artifact.
+- Amend ADR-003 without the Docker evidence gate.
+- Bypass the pre-commit gate silently. Use Rule 10 (direct + logged).
+- Use --no-verify without first running the direct gates whole-tree.
+- Rebase 66c17bc, b304d99, a662848, 2fad409, c42d00e, b45fe7a, or
+  4d2a881.
+- Attempt cmd.exe restore via manual copy from C:\Windows\WinSxS\*.
+  Use DISM + SFC in a maintenance window (gotcha L).
+- Re-enable repo:-style pre-commit hooks until GitHub clone works.
+- Add AI/LLM features the suite cannot verify deterministically.
+- Use heredoc $msg for git commit. Multiple -m per Rule 7.
+- Use <placeholder> syntax in commit messages without substitution.
+- Assume helper names are shared across test files (gotcha P).
+- Mix Set-Location with [IO.File]::* calls without also setting
+  [Environment]::CurrentDirectory (gotcha M).
+- Interpolate multi-line command output as "$var" when matching
+  with ^/$ anchors - use Get-Content -Raw (gotcha Q).
+- Throw on `ruff check --fix` non-zero exit in the gate; only the
+  verify step is the contract (O-live).
+- Name PowerShell helper functions with short names that collide
+  with built-in aliases (`CP`, `ls`, `cd`, `mv`, etc.) - use
+  approved verbs (gotcha R).
+- Match with `(?m)$` against un-normalized Windows text - normalize
+  CRLF to LF first, restore ending on write-back (gotcha S).
+- Assume `git commit` produced output; capture with 2>&1 into a
+  variable and print on both success and failure (gotcha T).
+
+=============================================================================
+NEXT-SCOPE MENU (ORDERED, DECIDED)
+=============================================================================
+
+Order is my decision, per the standing order.
+
+1. cmd.exe restore + Defender status investigation (0.3.7 item 2,
+   carried forward).
+   Elevate. DISM /Online /Cleanup-Image /RestoreHealth then
+   sfc /scannow. Before restoring Defender, check GPO/Intune/third-
+   party AV management - restoring WinDefend while a third-party
+   agent is active will conflict.
+   Scope: 30-60 min wall clock, elevated shell. NOT a repo task.
+   No commit, no CI, no handover wrap needed.
+   Why first: the only remaining hygiene item. Bring the machine
+   to a known-clean state before the next product arc.
+
+2. WAF-block 200 FP class
+   Phase 2.x. Requires a WAF-aware target. Not scheduled this arc.
+3. Pathtraver F1 (Docker evidence gate). Not scheduled this arc.
+4. 401 abort Phase 1.1 -> 1.2. Not scheduled this arc.
+5. Six-oracle refactor (8.x). Not scheduled this arc.
+
+Not scheduled:
+  - Six cosmetic pre-commit-hooks (network-blocked).
+  - K/K-2 root cause diagnosis (bypass active, does not block work).
+  - Gotcha T root cause (retry-once pattern; observe before
+    investigating).
+  - 0xC0000005 investigation (transient, retry once per gotcha O).
+
+=============================================================================
+LOOSE ENDS (NOT BLOCKERS)
+=============================================================================
+
+- The migration content was correct from Block 2's dryrun diff
+  onward. Three subsequent aborts (Blocks 3, 4, 5) were all
+  verification-design failures around the migration, not migration
+  failures. This is the signature of over-verified mechanical
+  changes: the assertion surface became its own project. For small
+  config-only changes, prefer one block with fewer assertions.
+
+- Block 5's git commit non-zero exit with no output was resolved
+  by retry (Block 6) capturing output. Root cause not identified;
+  gotcha T logged. If this recurs in future sessions, capture with
+  GIT_TRACE=1.
+
+- The pre-commit migration deleted no comments and preserved the
+  top-of-file header block byte-for-byte. ruamel round-trip
+  behaviour confirmed in practice.
+
+- Line ending: .pre-commit-config.yaml is LF-only in the tree.
+  This is intentional. `core.autocrlf` may warn about it on future
+  checkouts; do not "fix" by converting to CRLF - LF is the tree
+  convention.
+
+- The 0.3.7 loose end about "required-version already present" is
+  closed by 0.3.7's handover commit. No further action.
+
+- 66c17bc contains both .pre-commit-config.yaml and
+  session-0.3.5.txt in a single commit. Historical artifact; do not
+  rebase.
+
+- fa58641, 354f843 red in history. Fix-forwarded by 0ca0466 in
+  session-0.3. No action.
+
+- Six cosmetic pre-commit-hooks dropped in session 0.3.5.
+  Restore when network permits.
+
+- Test helper divergence (gotcha P) - documented, no code change
+  needed.
+
+=============================================================================
+WHAT THIS SESSION DELIVERED, IN ONE PARAGRAPH
+=============================================================================
+
+Session 0.3.8 shipped exactly one commit - pre-commit 4.7.0's
+migrate-config rewrote six stage declarations to their current
+names, and a follow-up L4 comment fix corrected a broken
+`--hook-stage push` example that predated the migration and was
+outside what migrate-config rewrites. Both changes landed as a
+single commit (4d2a881), 597/597 tests stayed green, CI passed on
+both workflows, benchmark F1 unchanged at 0.921 (config not on
+scoring path). But the migration itself was easy - three of five
+attempts to land it aborted on PowerShell and .NET tooling
+quirks, not on the migration content. Block 2's assertion failed
+because a `stages:` regex also matched `default_stages:`; Block 3
+failed because .NET `(?m)$` does not match before CRLF; Block 4
+failed because PowerShell aliases shadow user functions (CP is
+Copy-Item); Block 5 failed because git commit exited non-zero
+with no output. Each abort restored the tree cleanly. The migration
+content was correct in Block 2's dryrun diff and stayed correct
+through every subsequent attempt - what kept failing was the
+verification theater built around it. Four aborts, all caught by
+safety rails, all on tooling, none on the product. That is a
+signal: for small config-only changes, the dryrun/assert/commit
+pattern that served items 1 and 2 of 0.3.7 well is overkill.
+Session 0.3.9 opens at item 2 (cmd.exe + Defender maintenance),
+which is not a repo task - DISM + SFC in an elevated shell, no
+commit, no handover wrap. The pre-commit migration is the last
+unblocked repo-level hygiene item. What remains in the JANISSARY
+backlog is either blocked on Docker (Pathtraver, traversal
+payloads) or blocked on a WAF-aware target (WAF-block 200 FP) or
+blocked on Phase 1.1 -> 1.2 (401 abort). The product arc's next
+product-adjacent item is not in the current menu.
+
+Notes on this handover
+----------------------
+Fourth application of TEMPLATE.md. Shorter than 0.3.7 by design:
+one commit vs two, three gotchas added vs one, no ADRs touched.
+Sections all filled without forcing.
+
+Three new gotchas (R, S, T). None promoted to a rule - each
+observed once, per the 0.3.6 standard. R and S are particularly
+worth watching: R (PS alias shadowing) is a general PowerShell
+trap that will recur; S (CRLF breaks .NET $ anchors) is specific
+to Windows PowerShell interacting with mixed-line-ending tooling.
+Both are candidate rules if either fires a second time.
+
+The friction in this session is logged plainly, without defending
+the process. Four aborts on one commit, all tooling, all
+recoverable. The safety rails worked. But the cost-per-commit
+went up 4x over session 0.3.7, and the culprit is verification
+design, not tooling alone. Future sessions should measure blocks-
+to-commit as a health metric; if it exceeds 3 on a config-only
+change, the assertion surface is too heavy.
+
+The one-paragraph at the end is meant to be read first by the
+next session after the standing order.
