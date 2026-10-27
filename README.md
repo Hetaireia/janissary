@@ -18,17 +18,52 @@
 
 ---
 
+## Contents
+
+| Section | What's there |
+|---|---|
+| At a glance | Key facts, benchmark headline, install |
+| Why JANISSARY | Differential detection, WAF pacing, protocols |
+| SSRF detection | **New in 7.5.0** - out-of-band SSRF via collaborator |
+| See it work | Real scan output - eleven signals into one bug |
+| Benchmark | OWASP Benchmark results |
+| Install | pip, Docker, source |
+| Quickstart | Zero to scan in 60 seconds |
+| Commands | Full command reference |
+| Scope, auth, output | Scope enforcement, auth headers, JSON/SARIF |
+| Known Limitations | What doesn't work yet - tracked issues |
+
+## At a glance
+
+| | |
+|---|---|
+| **Version** | 7.5.0 (released 2026-10-28) |
+| **New in 7.5.0** | SSRF via Burp-compatible collaborator |
+| **Benchmark (OWASP)** | **F1 0.921** - Precision 1.000 - Recall 0.854 - 0 FP |
+| **Detection classes** | SQLi, XSS, SSRF, traversal, cmdi |
+| **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
+| **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
+| **Install** | `pip install janissary==7.5.0` |
+
+---
+
 ## Why JANISSARY
 
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
 > **What makes JANISSARY different:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
 
-**Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+### Differential detection, measured
 
-**WAF-aware pacing.** Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
+Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
-**Multi-protocol coverage.** HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
+### WAF-aware pacing
+
+Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. If you're scanning an authorised target, getting blocked mid-scan wastes the scan.
+
+### Multi-protocol coverage
+
+HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 
 ---
 
@@ -41,6 +76,8 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 | `ssrf:collaborator_hit` | CRITICAL | Target made an HTTP/HTTPS fetch to your collaborator. Real SSRF. |
 | `ssrf:dns_only_resolution` | INFO | Target resolved an arbitrary hostname but did not establish TCP. Useful signal, not full SSRF. |
 
+### Compatibility
+
 Compatible with **Burp Pro**, **interactsh**, and **ProjectDiscovery interact.sh** through the standard poll protocol. Each payload gets a unique subdomain (`jns-<16hex>`) so hits are attributed deterministically.
 
 Two flags on `scan`:
@@ -48,11 +85,12 @@ Two flags on `scan`:
 - `--collaborator URL` - your collaborator endpoint.
 - `--ssrf-timeout N` - outer wait for collaborator hits (default 10s).
 
-Example:
-
+### Example
 ```bash
 janissary scan -u "https://target.example/api/fetch?url=https://example.com" -p url --collaborator "https://your-collaborator-endpoint" --ssrf-timeout 15
 ```
+
+### Opt-in, zero cost when off
 
 SSRF is opt-in: with no `--collaborator`, the SSRF phase is a no-op and adds zero requests. Three additional payloads that cannot be observed via OOB - `metadata_http`, `metadata_v6`, `file` - require response-body inspection and are deferred to a future response-body detection path.
 
