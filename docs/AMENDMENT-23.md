@@ -100,3 +100,9 @@ Results are published whichever way they fall, including locked-set precision be
 ## Amendment log
 
 - 2026-10-27 - Initial draft for Phase 0 exit.
+### 2026-10-28 - Phase 1 blocker and prior-run audit
+
+- Docker Desktop daemon will not start. Baseline scans are blocked until target infrastructure is available.
+- Audit of `benchmark/track_a/runs/`: every existing run carries `tool_version: 7.3.0`. The README's 1.000 precision figure is inherited from 7.3.0 via the non-scoring-path claim for 7.4/7.5.0; it is not measured on 7.5.0. A fresh 7.5.0 measurement is required by this amendment before any 7.5.0 precision claim is made.
+- `src/`, `pyproject.toml`, `setup.py`, `setup.cfg` are identical between tag `7.5.0` and `main`. The editable install at the repo root therefore runs the same scanner source as the 7.5.0 tag; a reinstall is not required for reproducibility.
+- Preparation completed while blocked: invocation configs (default + tuned arms) and run script under `artifacts/7.5.0-baseline/invocations/`. Status tracked in `artifacts/7.5.0-baseline/PHASE-1-STATUS.md`.
