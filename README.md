@@ -33,6 +33,16 @@
 | Scope, auth, output | Scope enforcement, auth headers, JSON/SARIF |
 | Known Limitations | What doesn't work yet - tracked issues |
 
+## Who this is for
+
+JANISSARY is built for two audiences:
+
+- **Bug bounty hunters** who need high-signal findings with Burp-ready evidence, not a wall of false positives to triage by hand.
+- **Security engineers** running DAST in CI, who need deterministic findings and SARIF output that will not flake the pipeline.
+
+If you are evaluating an enterprise platform with crawling, RBAC, scheduled scans, and a support SLA - JANISSARY is not that, and we are not trying to be. There are excellent tools for that built by teams much larger than this one.
+
+---
 ## At a glance
 
 | | |
@@ -343,6 +353,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 See [SECURITY.md](SECURITY.md).
 
+## What JANISSARY is not
+
+Being explicit about scope is part of being honest about precision:
+
+- **Not a crawler.** You point it at a URL and parameters. It scans those. A crawler is on the roadmap but not here.
+- **Not an enterprise platform.** No SSO, no RBAC, no scheduled scans, no support SLA.
+- **Not a full OWASP Top 10 scanner yet.** It ships SQLi, XSS, SSRF, and partial traversal. IDOR is 7.6.0. JWT and prototype pollution are 7.7.0.
+- **Not a replacement for Burp.** It is complementary. Findings carry raw HTTP/1.1 so you can paste them into Repeater and finish the job.
+
+---
 ## Known Limitations
 *Honesty over assumptions. These are actively tracked, known issues.*
 
