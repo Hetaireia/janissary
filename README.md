@@ -62,7 +62,7 @@ janissary scan \
 
 ## See it work
 
-![JANISSARY demo](docs/demo.gif)
+https://docs/demo.gif
 
 One real SQL injection, scanned with `janissary scan`:
 
