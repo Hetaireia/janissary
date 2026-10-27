@@ -60,6 +60,8 @@ SSRF is opt-in: with no `--collaborator`, the SSRF phase is a no-op and adds zer
 
 ## See it work
 
+![JANISSARY demo](docs/demo.gif)
+
 One real SQL injection, scanned with `janissary scan`:
 
 ```text
