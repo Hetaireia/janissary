@@ -227,6 +227,22 @@ def cmd_scan(args: argparse.Namespace) -> int:
         auth_session = requests.Session()
         apply_to_session(auth_session, auth_cfg)
 
+    collaborator_client = None
+    if getattr(args, "collaborator", None):
+        from janissary.integrations.collaborator import (
+            CollaboratorClient,
+            CollaboratorError,
+        )
+
+        try:
+            collaborator_client = CollaboratorClient(
+                args.collaborator,
+                timeout=args.timeout,
+            )
+        except CollaboratorError as exc:
+            print(f"[!] --collaborator: {exc}", file=sys.stderr)
+            return 64
+
     scanner = Scanner(
         target=args.url,
         params=params,
@@ -240,6 +256,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         session=auth_session,
         inject_in=args.inject_in,
         auth_configured=not auth_cfg.is_empty,
+        collaborator=collaborator_client,
+        ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
     )
 
     if not args.quiet:
@@ -1190,6 +1208,18 @@ def build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST)",
+    )
+    scan.add_argument(
+        "--collaborator",
+        default=None,
+        metavar="URL",
+        help="Burp-compatible collaborator URL for SSRF OOB detection.",
+    )
+    scan.add_argument(
+        "--ssrf-timeout",
+        type=float,
+        default=10.0,
+        help="Seconds to wait for SSRF collaborator hits (default 10).",
     )
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)

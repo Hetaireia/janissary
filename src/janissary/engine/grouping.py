@@ -26,6 +26,8 @@ _ROOT_CAUSE_MAP: dict[tuple[str, str], str] = {
     ("traversal", "length_anomaly"): "path_traversal",
     ("cmdi", "timing_anomaly"): "command_injection",
     ("cmdi", "status_change"): "command_injection",
+    ("ssrf", "collaborator_hit"): "server_side_request_forgery",
+    ("ssrf", "dns_only_resolution"): "server_side_request_forgery",
 }
 
 # finding_type values that all mean "the endpoint reflected our input".

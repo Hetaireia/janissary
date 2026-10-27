@@ -164,6 +164,21 @@ _SPECS: list[tuple[str, str, str, tuple[int, ...], str]] = [
         (338,),
         "high",
     ),
+    # SSRF (ADR-012)
+    (
+        "ssrf",
+        "collaborator_hit",
+        "Server-Side Request Forgery",
+        (918,),
+        "critical",
+    ),
+    (
+        "ssrf",
+        "dns_only_resolution",
+        "Server-Side Request Forgery (DNS-only resolution)",
+        (918,),
+        "info",
+    ),
 ]
 
 _RULES: dict[tuple[str, str], RuleMeta] = {

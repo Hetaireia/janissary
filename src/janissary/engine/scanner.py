@@ -229,6 +229,8 @@ class Scanner:
         pacer_config: PacerConfig | None = None,
         inject_in: str = "auto",
         auth_configured: bool = False,
+        collaborator: object | None = None,
+        ssrf_timeout: float = 10.0,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -240,6 +242,9 @@ class Scanner:
         self.proxies = proxies
         self.session = session or requests.Session()
         self.auth_configured = auth_configured
+        self.collaborator = collaborator
+        self.ssrf_timeout = ssrf_timeout
+        self._ssrf_poll_delays: list[float] = [2.0, 3.0, 5.0]
         self._consecutive_401s: int = 0
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
@@ -444,6 +449,106 @@ class Scanner:
                 continue
             baseline.add(ResponseSnapshot.from_response(r))
         return baseline
+
+    def _ssrf_phase(
+        self,
+        param: str,
+        summary: ScanSummary,
+        quiet: bool = False,
+    ) -> None:
+        """ADR-012 D3: send SSRF payloads, poll collaborator, emit findings.
+
+        Called once per param after the differential payload loop. Polls
+        at each delay in self._ssrf_poll_delays (default 2s/3s/5s after
+        last send). Emits one ScanFinding per matching hit. On
+        collaborator unreachable, logs and continues.
+        """
+        if self.collaborator is None:
+            return
+
+        from janissary.integrations.collaborator import (
+            SSRF_PAYLOADS,
+            CollaboratorError,
+        )
+
+        issued: list[tuple[str, str, str, object]] = []
+        for payload in SSRF_PAYLOADS:
+            uniq = self.collaborator.new_unique_id(payload.name)
+            url = self.collaborator.payload_for(payload, uniq)
+            try:
+                r = self._paced_request(self.target, param, url)
+            except requests.RequestException:
+                r = None
+            summary.total_requests += 1
+            issued.append((uniq, payload.name, url, r))
+
+        if not issued:
+            return
+
+        pending = list(issued)
+        for delay in self._ssrf_poll_delays:
+            time.sleep(delay)
+            still_pending: list[tuple[str, str, str, object]] = []
+            for uniq, payload_name, url, r in pending:
+                try:
+                    hits = self.collaborator.poll(uniq)
+                except CollaboratorError:
+                    continue
+                if not hits:
+                    still_pending.append((uniq, payload_name, url, r))
+                    continue
+                for hit in hits:
+                    proto = (hit.protocol or "").lower()
+                    if proto in ("http", "https"):
+                        sev = "critical"
+                        ftype = "collaborator_hit"
+                        detail = (
+                            f"OOB hit: {proto} from "
+                            f"{hit.source_ip or '?'} at "
+                            f"{hit.timestamp or '?'} via {payload_name} "
+                            f"on param {param}"
+                        )
+                    elif proto == "dns":
+                        sev = "info"
+                        ftype = "dns_only_resolution"
+                        detail = (
+                            f"OOB DNS-only hit (no HTTP fetch): "
+                            f"{hit.source_ip or '?'} via {payload_name} "
+                            f"on param {param}"
+                        )
+                    else:
+                        continue
+
+                    req_obj = getattr(r, "request", None) if r is not None else None
+                    finding = ScanFinding(
+                        param=param,
+                        payload_name=payload_name,
+                        payload_value=url,
+                        category="ssrf",
+                        severity=sev,
+                        finding_type=ftype,
+                        detail=detail,
+                        response_status=(r.status_code if r is not None else None),
+                        response_length=(len(r.text or "") if r is not None else 0),
+                        response_content_type=(
+                            (r.headers or {}).get("content-type", "")
+                            if r is not None
+                            else ""
+                        ),
+                        url=(getattr(req_obj, "url", None) or self.target),
+                        method=self.method,
+                        raw_request=(
+                            serialize_request(req_obj) if req_obj is not None else None
+                        ),
+                        raw_response=(serialize_response(r) if r is not None else None),
+                    )
+                    summary.findings.append(finding)
+                    summary.finding_count += 1
+                    if not quiet:
+                        _say(f"  [{param}] SSRF {sev.upper()}: {ftype} | {detail[:80]}")
+            pending = still_pending
+            if not pending:
+                break
 
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
@@ -951,7 +1056,10 @@ class Scanner:
                             )
 
                 # Group findings by root cause so the summary reports bugs,
-        # not raw evidence rows.
+            # not raw evidence rows.
+
+            if self.collaborator is not None:
+                self._ssrf_phase(param, summary, quiet=quiet)
         from janissary.engine.grouping import group_findings
 
         summary.groups = group_findings(summary.findings)
