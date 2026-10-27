@@ -270,6 +270,10 @@ before pasting scan output into a bug report.
 
 Scans with ``--cookie`` or ``--bearer`` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and ``abort_reason`` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
 
+Scans with ``--cookie`` or ``--bearer`` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and ``abort_reason`` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
+
+Scans with ``--cookie`` or ``--bearer`` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and ``abort_reason`` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
+
 ### Machine-readable output
 
 `--json` emits one envelope document to stdout. `--jsonl` emits one
@@ -290,6 +294,10 @@ with CRLF line endings, ready to paste into Burp Repeater.
 
 SARIF 2.1.0 export is available via ``--export *.sarif`` on ``scan`` and ``agent``. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
 
+SARIF 2.1.0 export is available via ``--export *.sarif`` on ``scan`` and ``agent``. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
+
+SARIF 2.1.0 export is available via ``--export *.sarif`` on ``scan`` and ``agent``. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
+
 ---
 
 ## Contributing
@@ -306,6 +314,12 @@ See [SECURITY.md](SECURITY.md).
 - **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to report false positives (e.g., `/wp-admin/`). Future work requires moving beyond status codes to content-length and body-signature differentials.
 - **HTTP 401 Abort Behavior (Issue #2):** A 401 response currently aborts the scan instead of reporting an `auth_required` state. Future work will capture 401/403, continue safe checks, and report the auth state cleanly.
 - **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
+- **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
+- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
+- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
+- **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
+- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
+- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
 - **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
 - **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
 - **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
