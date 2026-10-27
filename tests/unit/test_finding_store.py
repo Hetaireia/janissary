@@ -183,3 +183,131 @@ def test_summary_counts():
     assert summ["by_severity"]["high"] == 2
     assert summ["by_category"]["sqli"] == 2
     assert "http://t/" in summ["targets"]
+
+
+# ---------------------------------------------------------------------------
+# Legacy store migration (ADR-007 D5)
+# ---------------------------------------------------------------------------
+
+
+def _legacy_entry(target: str, **overrides) -> dict:
+    """A legacy-store entry dict as it appeared before ADR-007.
+
+    Deliberately missing the ``fingerprint`` field: legacy stores predate
+    it, and ``Finding.__post_init__`` is what backfills it on load.
+    """
+    base = {
+        "target": target,
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "db_error",
+        "discriminator": "q",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_load_backfills_missing_fingerprint(tmp_path: Path):
+    """Legacy entry without a fingerprint field gets one computed on load."""
+    p = tmp_path / "legacy.json"
+    p.write_text(
+        json.dumps({"version": 1, "findings": [_legacy_entry("http://x/a")]}),
+        encoding="utf-8",
+    )
+    s = FindingStore(p)
+    assert s.load() == 1
+    (loaded,) = s.all()
+    assert loaded.fingerprint.startswith("jfv1:")
+    assert len(loaded.fingerprint) == len("jfv1:") + 32
+
+
+def test_load_merges_legacy_entries_differing_only_in_host_case(tmp_path: Path):
+    """D5 "differed only in case": colliding entries collapse on load.
+
+    ``canonicalize_target`` lowercases the host (ADR-007 D2), so entries
+    whose targets differ only in host casing compute the same fingerprint
+    and the store keeps only the first. This is the documented
+    "silently merge" behavior of D5 - intended, not a bug.
+    """
+    p = tmp_path / "legacy.json"
+    p.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "findings": [
+                    _legacy_entry("http://EXAMPLE.COM/a"),
+                    _legacy_entry("http://example.com/a"),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    s = FindingStore(p)
+    assert s.load() == 1
+    (kept,) = s.all()
+    # First-in-file wins under current implementation. If this changes,
+    # re-check against ADR-007 D5 that "which one survives" is still
+    # silent-merge-compatible before relaxing the assertion.
+    assert kept.target == "http://EXAMPLE.COM/a"
+
+
+def test_load_merges_legacy_entries_differing_only_in_volatile_params(
+    tmp_path: Path,
+):
+    """D5 "or volatile params": colliding entries collapse on load.
+
+    ``sessionid`` is in ``VOLATILE_PARAMS`` (ADR-007 D2) and is dropped
+    from the canonical target, so entries whose only difference is that
+    parameter's value fingerprint identically and the store keeps the
+    first. This is the documented silent-merge behavior of D5.
+    """
+    p = tmp_path / "legacy.json"
+    p.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "findings": [
+                    _legacy_entry("http://x/a?q=1&sessionid=abc"),
+                    _legacy_entry("http://x/a?q=1&sessionid=xyz"),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    s = FindingStore(p)
+    assert s.load() == 1
+    (kept,) = s.all()
+    assert kept.target == "http://x/a?q=1&sessionid=abc"
+
+
+def test_save_after_legacy_load_writes_fingerprints(tmp_path: Path):
+    """D5 "re-saved with fingerprints populated": every entry gets one."""
+    p = tmp_path / "legacy.json"
+    p.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "findings": [
+                    _legacy_entry("http://x/a"),
+                    _legacy_entry(
+                        "http://x/b",
+                        category="xss",
+                        severity="low",
+                        finding_type="reflected",
+                        discriminator="name",
+                    ),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    s = FindingStore(p)
+    s.load()
+    s.save()
+
+    reloaded = json.loads(p.read_text(encoding="utf-8"))
+    assert len(reloaded["findings"]) == 2
+    for entry in reloaded["findings"]:
+        assert "fingerprint" in entry
+        assert entry["fingerprint"].startswith("jfv1:")
+        assert len(entry["fingerprint"]) == len("jfv1:") + 32
