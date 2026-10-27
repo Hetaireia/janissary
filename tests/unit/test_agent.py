@@ -31,6 +31,26 @@ class FakeWAF:
         self.vendor = vendor
 
 
+class FakeResponse:
+    def __init__(self, status_code: int, url: str = "http://t/"):
+        self.status_code = status_code
+        self.url = url
+
+
+class FakeSession:
+    """Minimal session stub for ADR-011 threading tests."""
+
+    def __init__(self):
+        self.headers: dict = {}
+        self.hooks: dict = {"response": []}
+
+    def get(self, url, **kwargs):
+        return FakeResponse(200, url)
+
+    def post(self, url, **kwargs):
+        return FakeResponse(200, url)
+
+
 def _store() -> FindingStore:
     return FindingStore(":memory:")
 
@@ -238,3 +258,42 @@ def test_run_writes_through_to_disk(tmp_path: Path):
 
     store2 = FindingStore(p)
     assert store2.load() == 1
+
+
+# ---------------------------------------------------------------------------
+# ADR-011: auth threading
+# ---------------------------------------------------------------------------
+
+
+def test_agent_accepts_session_kwarg():
+    session = FakeSession()
+    a = Agent(_store(), session=session)
+    assert a.session is session
+
+
+def test_agent_passes_session_via_adapter_context():
+    session = FakeSession()
+    captured = {}
+
+    def adapter(target, context):
+        captured["session"] = context.get("session")
+        return []
+
+    a = Agent(
+        _store(),
+        adapters={"scan": adapter},
+        fingerprinter=lambda target: FakeFP(cms="wordpress"),
+        session=session,
+    )
+    a.run("http://t/")
+    assert captured["session"] is session
+
+
+def test_cmd_agent_has_no_session_monkey_patch():
+    import inspect
+
+    from janissary import cli
+
+    src = inspect.getsource(cli.cmd_agent)
+    assert "requests.Session.__init__ =" not in src
+    assert "_orig_session_init" not in src

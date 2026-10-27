@@ -836,6 +836,13 @@ def cmd_agent(args: argparse.Namespace) -> int:
     if getattr(args, "proxy", None):
         proxies = {"http": args.proxy, "https": args.proxy}
 
+    # ADR-011 D1: construct the auth session once and thread it through.
+    auth_cfg = auth_from_args(args)
+    auth_session = None
+    if not auth_cfg.is_empty:
+        auth_session = requests.Session()
+        apply_to_session(auth_session, auth_cfg)
+
     # Fingerprinter wrapper that merges CMS and WAF into one object
     # the agent can read.
     def _fp(target: str):
@@ -843,11 +850,18 @@ def cmd_agent(args: argparse.Namespace) -> int:
 
         from janissary.recon.waf import WAFDetector
 
-        fp = run_fingerprint(target, timeout=args.timeout, proxies=proxies)
+        fp = run_fingerprint(
+            target,
+            timeout=args.timeout,
+            proxies=proxies,
+            session=auth_session,
+        )
         # Attach a WAF profile so the agent can report it.
         try:
-            session = _rq.Session()
-            det = WAFDetector(session=session, timeout=args.timeout, proxies=proxies)
+            waf_session = auth_session or _rq.Session()
+            det = WAFDetector(
+                session=waf_session, timeout=args.timeout, proxies=proxies
+            )
             fp.waf = det.detect(target)
         except Exception:
             fp.waf = None
@@ -857,6 +871,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
         store,
         adapters=default_adapters(),
         fingerprinter=_fp,
+        session=auth_session,
     )
 
     if not args.quiet:
@@ -874,20 +889,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
     if args.platforms:
         extra_platforms = [p.strip() for p in args.platforms.split(",") if p.strip()]
 
-    auth_cfg = auth_from_args(args)
-    _orig_session_init = requests.Session.__init__
-    if not auth_cfg.is_empty:
-
-        def _auth_init(self, *a, **kw):
-            _orig_session_init(self, *a, **kw)
-            apply_to_session(self, auth_cfg)
-
-        requests.Session.__init__ = _auth_init
-    try:
-        result = agent.run(args.url, extra_platforms=extra_platforms)
-    finally:
-        if not auth_cfg.is_empty:
-            requests.Session.__init__ = _orig_session_init
+    result = agent.run(args.url, extra_platforms=extra_platforms)
 
     if not args.quiet:
         print(f"[*] Platforms:       {', '.join(result.platforms) or '-'}")
