@@ -4,14 +4,9 @@
 
 `v7.5.0` — Apache 2.0
 
-> ### Authorised use only
->
-> JANISSARY is a dual-use security testing tool. Use it **only**
-> against systems you own, or systems you have prior written
-> permission to test.
->
-> By running any network command you accept the
-> [Terms of Use](LEGAL.md). Review with `janissary terms show`.
+> [!CAUTION]
+> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By running any network command you accept the [Terms of Use](LEGAL.md). Review with `janissary terms show`.
+
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
@@ -49,7 +44,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 |---|---|
 | **Version** | 7.5.0 (released 2026-10-28) |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
-| **Benchmark (OWASP)** | **F1 0.921** - Precision 1.000 - Recall 0.854 - 0 FP |
+| **Benchmark (OWASP)** | **F1 0.921** - Precision 1.000 (dev splits, 0 FP observed) - Recall 0.854 |
 | **Detection classes** | SQLi, XSS, SSRF, traversal, cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
@@ -57,15 +52,18 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 
 ---
 
+> [!TIP]
+> **Why it matters.** Differential detection with no observed false positives on the dev corpus, WAF-aware pacing, and Burp-ready HTTP evidence.
+
 ## Why JANISSARY
 
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
-> **What makes JANISSARY different:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
+> **What makes JANISSARY different:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, differential detection with no observed false positives on the dev corpus, and Burp-native output at a free price point.
 
 ### Differential detection, measured
 
-Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 on dev splits (0 FP observed), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
 ### WAF-aware pacing
 
@@ -167,13 +165,16 @@ different root cause (reflection) and stays separate. One finding to
 triage, with the receipts attached.
 ---
 
+> [!IMPORTANT]
+> **Measurement status (Amendment 23).** These are dev-split figures. The 95% upper bound on the real-world false-positive rate, the locked held-out precision, and external reproductions are pending. "Best-in-class" is not claimed until claims A-C pass. See `docs/AMENDMENT-23.md`, `artifacts/7.5.0-baseline/README.md`, and `BENCHMARK.md`.
+
 ## Benchmark
 
 JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full results, methodology, and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committed under `benchmark/track_a/runs/`; the recovered run is `20261024T130735Z-janissary-r1+rec`.
 
 | Metric | Value |
 |---|---|
-| Precision | 1.000 |
+| Precision (dev splits) | 1.000 (0 FP observed) |
 | Recall | 0.854 |
 | F1 | 0.921 |
 | TP / FP / FN | 987 / 0 / 169 |
@@ -185,6 +186,9 @@ Reproduce: `python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/
 The F1 0.921 figure applies the FN-recovery protocol to the first two baseline runs; the third baseline run (`20261025T062837Z-janissary-r3`, F1 0.895) has not been recovery-scored. Full detail in `BENCHMARK.md` Amendment 22.
 
 The weakest category is path traversal (F1 0.049–0.308), documented in `docs/pathtraver.md` as a property of the benchmark target, not a scanner gap.
+
+> [!NOTE]
+> **Two-minute install.** `pip`, Docker, or from source. The core scanner runs without external services.
 
 ## Install
 
@@ -349,9 +353,15 @@ SARIF 2.1.0 export is available via ``--export *.sarif`` on ``scan`` and ``agent
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+> [!CAUTION]
+> **Reporting a vulnerability.** Do not open a public issue. Use the private disclosure channel below.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md).
+
+> [!WARNING]
+> **Scope honesty.** Being explicit about what is not in scope is part of the precision discipline.
 
 ## What JANISSARY is not
 
@@ -363,18 +373,16 @@ Being explicit about scope is part of being honest about precision:
 - **Not a replacement for Burp.** It is complementary. Findings carry raw HTTP/1.1 so you can paste them into Repeater and finish the job.
 
 ---
+
+> [!WARNING]
+> **Read this before deploying.** Each known gap is scoped for a specific release, or documented as an inherent property of the benchmark target rather than a scanner defect.
+
 ## Known Limitations
 *Honesty over assumptions. These are actively tracked, known issues.*
 
 - **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to report false positives (e.g., `/wp-admin/`). Future work requires moving beyond status codes to content-length and body-signature differentials.
 - **HTTP 401 Abort Behavior (Issue #2):** A 401 response currently aborts the scan instead of reporting an `auth_required` state. Future work will capture 401/403, continue safe checks, and report the auth state cleanly.
 - **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
-- **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
-- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
-- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
-- **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
-- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
-- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
 - **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
 - **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
 - **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
