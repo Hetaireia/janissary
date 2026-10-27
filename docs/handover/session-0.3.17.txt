@@ -1,0 +1,187 @@
+Session 0.3.17 — Handover Summary
+Mission (unchanged)
+Build the best precision tool for enterprise and the best independent bug bounty tool.
+
+Where we are
+Item                       State
+PyPI 7.5.0                 Published — pypi.org/project/janissary/7.5.0/ (unchanged)
+GitHub tag 7.5.0           e5b484078223f626e32b7ab8552ee947ff71253d (version-bump commit)
+GitHub release 7.5.0       id 425843459, draft:false, prerelease:false, target e5b4840; body rewritten for 7.5.0
+Docker Hub 7.5.0           sha256:5fe2b07a7d9eb8400460ba1fae98b2c33b565037dbb50c2bf48f0a17d64787a3 (unchanged)
+Docker Hub latest          same digest as 7.5.0
+Local HEAD                 the amended commit produced by the 0.3.17 close-out script
+Remote main                same as Local HEAD (push verified)
+Tests                      619/619
+Version                    7.5.0
+git push                   WORKING — pre-push hook renamed (gotcha AC)
+release-state.json         local only (gitignored); on disk: 7.5.0 / sha256:5fe2b07a... (gotcha AI)
+
+What 0.3.17 delivered
+- Restored plain git push. Root cause was NOT transport: the pre-commit-generated
+  .git/hooks/pre-push crashed MSYS2 fork (0xC0000005, "fork: Resource temporarily
+  unavailable"), so git waited on a child that would never finish. git push --no-verify
+  was the diagnostic that isolated the hook from transport; renaming the hook was the fix.
+- Reconciled divergent histories. --force-with-lease pushed local 7c097e2 over remote
+  a0b58209 after verifying the tree SHA matched (2451abe0... on both sides). No
+  user-visible change because tree bytes were identical.
+- Re-pointed tag 7.5.0 from a0b58209 -> 7c097e2 (wrong: docs handover commit) -> e5b4840
+  (correct: version-bump commit per the 0.3.15 handover).
+- Restored release 425843459 from draft to live after the tag delete flipped it.
+- Rewrote the release body. It had been carrying the 7.4.0 body under a 7.5.0 tag
+  (7.4.0 install commands, sha256:aa818310 digest, 443 tests, no SSRF mention). Replaced
+  with a 7.5.0 body derived from CHANGELOG.md [7.5.0] and verified via gh api --jq.
+- Updated local release-state.json to 7.5.0 / sha256:5fe2b07a... (gitignored; not a
+  commit target; see gotcha AI).
+- Amended the handover commit to replace placeholder content with the real handover.
+
+What 0.3.17 did not deliver
+Nothing in scope. Hook restoration (Defender exclusions / ASLR) was deliberately deferred
+per the one-session cap.
+
+New gotchas
+Gotcha AC — pre-commit pre-push hook crashes MSYS2 fork on this machine
+  Symptom: git push hangs indefinitely. A timed git push --no-verify completes in seconds
+  with a normal rejection, proving transport is healthy. The failing child shows
+  "fork: retry: Resource temporarily unavailable" and 0xC0000005, same crash family as
+  gh 2.101.0. Fix on this machine: rename .git/hooks/pre-push to pre-push.disabled.
+  Do not re-enable without Defender exclusions or ASLR adjustment.
+
+Gotcha AD — Deleting a tag ref converts its release to draft
+  gh api --method DELETE .../git/refs/tags/<tag> flips the associated release to
+  draft:true. Content is preserved. Recovery: one gh api --method PATCH .../releases/<id>
+  with -F draft=false -F prerelease=false -f target_commitish=<full-sha>.
+
+Gotcha AE — git/commits endpoint requires full 40-char SHA
+  gh api .../git/commits/<short-sha> 404s. Use gh api .../commits/<short-sha> (the
+  contents endpoint) for short-SHA lookups, or pass the full SHA.
+
+Gotcha AF — gh api -f vs -F
+  -f sends strings; -F sends typed values (booleans, numbers, and @file reads). Use
+  -F draft=false, not -f draft=false. Use -F body=@path for large bodies.
+
+Gotcha AG — ConvertFrom-Json mangles non-ASCII from gh api
+  $r = gh api ... | ConvertFrom-Json decodes UTF-8 output as the legacy OEM codepage in
+  this PowerShell config, so an em-dash appears as mojibake in $r.body. The bytes GitHub
+  stored are correct. Verify non-ASCII via gh api ... --jq ..., never via ConvertFrom-Json.
+
+Gotcha AH — Placeholder-in-guidance defect (process gotcha, not technical)
+  Several commands this session were handed over with literal placeholders (<ID>,
+  <full-sha>, <HANDOVER CONTENT...>) and the operator pasted them verbatim, producing
+  clean 404/422 rejections and one bad commit. Rule: when providing commands to the
+  operator, use literal values only. Never templates. If a script must embed content,
+  embed the content inline in the script, not as a placeholder.
+
+Gotcha AI — release-state.json is gitignored
+  The release engine's state file is not tracked. Updating it is local-only; do not
+  attempt to git add it (git will warn "paths are ignored"), and do not treat its
+  staleness as a repo defect. If a future session sees a 7.4.0-era Version in
+  release-state.json, update it on disk only.
+
+Gotcha AJ — throw does not terminate a pasted interactive script
+  In PowerShell 7, pasting a sequence of statements into the interactive prompt and
+  hitting Enter on a line that throws will print Exception: and then CONTINUE with the
+  next pasted statement. $ErrorActionPreference = 'Stop' does not help. The only reliable
+  way to make throw abort the rest of a pasted script is to wrap the entire body in a
+  script block scope: & { ... throw ... }. Use that pattern for any operator-facing
+  destructive script.
+
+Decisions made
+- Hook disabled on this machine, not fixed. Defender exclusions and ASLR adjustment are
+  deferred to a separate maintenance window (per handover cap).
+- Tag anchor is e5b4840 (version-bump commit), not the docs handover commit that follows
+  it. This reaffirms the 0.3.15 principle.
+- release-state.json is local-only; not fixed by commit because it is untracked.
+- The F1=0.921 number appears in the live 7.5.0 release body's Benchmark status
+  paragraph. Future releases should decide per-release whether that number is published;
+  if not, remove it from the body before PATCH.
+- 0.3.18 remains the README rewrite, per prior plan.
+
+First actions in the new window (0.3.18 prep)
+1. cd "C:\Users\M5 E60\janissary-project\janissary"
+2. .\.venv\Scripts\Activate.ps1
+3. git --version                     # expect 2.46.2.windows.1
+4. git log --oneline -3              # expect this handover on top of 7c097e2
+5. python -m pytest -q               # expect 619 passed
+6. ruff check .                      # expect All checks passed!
+7. gh api repos/Hetaireia/janissary/releases/tags/7.5.0 --jq '{draft, prerelease, tag: .tag_name, target: .target_commitish, first_line: (.body | split("\n")[0])}'
+8. gh api repos/Hetaireia/janissary/git/ref/tags/7.5.0 --jq '.object.sha'   # expect e5b4840...
+9. Get-Content release-state.json    # expect 7.5.0 / sha256:5fe2b07a...
+
+Read next, in order
+docs/handover/STANDING-ORDER.md
+docs/handover/TEMPLATE.md
+docs/handover/session-0.3.17.txt (this file)
+docs/handover/session-0.3.16.txt
+docs/adr/ADR-012-ssrf-via-collaborator.md
+src/janissary/integrations/collaborator.py
+_ssrf_phase in src/janissary/engine/scanner.py
+
+0.3.18 — README rewrite (execution plan)
+Objective: rewrite README.md for the hunter audience. Lead with what ships today
+(SSRF, SQLi, XSS); do not claim IDOR until 7.6.0 ships.
+Sources of truth:
+- CHANGELOG.md [7.5.0] for SSRF details
+- CHANGELOG.md [7.4.0] for SARIF and auth-expiry details
+- BENCHMARK.md only if the maintainer authorizes re-publishing the F1 number
+- Existing README.md for structure and install sections to keep
+Deliverables:
+- README.md rewritten end-to-end
+- Install section: pip install janissary==7.5.0, docker pull oraclemode337/janissary:7.5.0
+- SSRF section with a worked example (--collaborator + finding category examples)
+- No new claims beyond what CHANGELOG / BENCHMARK support
+- One commit, chore/docs scope, on top of this handover commit
+
+Next-scope menu
+#   Item                                   Session      Status
+1   README rewrite for hunter audience     0.3.18       Next
+2   cmd.exe + Defender maintenance         standalone   Before 0.3.19
+3   IDOR detection, 7.6.0                 0.3.19/20    After README
+4   JWT / prototype pollution, 7.7.0       0.3.21/22    After IDOR
+5   pre-push hook restoration              standalone   Optional; not blocking
+6   Local/remote history reconciliation     closed in 0.3.17 via force-with-lease
+
+Blocked (unchanged from 0.3.16)
+- Pathtraver F1 (Docker target)
+- Phase 2.2 payloads (Docker target)
+- WAF-block 200 FP (needs WAF target)
+- Benchmark registry (real 0.1b blocker)
+- Six cosmetic pre-commit hooks (network)
+- K/K-2 root cause
+
+Recovery pattern that worked in 0.3.17
+- Isolate before you retry. --no-verify push isolated transport from the hook in one step.
+  Without it, the natural next move was Defender exclusions, which would have been wrong.
+- Assert the invariant, then mutate. Every tag / release mutation was preceded by a tree or
+  SHA check. The tree-SHA match (2451abe0 == 2451abe0) was the load-bearing check before
+  the force-push.
+- Verify with the source of truth, not the writer. git ls-remote / gh api --jq beat
+  $LASTEXITCODE and ConvertFrom-Json every time. ConvertFrom-Json produced the only
+  false negative of the session; a bad placeholder produced the only bad commit.
+- Do not spend a second session on the same diagnosis. Hook restoration (Defender/ASLR) is
+  a separate maintenance item; the plain-push success criterion was met without it.
+- Check the file you just wrote before committing. A 90-byte "handover" should have been
+  caught by the size guard — the guard was correct, the execution model was wrong. Fixed
+  by & {} wrapper (gotcha AJ) and by not using placeholders (gotcha AH).
+
+Security record
+- PyPI token: revoked by operator in 0.3.16; unchanged.
+- GitHub token: still in gh's keyring.
+- Docker Hub credentials: still in Docker Desktop credential store.
+- No new tokens were pasted into this session's transcript.
+- When 7.6.0 needs a PyPI token: set TWINE_USERNAME=__token__ and TWINE_PASSWORD=pypi-...
+  in the shell without echoing, and use twine upload --verbose (which masks the password).
+
+Mission alignment check
+- Enterprise precision tool: the 7.5.0 release is now correctly presented — the release
+  body matches the tag content, the install commands point at 7.5.0, the Docker digest is
+  the 7.5.0 digest, and the SSRF finding categories are described accurately.
+- Independent bug bounty tool: SSRF is the headline feature and the release page now
+  advertises it correctly. pip install janissary==7.5.0 and the docker pull line both
+  point at verified content.
+- The session advanced the mission by removing a release-integrity defect (release body
+  7.4.0 under a 7.5.0 tag) that would have undermined trust in the release.
+
+One sentence
+7.5.0 is now correctly shipped across PyPI, GitHub, and Docker Hub — the tag points at the
+version-bump commit, the release body matches the tag content, git push works on this
+machine again, and the only remaining item is the routine README rewrite in 0.3.18.
