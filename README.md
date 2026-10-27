@@ -16,8 +16,6 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 
-![JANISSARY demo](docs/demo.gif)
-
 ---
 
 ## Why JANISSARY
@@ -25,7 +23,6 @@
 Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways:
 
 > **What makes JANISSARY different:** JANISSARY is an open-source DAST tool that offers proven WAF resilience, zero-false-positive differential detection, and Burp-native output at a free price point.
-
 
 **Differential detection, measured.** Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 (0 FP), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
@@ -141,7 +138,6 @@ The weakest category is path traversal (F1 0.049–0.308), documented in `docs/p
 
 ## Install
 
-
 ```bash
 pip install janissary==7.5.0
 
@@ -224,7 +220,6 @@ janissary agent https://target.example --attack-confirm
 ```
 
 ---
-
 
 ## Scope, authentication, and machine-readable output
 
@@ -352,7 +347,6 @@ JANISSARY was run against OWASP Juice Shop behind ModSecurity + OWASP CRS. The s
 ```
 
 Configuration: `docker-compose.waf.yml` (ModSecurity CRS reverse proxy in front of Juice Shop). This closes the gap between "architecturally paces" and "provably paces."
-
 
 ## Docker
 
