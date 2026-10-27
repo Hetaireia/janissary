@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.4.0] - 2026-10-27
+
+### Added
+
+- **SARIF 2.1.0 export for agent findings** (ADR-009). `janissary agent --export *.sarif` now emits SARIF with catalog-driven rules, CWE taxonomy, cross-run partialFingerprints, and invocation metadata that distinguishes single-target from multi-target runs.
+- **Mid-scan auth expiry detection, direct-scan path** (ADR-010). Scans with `--cookie` or `--bearer` now abort with exit code 2 when two consecutive HTTP 401 responses arrive during the payload loop. Findings collected before the abort are preserved. `abort_reason` names the threshold, param, and last payload attempted.
+- **Mid-scan auth expiry detection, agent path** (ADR-011). `cmd_agent` no longer monkey-patches `requests.Session.__init__`; session is threaded explicitly through `Agent.__init__`, adapter context, and all four recon targets (`probe_admin`, `xmlrpc.detect`, `graphql.detect`, `fingerprint`). Response-hook 401 counter with threshold=2, matching the scanner path.
+
+### Changed
+
+- Ruff version pinned to `==0.16.9` in `pyproject.toml` dev extras; `[tool.ruff]` `required-version = "==0.16.9"` enforces it at runtime. Version drift between local and CI is now impossible.
+- Pre-commit stage names migrated to current identifiers (`pre-commit`, `pre-push`). The six deprecation warnings per gate run are gone.
+- ADR-007 D5 legacy-store silent-dedupe behavior now has explicit test coverage (4 tests in `test_finding_store.py`).
+
+### Fixed
+
+- L4 comment in `.pre-commit-config.yaml` referenced a `--hook-stage push` value that pre-commit 4.7.0 does not accept. Corrected to `pre-push`.
+
+### Notes
+
+- Test count: 586 → 611 (+25 new tests across the arc).
+- Benchmark: F1=0.921, FP=0 on the OWASP Benchmark r1+rec artifact, unchanged from 7.3.0. All arc changes are non-scoring-path by construction (SARIF serialization, CLI wiring, dependency pin, config, tests, agent auth threading).
+- No breaking changes. All new behavior is opt-in (`auth_configured=False` default on both `Scanner` and `Agent`; SARIF export triggered by file extension; other extensions keep the JSON exporter).
+
 ## [7.3.0] - 2026-10-22
 
 ### Changed
