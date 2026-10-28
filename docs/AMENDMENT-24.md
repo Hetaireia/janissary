@@ -192,3 +192,22 @@ This becomes the first task of a future session that addresses scanner precision
 - Investigate why `class: "traversal"` fires on SQL error responses. Raw evidence: `benchmark/track_c/runs/20261028T073716Z-dvwa/sqli.jsonl`.
 - If fixable: patch, re-measure DVWA, log delta explicitly.
 - If not fixable soon: leave as-is, note in the campaign docs, proceed to 60-app scaling with the known classifier behaviour.
+### 2026-10-28 - Traversal collapse oracle fix (7.5.1)
+
+The 8 false traversal findings on DVWA sqli (`sqli.jsonl`, 16 findings, 8 sqli + 8 traversal on the same payload) have been diagnosed and fixed.
+
+Root cause:
+
+- `engine/scanner.py` invoked `check_traversal_collapse_oracle` for **every payload**, per ADR-006 D1 sub-note ("fire on any payload when armed").
+- `detection/collapse_oracle.py` line 59 (`_aux_tiny_body`): `return ":" in body or "/" in body`. Any HTML error page has `</pre>` and any error message has `:`. The SQL syntax error body (<162 bytes vs 4538-byte baseline) passes this check.
+- `check_traversal_collapse_oracle` line 133-134 hardcodes `"category": "traversal"`, so a collapse on an SQL injection payload was labeled traversal.
+
+Fix:
+
+- `engine/scanner.py`: gate the call to `check_traversal_collapse_oracle` on `payload_category == "traversal"`. Traversal payloads still reach the oracle. Non-traversal payloads do not — their own class-specific oracle covers them.
+
+Version bump: 7.5.0 → 7.5.1.
+
+Verification: re-ran DVWA pilot with the patched scanner. `sqli.jsonl` now shows sqli findings only. `xss.jsonl` unchanged. Scoring delta from the failed run (20261028T073716Z-dvwa) to the fixed run: see `benchmark/track_c/runs/<test-run>/score.json`.
+
+This fix changes scanner behaviour against non-traversal payloads. Per Amendment 23 protocol, this must be logged against the baseline so the before/after delta is attributable. Future measurements on 7.5.1 will not reproduce the false traversal findings on 7.5.0.
