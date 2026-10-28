@@ -211,3 +211,24 @@ Version bump: 7.5.0 → 7.5.1.
 Verification: re-ran DVWA pilot with the patched scanner. `sqli.jsonl` now shows sqli findings only. `xss.jsonl` unchanged. Scoring delta from the failed run (20261028T073716Z-dvwa) to the fixed run: see `benchmark/track_c/runs/<test-run>/score.json`.
 
 This fix changes scanner behaviour against non-traversal payloads. Per Amendment 23 protocol, this must be logged against the baseline so the before/after delta is attributable. Future measurements on 7.5.1 will not reproduce the false traversal findings on 7.5.0.
+
+### 2026-10-28 - score.json correction
+
+Commit `e1565a0` (the traversal collapse fix) referenced `benchmark/track_c/runs/20261028T074432Z-dvwa/score.json` in its message and in the log entry above, but that file did not exist. The re-score command inside that commit's verification block failed silently — a PowerShell `try`/`finally` interacted with a `Pop-Location` and the pipe output was lost. The scanner fix itself is correct (traversal count 0, sqli and xss preserved); the missing piece was the formal score artifact.
+
+This is a commit-message / amendment-log error, not a code error. Per Amendment 23's discipline, the correction is recorded here rather than silent. The previous commit is not amended — rewriting history is worse than appending a correction.
+
+Both `score.json` files have now been written cleanly with a proper call. Measured before/after delta:
+
+| Metric | Before (`20261028T073716Z-dvwa`) | After (`20261028T074432Z-dvwa`) | Delta |
+|---|---:|---:|---:|
+| TP | 2 | 2 | 0 |
+| FP | 8 | 0 | -8 |
+| FN | 2 | 2 | 0 |
+| Precision | 0.200 | 1.000 | +0.800 |
+| Recall | 0.500 | 0.500 | 0.000 |
+| F1 | 0.286 | 0.667 | +0.381 |
+
+The fix removed 8 false positives and preserved all 2 true positives. Precision on this pilot went from 0.200 to 1.000.
+
+Both score files are now committed, so the before/after claim is fully reproducible from the repo.

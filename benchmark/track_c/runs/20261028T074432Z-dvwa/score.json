@@ -1,0 +1,12 @@
+{
+  "app": "dvwa",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261028T074432Z-dvwa",
+  "cases": 4,
+  "findings": 10,
+  "tp": 2,
+  "fp": 0,
+  "fn": 2,
+  "precision": 1.0,
+  "recall": 0.5,
+  "f1": 0.6667
+}
