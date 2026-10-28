@@ -1,0 +1,17 @@
+{
+  "dvwa": {
+    "base_url": "http://127.0.0.1:4280",
+    "healthcheck": "/login.php",
+    "login": {
+      "url": "/login.php",
+      "data": {"username": "admin", "password": "password", "Login": "Login"},
+      "post_url": "/security.php",
+      "post_data": {"security": "low", "seclev_submit": "Submit"}
+    }
+  },
+  "juice-shop": {
+    "base_url": "http://127.0.0.1:3000",
+    "healthcheck": "/rest/admin/application-version",
+    "login": null
+  }
+}
