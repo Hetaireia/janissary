@@ -1,0 +1,25 @@
+# Track C targets — start one at a time to keep port/memory sane
+services:
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: janissary-trackc-dvwa
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4280:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost/login.php || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  juice-shop:
+    image: bkimminich/juice-shop:v17.1.1
+    container_name: janissary-trackc-juice
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/rest/admin/application-version || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
