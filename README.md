@@ -170,22 +170,45 @@ triage, with the receipts attached.
 
 ## Benchmark
 
-JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full results, methodology, and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committed under `benchmark/track_a/runs/`; the recovered run is `20261024T130735Z-janissary-r1+rec`.
+> [!IMPORTANT]
+> **Measurement status (Amendment 23).** The 7.5.0 baseline was measured end-to-end
+> on 2026-10-28 (three independent runs, fresh containers, single-process, same target).
+> Figures below distinguish the **unassisted** score from the **FN-recovery-scored**
+> figure. The unassisted figure is what a clean run reproduces; the recovery figure
+> additionally re-scans FN cases at higher timeout per Amendment 20.
+> See `docs/AMENDMENT-23.md` and `artifacts/7.5.0-baseline/summary/three-run-baseline.md`.
 
-| Metric | Value |
-|---|---|
-| Precision (dev splits) | 1.000 (0 FP observed) |
-| Recall | 0.854 |
-| F1 | 0.921 |
-| TP / FP / FN | 987 / 0 / 169 |
-| Categories at F1 1.000 | 20 |
-| 3-run unassisted baseline F1 | 0.903 ± 0.009 (n=3) |
+JANISSARY is scored against the OWASP Benchmark DAST-applicable corpus. Full methodology
+and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committed under
+`benchmark/track_a/runs/`.
 
-Reproduce: `python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261024T130735Z-janissary-r1+rec`
+| Metric | Value | Notes |
+|---|---|---|
+| **Precision (dev split, n=3)** | **1.000 (0 FP observed)** | Empirically reproduced on 7.5.0 (2026-10-28) |
+| **Recall (unassisted, n=3)** | **0.828 ± 0.004** | Sample std, DAST-applicable categories |
+| **F1 (unassisted, n=3)** | **0.906 ± 0.002** | Sample std, DAST-applicable categories |
+| F1 (with FN-recovery protocol) | 0.921 | Amendment 20; single-pass on 7.3.0, not re-measured on 7.5.0 |
+| 3-run unassisted baseline F1 (historical) | 0.903 ± 0.009 | 7.3.0, prior 3-run mean — matched by 7.5.0 within 1σ |
+| TP / FP / FN per run (r1 / r2 / r3) | 961/0/195 · 960/0/196 · 953/0/203 | DAST-applicable |
+| Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |
 
-The F1 0.921 figure applies the FN-recovery protocol to the first two baseline runs; the third baseline run (`20261025T062837Z-janissary-r3`, F1 0.895) has not been recovery-scored. Full detail in `BENCHMARK.md` Amendment 22.
+Reproduce:
 
-The weakest category is path traversal (F1 0.049–0.308), documented in `docs/pathtraver.md` as a property of the benchmark target, not a scanner gap.
+```bash
+# From the repo root, with target up on http://127.0.0.1:8080/benchmark
+python -m benchmark.track_a.runner \
+    --tool janissary --run-number 1 \
+    --target-base http://127.0.0.1:8080/benchmark \
+    --cases-csv benchmark/track_a/case_vectors.csv \
+    --tools-env artifacts/7.5.0-baseline/invocations/tools_default.env
+python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/<run-dir>
+```
+
+### What this measurement does and does not claim
+
+- ✅ **Measured on 7.5.0:** dev-split precision (0 FP in 3 independent runs).
+- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, or independent reproduction. Those remain Phase 3/4 items under `docs/AMENDMENT-23.md`.
+- The `0.921` F1 headline reflects the **FN-recovery protocol** (Amendment 20). The **unassisted** 7.5.0 3-run mean is `0.906 ± 0.002`.
 
 > [!NOTE]
 > **Two-minute install.** `pip`, Docker, or from source. The core scanner runs without external services.
