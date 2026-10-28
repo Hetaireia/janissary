@@ -1,0 +1,47 @@
+RUN benchmark\track_a\runs\20261028T000025Z-janissary-r3
+findings=4144 wrong_family=0 orphan=0
+excluded categories: ['crypto-00', 'crypto-01', 'crypto-02', 'crypto-03', 'hash-00', 'hash-01', 'hash-02']
+
+=== FULL CORPUS ===
+  TP=953 FP=0 FN=462 TN=1325
+  P=1.000  R=0.673  F1=0.805
+
+=== DAST-APPLICABLE ===
+  TP=953 FP=0 FN=203 TN=1102
+  P=1.000  R=0.824  F1=0.904
+
+=== Per-category (DAST-applicable, sorted by F1 ascending) ===
+  category               F1      P      R    TP    FP    FN
+  pathtraver-01       0.049  1.000  0.025     1     0    39
+  pathtraver-02       0.154  1.000  0.083     3     0    33
+  pathtraver-00       0.160  1.000  0.087     4     0    42
+  pathtraver-03       0.308  1.000  0.182     2     0     9
+  trustbound-01       0.846  1.000  0.733    22     0     8
+  securecookie-00     0.857  1.000  0.750    27     0     9
+  weakrand-03         0.857  1.000  0.750    24     0     8
+  trustbound-00       0.872  1.000  0.774    41     0    12
+  weakrand-05         0.909  1.000  0.833    30     0     6
+  weakrand-06         0.909  1.000  0.833     5     0     1
+  weakrand-01         0.947  1.000  0.900    27     0     3
+  cmdi-00             0.950  1.000  0.905    38     0     4
+  sqli-05             0.955  1.000  0.913    42     0     4
+  cmdi-01             0.955  1.000  0.914    32     0     3
+  sqli-04             0.959  1.000  0.921    35     0     3
+  xpathi-00           0.966  1.000  0.933    14     0     1
+  cmdi-02             0.966  1.000  0.933    42     0     3
+  weakrand-02         0.967  1.000  0.935    29     0     2
+  sqli-03             0.968  1.000  0.938    45     0     3
+  xss-01              0.973  1.000  0.947    36     0     2
+  sqli-00             0.979  1.000  0.958    46     0     2
+  xss-04              0.979  1.000  0.959    47     0     2
+  xss-00              0.980  1.000  0.962    50     0     2
+  xss-02              0.989  1.000  0.978    45     0     1
+  weakrand-00         0.989  1.000  0.979    46     0     1
+  ldapi-00            1.000  1.000  1.000    27     0     0
+  sqli-01             1.000  1.000  1.000    42     0     0
+  sqli-02             1.000  1.000  1.000    43     0     0
+  xss-03              1.000  1.000  1.000    40     0     0
+  weakrand-04         1.000  1.000  1.000    36     0     0
+  xss-05              1.000  1.000  1.000    21     0     0
+  cmdi-03             1.000  1.000  1.000     4     0     0
+  sqli-06             1.000  1.000  1.000     7     0     0
