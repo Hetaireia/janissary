@@ -1,0 +1,7 @@
+app,path,method,param,vuln_class,notes
+dvwa,/vulnerabilities/sqli/?id=test&Submit=Submit,GET,id,sqli,requires_low_security
+dvwa,/vulnerabilities/sqli_blind/?id=test&Submit=Submit,GET,id,sqli_blind,requires_low_security
+dvwa,/vulnerabilities/xss_r/?name=test,GET,name,xss,requires_low_security
+dvwa,/vulnerabilities/fi/?page=include.php&Submit=Submit,GET,page,traversal,requires_low_security
+juice-shop,/rest/products/search?q=test,GET,q,sqli,anonymous
+juice-shop,/rest/products/search?q=test,GET,q,xss,anonymous
