@@ -141,3 +141,54 @@ Once the 60-app corpus is built:
 Commit of this amendment plus the working pilot harness (Commit `e7b4170` + metadata commit). No apps have been added beyond DVWA and Juice Shop. No locked apps exist. No FP rate is claimed.
 
 The next session starts with Phase 1 above: schema change, no scans.
+## Pilot FP analysis (2026-10-28)
+
+The "interpretations to resolve" section above is now resolved by the pilot data. Recording what we found.
+
+### What the 8 FPs are
+
+Dump of `sqli.jsonl` (16 findings, all on `/vulnerabilities/sqli/`):
+
+| class | count |
+|---|---:|
+| `sqli` | 8 |
+| `traversal` | 8 |
+
+Dump of `xss.jsonl` (2 findings, all on `/vulnerabilities/xss_r/`):
+
+| class | count |
+|---|---:|
+| `xss` | 2 |
+
+Every URL is correct. Every payload is correct. The XSS endpoint produces only XSS findings. **The SQLi endpoint produces both SQLi findings (correct) and traversal findings on the same requests (incorrect).**
+
+### Interpretation 2 is ruled out
+
+This is not a scorer artefact. The scorer's `category_of` fix (commit `e7b4170`) now correctly reads the `class` field from janissary's JSONL. The 8 FPs are what janissary actually emitted: `{"class": "traversal", ...}` on URLs where the only vulnerability is SQL injection.
+
+### Interpretation 1 is confirmed, with specificity
+
+Janissary over-fires traversal on SQL injection payloads. The likely mechanism (unverified): DVWA's SQL error responses contain file-path fragments (e.g. `/var/www/html/...`) in their stack traces, and janissary's differential detector sees "path-like string appeared in response body" and classifies it as traversal.
+
+This is a **real precision bug in the scanner on a real application**, exactly the class of problem Amendment 23 Item A is designed to measure. It is not a scoring quirk, not a rubric question, not a Track C harness issue.
+
+### What this means for the campaign
+
+The pilot demonstrates the campaign works: it surfaced a real scanner precision problem on the first target. Scaling to 60+ apps will produce either:
+
+- **The same pattern at scale:** janissary systematically emits traversal findings alongside SQLi on many apps. That becomes the Item A number, published honestly.
+- **A different pattern at scale:** the DVWA case is idiosyncratic; other apps don't produce this. Either way, we now know the harness measures real precision, not just scorer agreement.
+
+This finding does not change the pre-registration. It is a measurement result that will be part of the campaign's output.
+
+### Not fixed in this session
+
+The traversal mis-classification is **not** being patched here. Per Amendment 23's burned-data rule and the general principle of pre-registration: fixing detectors against dev-split findings is fine (dev data is for hardening), but the fix must be logged as a change against the baseline so that later measurements on the fixed scanner are attributed to the fix, not silently inherited.
+
+This becomes the first task of a future session that addresses scanner precision: identify why the differential detector labels SQL error pages as traversal, and add a class-specific gate. That is a **scanner change**, not a benchmark change, and belongs in a new version (7.5.1 or 7.6.0) with its own Amendment or changelog entry.
+
+### Logged for the next session
+
+- Investigate why `class: "traversal"` fires on SQL error responses. Raw evidence: `benchmark/track_c/runs/20261028T073716Z-dvwa/sqli.jsonl`.
+- If fixable: patch, re-measure DVWA, log delta explicitly.
+- If not fixable soon: leave as-is, note in the campaign docs, proceed to 60-app scaling with the known classifier behaviour.
