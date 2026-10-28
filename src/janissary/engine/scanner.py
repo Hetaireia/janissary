@@ -651,7 +651,7 @@ class Scanner:
                 # payload response structurally collapses from the armed
                 # baseline AND an auxiliary signal corroborates. D5
                 # pass-through: no-op when arming.armed is False.
-                if arming.armed:
+                if arming.armed and category == "traversal":  # ADR-006 D1: only traversal payloads reach the collapse oracle; non-traversal payloads are handled by their own oracle
                     collapse_raw = check_traversal_collapse_oracle(
                         baseline=baseline,
                         arming=arming,
