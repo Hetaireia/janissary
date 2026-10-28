@@ -1,0 +1,47 @@
+{
+  "app": "vampi",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261028T075758Z-vampi",
+  "cases": 4,
+  "vuln_cases": 0,
+  "safe_cases": 4,
+  "findings": 0,
+  "unmatched_findings": 0,
+  "tp": 0,
+  "fp": 0,
+  "fn": 0,
+  "tn": 4,
+  "precision": 0.0,
+  "recall": 0.0,
+  "f1": 0.0,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/openapi.json",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/users/v1",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/users/v1/_debug",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    }
+  ]
+}
