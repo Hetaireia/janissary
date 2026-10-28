@@ -324,3 +324,51 @@ TP=0 FP=0 FN=0 TN=4 was factually wrong at the time. It is now
 factually correct as of this commit because a real run happened.
 The commit message for 3f39ae6 is not edited (history is linear).
 This Amendment 24 entry supersedes it.
+
+### 2026-10-28 - VAmPI crash on /users/v1/_debug
+
+The commit `6f5a37c` states that the VAmPI run produced "0 findings on 4
+unauthenticated VAmPI endpoints" as a "clean precision data point". That
+is **3/4 true and 1/4 false**, and the false quarter is a real scanner
+bug that must be recorded.
+
+Runner output from `benchmark/track_c/runs/20261028T075535Z-vampi/`:
+
+| Endpoint | Janissary exit | Meaning |
+|---|---|---|
+| `GET /` | 0 | Clean scan, no findings |
+| `GET /openapi.json` | 0 | Clean scan, no findings |
+| `GET /users/v1` | 0 | Clean scan, no findings |
+| `GET /users/v1/_debug` | **3221225477 (0xC0000005)** | **Native crash — scan never completed** |
+
+0xC0000005 is Windows STATUS_ACCESS_VIOLATION. The janissary subprocess
+crashed before producing any findings. `safe.stderr` is 0 bytes for that
+trial, which is consistent with a native crash that did not go through
+Python's exception handler.
+
+Implications for the measurement:
+
+- **3 trials are valid TN**: clean null results on 3 endpoints. That is
+  real precision evidence and belongs in Item A evidence.
+- **1 trial is inconclusive**: the scanner died before scanning. The
+  score.json records it as TN because there were no findings — but
+  "no findings because the process crashed" is not the same as
+  "no findings because the scanner looked and found nothing".
+- **The claim "0 findings on 4 endpoints" overstates the result.** The
+  honest summary is "0 findings on 3 endpoints; the fourth crashed
+  before a scan could complete".
+
+The commit message for `6f5a37c` is not edited. History stays linear.
+This Amendment 24 entry supersedes the "4 clean" claim with a "3 clean
++ 1 crashed" record.
+
+The crash is a **scanner bug**, not a benchmark bug. It reproduces when
+janissary is invoked directly (see Command 44 reproduction output saved
+under `artifacts/track-c-phase-2/vampi-crash-*.txt`). Whether it is a
+defusedxml / selectolax / native-parser issue or something else is
+pending diagnosis.
+
+Deferred until the crash is diagnosed and either fixed or documented:
+
+- No VAmPI finding is written to Item A evidence for `/users/v1/_debug`.
+- The 3 clean endpoints remain in the corpus.
