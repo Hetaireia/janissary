@@ -44,7 +44,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 |---|---|
 | **Version** | 7.5.0 (released 2026-10-28) |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
-| **Benchmark (OWASP)** | **F1 0.921** - Precision 1.000 (dev splits, 0 FP observed) - Recall 0.854 |
+| **Benchmark (OWASP)** | **F1 0.906 ± 0.002** unassisted (n=3); **0.921** with FN-recovery — Precision 1.000 (0 FP, n=3) — Recall 0.828 ± 0.004 |
 | **Detection classes** | SQLi, XSS, SSRF, traversal, cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
