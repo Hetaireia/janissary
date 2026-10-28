@@ -2,16 +2,38 @@
   "dvwa": {
     "base_url": "http://127.0.0.1:4280",
     "healthcheck": "/login.php",
+    "image_digest": null,
+    "security_level": "low",
+    "excluded": false,
+    "trial_class": ["sqli", "sqli_blind", "xss", "traversal"],
+    "safe_endpoints": ["/index.php", "/instructions.php"],
+    "known_vulnerable": [
+      {"path": "/vulnerabilities/sqli/?id=test&Submit=Submit", "class": "sqli"},
+      {"path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit", "class": "sqli_blind"},
+      {"path": "/vulnerabilities/xss_r/?name=test", "class": "xss"},
+      {"path": "/vulnerabilities/fi/?page=include.php&Submit=Submit", "class": "traversal"}
+    ],
     "login": {
       "url": "/login.php",
       "data": {"username": "admin", "password": "password", "Login": "Login"},
       "post_url": "/security.php",
-      "post_data": {"security": "low", "seclev_submit": "Submit"}
+      "post_data": {"security": "low", "seclev_submit": "Submit"},
+      "cookies": [],
+      "setup": []
     }
   },
   "juice-shop": {
     "base_url": "http://127.0.0.1:3000",
     "healthcheck": "/rest/admin/application-version",
+    "image_digest": null,
+    "security_level": null,
+    "excluded": false,
+    "trial_class": ["sqli", "xss"],
+    "safe_endpoints": ["/", "/rest/admin/application-version"],
+    "known_vulnerable": [
+      {"path": "/rest/products/search?q=test", "class": "sqli"},
+      {"path": "/rest/products/search?q=test", "class": "xss"}
+    ],
     "login": null
   }
 }
