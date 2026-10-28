@@ -148,7 +148,7 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--app", required=True, choices=["dvwa", "juice-shop"])
+    ap.add_argument("--app", required=True)  # validated against apps.json below
     args = ap.parse_args()
 
     apps = load_apps()

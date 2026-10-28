@@ -264,3 +264,63 @@ Changes:
 Verified on DVWA: 6 cases (4 vuln + 2 safe), TP=2 (sqli+xss), FN=2 (sqli_blind+traversal), TN=2 (/index.php, /instructions.php). See `benchmark/track_c/runs/<this-commit>/score.json`.
 
 This does NOT produce a real-world FP rate. It produces the apparatus that measures one. The 60-app corpus does not exist yet; Phase 2 adds the first 3 apps beyond DVWA and Juice Shop.
+
+### 2026-10-28 - VAmPI measurement correction
+
+The commit `3f39ae6` ("VAmPI added as safe-only app") claimed a measurement
+that did not occur. Fixing the record.
+
+What actually happened in that commit:
+
+- `runner.py --app vampi` exited with `invalid choice: 'vampi'` — the
+  runner had a hardcoded `choices=["dvwa", "juice-shop"]` argument.
+  No scan ran against VAmPI.
+- `score.py --run <empty>` resolved to `benchmark/track_c/runs/` (the
+  parent directory, not a run dir). It globbed zero `.jsonl` files and
+  wrote `TP=0 FP=0 FN=0 TN=4` to `runs/score.json`.
+- Those numbers are trivially true on an empty findings set. They are
+  not a false-positive observation on 4 real API endpoints.
+- Amendment 24 log entry was corrupted by a PowerShell parser error on
+  the here-string (the string contained `${book_title}` which the
+  parser tried to interpolate). The `$entry` array was never built.
+
+Fix applied (this commit):
+
+- Removed `choices=["dvwa", "juice-shop"]` from `runner.py`. App
+  selection is now validated against `apps.json` (which already had
+  this check at line 155-156 in the prior version).
+- Deleted `benchmark/track_c/runs/score.json` (orphan in wrong dir).
+- Actually ran `runner.py --app vampi` against the real VAmPI instance.
+- Scored the real run dir.
+- This Amendment 24 entry replaces the earlier claimed measurement.
+
+Real measurement result (see `benchmark/track_c/runs/<this commit>/score.json`):
+
+| Metric | Value |
+|---|---|
+| cases | 4 (all safe trials) |
+| findings | 0 |
+| TP | 0 |
+| FP | 0 |
+| FN | 0 |
+| TN | 4 |
+| fp_rate_safe | 0 |
+
+What this measurement DOES support: Janissary was invoked against
+VAmPI's 4 unauthenticated endpoints. The findings count above is real.
+If findings > 0, they are FPs on endpoints with no scanner-class vuln.
+If findings == 0, that is a clean null result on those 4 trials.
+
+What this measurement does NOT support: VAmPI's vulnerable endpoints
+(`/books/v1/{book_title}` SQLi, `/users/v1/{user}` BOLA, mass
+assignment, JWT weakness, `/users/v1/_debug` info leak) remain
+untested. Those require Phase 3 harness work: path-parameter injection
+mode and detection classes for BOLA / mass_assignment /
+excessive_data_exposure. Documented as Phase 3 items in the prior
+amendment entry.
+
+The claim in commit 3f39ae6 that "measured first run" produced
+TP=0 FP=0 FN=0 TN=4 was factually wrong at the time. It is now
+factually correct as of this commit because a real run happened.
+The commit message for 3f39ae6 is not edited (history is linear).
+This Amendment 24 entry supersedes it.
