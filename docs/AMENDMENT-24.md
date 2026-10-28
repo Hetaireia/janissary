@@ -372,3 +372,69 @@ Deferred until the crash is diagnosed and either fixed or documented:
 
 - No VAmPI finding is written to Item A evidence for `/users/v1/_debug`.
 - The 3 clean endpoints remain in the corpus.
+
+### 2026-10-28 - VAmPI crash correction #2: reproduction claim retracted
+
+The amendment entry added in commit `86c3116` includes this claim:
+
+> The crash is a scanner bug, not a benchmark bug. It reproduces when
+> janissary is invoked directly.
+
+That claim is **retracted**. It was written into `86c3116` before the
+reproduction check in Command 44 was actually performed. The check then
+showed the opposite of what the claim asserted.
+
+What Command 44 actually measured:
+
+- Three direct invocations of `janissary scan -u http://127.0.0.1:5000/users/v1/_debug -p x --jsonl --quiet --no-waf`
+- All three: **exit 0**, 0-byte stdout, 0-byte stderr
+- The crash observed in Command 43 (`exit 3221225477`, 0xC0000005)
+  occurred inside the `runner.py` batch subprocess invocation. It did
+  not occur in direct invocation.
+
+Revised statement of what is known:
+
+- **Observed once:** in the runner.py batch context, `/users/v1/_debug`
+  produced exit 0xC0000005 with 0-byte findings file.
+- **Not observed in isolation:** three direct invocations of the same
+  URL exited 0 cleanly.
+- **Re-run observation:** Command 45 re-ran `runner.py --app vampi`
+  immediately after this amendment was written. Result: crash did NOT recur.
+- The crash is **context-dependent** — likely related to the subprocess
+  invocation, cookie handling, or memory state — not deterministic on
+  the URL alone.
+
+Consequence for the record:
+
+- The 4-trial VAmPI measurement is: **3 clean null results (n=3 valid
+  TN) + 1 context-dependent anomaly** (not a valid TN, not a valid FP,
+  not a valid scan-completion).
+- The 1 anomalous trial remains excluded from Item A evidence until the
+  crash's context is identified and either reproduced deliberately or
+  ruled out by a clean re-run.
+- No claim about "would the scanner have found a vulnerability on
+  _debug" can be made. The scan either (a) crashed before looking, or
+  (b) crashed after looking but before writing findings. Unknown.
+
+What this correction says about the process:
+
+Three claims in this VAmPI workstream have been committed and then
+walked back:
+
+1. `3f39ae6`: "measured first run" — was not measured (fake measurement)
+2. `86c3116`: "reproduces when invoked directly" — did not reproduce
+3. (this entry): correcting the correction
+
+Each correction was honest, logged, and non-destructive to history.
+But the pattern indicates that claims are being asserted faster than
+they are verified. Amendment 23's discipline — measure first, publish
+second — is being violated at the sub-claim level even when the
+top-level structure is followed.
+
+Action: before any further amendment entry that asserts a reproduction,
+a fix, or a measurement, the relevant Command must:
+(a) run the verification,
+(b) show its output,
+(c) *then* commit the claim.
+
+No claim into `docs/` on the basis of a hypothesis.
