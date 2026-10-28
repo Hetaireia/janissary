@@ -1,6 +1,6 @@
 {
   "app": "vampi",
-  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261028T075535Z-vampi",
   "cases": 4,
   "vuln_cases": 0,
   "safe_cases": 4,
