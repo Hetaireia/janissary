@@ -106,3 +106,27 @@ Results are published whichever way they fall, including locked-set precision be
 - Audit of `benchmark/track_a/runs/`: every existing run carries `tool_version: 7.3.0`. The README's 1.000 precision figure is inherited from 7.3.0 via the non-scoring-path claim for 7.4/7.5.0; it is not measured on 7.5.0. A fresh 7.5.0 measurement is required by this amendment before any 7.5.0 precision claim is made.
 - `src/`, `pyproject.toml`, `setup.py`, `setup.cfg` are identical between tag `7.5.0` and `main`. The editable install at the repo root therefore runs the same scanner source as the 7.5.0 tag; a reinstall is not required for reproducibility.
 - Preparation completed while blocked: invocation configs (default + tuned arms) and run script under `artifacts/7.5.0-baseline/invocations/`. Status tracked in `artifacts/7.5.0-baseline/PHASE-1-STATUS.md`.
+
+### 2026-10-28 - Baseline measured on 7.5.0 (n=3)
+
+First empirical 7.5.0 measurement completed. Scanner: `janissary 7.5.0` (editable install; `src/` identical to tag). Target: OWASP Benchmark Java `20cbf3d11123347e47ed89541e6942836def53f7`, container `20cbf3d-ldapfix-v2`. Invocation: `tools_default.env` (`JANISSARY_TIMEOUT=180`). Runner: harness `5764d76`.
+
+| Run | Precision | Recall | F1 | Wall time |
+|---|---|---|---|---|
+| 1 | 1.000 | 0.831 | 0.908 | 54m 22s |
+| 2 | 1.000 | 0.830 | 0.907 | 52m 51s |
+| 3 | 1.000 | 0.824 | 0.904 | 52m 15s |
+
+Aggregate (DAST-applicable, sample std): Precision 1.0000 +/- 0.0000; Recall 0.8283 +/- 0.0038; F1 0.9063 +/- 0.0021.
+
+Findings:
+
+- **Precision = 1.000, FP = 0, in all three runs.** The dev-split precision claim is now empirically reproduced on 7.5.0 specifically. This closes the gap identified on 2026-10-28 between the README claim and the fact that all prior on-disk runs were `tool_version: 7.3.0`.
+- **The unassisted F1 is 0.906 +/- 0.002 (n=3)**, which is tighter and statistically indistinguishable from the historical unassisted 0.903 +/- 0.009. The README's 0.921 headline is the FN-recovery protocol figure (Amendment 20), not the unassisted baseline.
+- Zero `timeouts.jsonl` entries across all three runs. Zero `wrong_family` and zero `orphan`.
+- Container remained healthy across the full 2h 40m; no restarts required.
+- Per-run scores and the three-run summary are under `artifacts/7.5.0-baseline/summary/` and `benchmark/track_a/runs/`.
+
+This does NOT publish a real-world FP rate, held-out precision, competitor comparison, or independent reproduction. Those remain Phase 3/4 claims under this amendment.
+
+README has NOT been updated to reflect these numbers yet; that is a separate editorial step to be reviewed before it lands.
