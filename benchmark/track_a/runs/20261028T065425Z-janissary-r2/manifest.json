@@ -1,0 +1,14 @@
+{
+  "case_count": 454,
+  "cases_csv": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_a\\_chunks\\fn_recovery_7_5_0.csv",
+  "exit_code": 1,
+  "finished_at": "2026-10-28T07:03:24Z",
+  "harness_commit": "623764e8f9df2a4c42de616124047f2585cbe44a",
+  "run_number": 2,
+  "started_at": "2026-10-28T06:54:25Z",
+  "target_base": "http://127.0.0.1:8080/benchmark",
+  "target_version": "20cbf3d11123347e47ed89541e6942836def53f7",
+  "tool": "janissary",
+  "tool_version": "7.5.0",
+  "track": "track_a"
+}
