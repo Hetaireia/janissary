@@ -187,7 +187,7 @@ and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committe
 | **Precision (dev split, n=3)** | **1.000 (0 FP observed)** | Empirically reproduced on 7.5.0 (2026-10-28) |
 | **Recall (unassisted, n=3)** | **0.828 ± 0.004** | Sample std, DAST-applicable categories |
 | **F1 (unassisted, n=3)** | **0.906 ± 0.002** | Sample std, DAST-applicable categories |
-| F1 (with FN-recovery protocol) | 0.921 | Amendment 20; single-pass on 7.3.0, not re-measured on 7.5.0 |
+| F1 (with FN-recovery protocol) | 0.921 | Measured on 7.5.0, 2026-10-28 (TP 987 / FP 0 / FN 169, identical to 7.3.0) |
 | 3-run unassisted baseline F1 (historical) | 0.903 ± 0.009 | 7.3.0, prior 3-run mean — matched by 7.5.0 within 1σ |
 | TP / FP / FN per run (r1 / r2 / r3) | 961/0/195 · 960/0/196 · 953/0/203 | DAST-applicable |
 | Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |

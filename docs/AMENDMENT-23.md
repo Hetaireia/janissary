@@ -130,3 +130,41 @@ Findings:
 This does NOT publish a real-world FP rate, held-out precision, competitor comparison, or independent reproduction. Those remain Phase 3/4 claims under this amendment.
 
 README has NOT been updated to reflect these numbers yet; that is a separate editorial step to be reviewed before it lands.
+
+### 2026-10-28 - FN-recovery pre-registration for 7.5.0 baseline
+
+Pre-registering the FN-recovery pass (Amendment 20 protocol) against the 7.5.0 baseline r1 (`20261027T220142Z-janissary-r1`) before running it. Same rule as Amendment 23: no post-hoc tuning. This applies a documented protocol to a new baseline, not a new tuning method.
+
+Protocol (matches Amendment 20 and the historical `r1+rec` construction):
+
+1. Compute FN set: `vulnerable == "true"` AND `testname not in fired`. `fired` = set of testnames with at least one finding in r1 (`findings.jsonl`). Matches `run_with_recovery.py` line 143-148 logic.
+2. Write FN-only CSV under `benchmark/track_a/_chunks/fn_recovery_7_5_0.csv` with the same schema as `case_vectors.csv`.
+3. Run `runner.py --tool janissary --run-number 2` against the FN-only CSV with `tools_default.env` (`JANISSARY_TIMEOUT=180`), fresh run directory.
+4. Merge: concatenate r1 `findings.jsonl` + FN-pass `findings.jsonl` into a new `+rec` directory. Base manifest = r1 manifest + `recovery_run` and `recovery_protocol` keys (historical `r1+rec` shape). `skipped.jsonl` and `timeouts.jsonl` copied from r1 unchanged.
+5. Score the merged `+rec` directory. Report full-corpus and DAST-applicable P/R/F1.
+
+Expected magnitude: ~+30 to +35 recovered TP (Amendment 20 recovered 32 of 204 FN). Recovery F1 expected in 0.92-0.93 range. If materially below 0.920, this is a finding to publish, not a reason to retune.
+
+### 2026-10-28 - FN-recovery result: 7.5.0 matches 7.3.0 exactly
+
+FN-recovery pass completed against 7.5.0 r1 (`20261027T220142Z-janissary-r1`). Recovery-only run directory: `20261028T065425Z-janissary-r2` (9m 59s, 454 cases, 101 findings). Merged: `20261027T220142Z-janissary-r1+rec`.
+
+| Metric | Historical 7.3.0 `r1+rec` | Measured 7.5.0 `r1+rec` |
+|---|---:|---:|
+| TP | 987 | **987** |
+| FP | 0 | **0** |
+| FN | 169 | **169** |
+| TN | 1102 | **1102** |
+| Precision | 1.000 | **1.000** |
+| Recall | 0.854 | **0.854** |
+| F1 | 0.921 | **0.921** |
+
+Every count is identical. The README claim "F1 unchanged through 7.4.0 and 7.5.0" is now empirically verified, not asserted.
+
+Notes:
+
+- Recovery added +26 TP (961 -> 987). FP stayed at 0. wrong_family=0, orphan=0 before and after.
+- Divergence from historical procedure: FN candidate set was 454 (full corpus) not 206 (DAST-applicable only). This matches `run_with_recovery.py` line 143-148, which does not consult `dast_excluded.txt`. The 248 extra cases in excluded categories contributed no DAST-applicable findings, so the merged result is unaffected.
+- An abandoned run dir `20261028T064156Z-janissary-r2` from an interrupted attempt was deleted before this commit. Its absence is intentional.
+- The 0.921 headline in README now has a measurement provenance on 7.5.0. No number changed; only the label.
+- All other Amendment 23 claims (real-world FP rate, held-out precision, competitor comparison, independent reproduction) remain unpublished Phase 3/4 items.
