@@ -9,3 +9,7 @@ juice-shop,/rest/products/search?q=test,GET,q,sqli,false,sqli,anonymous
 juice-shop,/rest/products/search?q=test,GET,q,xss,false,xss,anonymous
 juice-shop,/,GET,q,safe,true,,homepage_no_vuln
 juice-shop,/rest/admin/application-version,GET,x,safe,true,,health_check_no_vuln
+vampi,/,GET,x,safe,true,,root_page_no_vuln
+vampi,/openapi.json,GET,x,safe,true,,openapi_spec_no_vuln
+vampi,/users/v1,GET,x,safe,true,,users_list_unauth_no_class_vuln
+vampi,/users/v1/_debug,GET,x,safe,true,,debug_leak_not_scanner_class

@@ -5,19 +5,46 @@
     "image_digest": null,
     "security_level": "low",
     "excluded": false,
-    "trial_class": ["sqli", "sqli_blind", "xss", "traversal"],
-    "safe_endpoints": ["/index.php", "/instructions.php"],
+    "trial_class": [
+      "sqli",
+      "sqli_blind",
+      "xss",
+      "traversal"
+    ],
+    "safe_endpoints": [
+      "/index.php",
+      "/instructions.php"
+    ],
     "known_vulnerable": [
-      {"path": "/vulnerabilities/sqli/?id=test&Submit=Submit", "class": "sqli"},
-      {"path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit", "class": "sqli_blind"},
-      {"path": "/vulnerabilities/xss_r/?name=test", "class": "xss"},
-      {"path": "/vulnerabilities/fi/?page=include.php&Submit=Submit", "class": "traversal"}
+      {
+        "path": "/vulnerabilities/sqli/?id=test&Submit=Submit",
+        "class": "sqli"
+      },
+      {
+        "path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit",
+        "class": "sqli_blind"
+      },
+      {
+        "path": "/vulnerabilities/xss_r/?name=test",
+        "class": "xss"
+      },
+      {
+        "path": "/vulnerabilities/fi/?page=include.php&Submit=Submit",
+        "class": "traversal"
+      }
     ],
     "login": {
       "url": "/login.php",
-      "data": {"username": "admin", "password": "password", "Login": "Login"},
+      "data": {
+        "username": "admin",
+        "password": "password",
+        "Login": "Login"
+      },
       "post_url": "/security.php",
-      "post_data": {"security": "low", "seclev_submit": "Submit"},
+      "post_data": {
+        "security": "low",
+        "seclev_submit": "Submit"
+      },
       "cookies": [],
       "setup": []
     }
@@ -28,11 +55,54 @@
     "image_digest": null,
     "security_level": null,
     "excluded": false,
-    "trial_class": ["sqli", "xss"],
-    "safe_endpoints": ["/", "/rest/admin/application-version"],
+    "trial_class": [
+      "sqli",
+      "xss"
+    ],
+    "safe_endpoints": [
+      "/",
+      "/rest/admin/application-version"
+    ],
     "known_vulnerable": [
-      {"path": "/rest/products/search?q=test", "class": "sqli"},
-      {"path": "/rest/products/search?q=test", "class": "xss"}
+      {
+        "path": "/rest/products/search?q=test",
+        "class": "sqli"
+      },
+      {
+        "path": "/rest/products/search?q=test",
+        "class": "xss"
+      }
+    ],
+    "login": null
+  },
+  "vampi": {
+    "base_url": "http://127.0.0.1:5000",
+    "healthcheck": "/",
+    "image_digest": null,
+    "security_level": null,
+    "excluded": false,
+    "trial_class": [
+      "sqli"
+    ],
+    "safe_endpoints": [
+      "/",
+      "/openapi.json",
+      "/users/v1",
+      "/users/v1/_debug"
+    ],
+    "known_vulnerable": [
+      {
+        "path": "/books/v1/{book_title}",
+        "class": "sqli"
+      },
+      {
+        "path": "/users/v1/_debug",
+        "class": "info_disclosure"
+      },
+      {
+        "path": "/users/v1/register",
+        "class": "mass_assignment"
+      }
     ],
     "login": null
   }

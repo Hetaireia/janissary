@@ -248,3 +248,19 @@ Changes:
 Verified on DVWA: 6 cases (4 vuln + 2 safe), TP=2 (sqli+xss), FN=2 (sqli_blind+traversal), TN=2 (/index.php, /instructions.php). See `benchmark/track_c/runs/<this-commit>/score.json`.
 
 This does NOT produce a real-world FP rate. It produces the apparatus that measures one. The 60-app corpus does not exist yet; Phase 2 adds the first 3 apps beyond DVWA and Juice Shop.
+
+### 2026-10-28 - Phase 1 complete (schema v2)
+
+Schema v2 implemented. `benchmark/track_c/SCHEMA.md` documents the contract. `apps.json` and `cases.csv` extended; scorer rewritten to per-case TP/FP/FN/TN with proper TN handling for safe trials.
+
+Changes:
+
+- `SCHEMA.md` (new): field-by-field contract for apps.json and cases.csv, scoring model, locked-run requirements.
+- `apps.json`: added `image_digest` (null), `security_level`, `excluded`, `trial_class`, `safe_endpoints`, `known_vulnerable`, `login.cookies`, `login.setup`. Backfilled for DVWA and Juice Shop.
+- `cases.csv`: added `safe` and `expected_finding_class` columns. Backfilled 4 existing vulnerable rows. Added 4 safe trials (2 per app).
+- `score.py`: rewritten. Per-case accounting. `safe=true` trials produce TN (no findings) or FP (any finding). `safe=false` trials produce TP (matching class), FP (wrong class), or FN (no findings). Adds `fp_rate_safe` field to score.json — the raw fraction, not the cluster-aware interval (which is computed at campaign level per Amendment 24).
+- `runner.py`: unchanged. Reads `path`, `method`, `param`, all preserved.
+
+Verified on DVWA: 6 cases (4 vuln + 2 safe), TP=2 (sqli+xss), FN=2 (sqli_blind+traversal), TN=2 (/index.php, /instructions.php). See `benchmark/track_c/runs/<this-commit>/score.json`.
+
+This does NOT produce a real-world FP rate. It produces the apparatus that measures one. The 60-app corpus does not exist yet; Phase 2 adds the first 3 apps beyond DVWA and Juice Shop.
