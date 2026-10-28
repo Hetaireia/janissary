@@ -1,0 +1,48 @@
+{
+  "timestamp_utc": "2026-10-28T07:52:38Z",
+  "vampi_container": "janissary-trackc-vampi",
+  "image": "erev0s/vampi:latest",
+  "port": 5000,
+  "base_url": "http://127.0.0.1:5000",
+  "db": "sqlite (bundled, provisioned via /createdb)",
+  "status": "functional",
+  "register_code": "200",
+  "login_code": "200",
+  "login_has_token": true,
+  "endpoints_discovered": [
+    "GET /",
+    "GET /openapi.json",
+    "POST /users/v1/register",
+    "POST /users/v1/login",
+    "GET /me",
+    "GET /books/v1",
+    "GET /books/v1/{book_title}",
+    "GET /users/v1",
+    "GET /users/v1/_debug",
+    "DELETE /users/v1/{username}",
+    "PUT /users/v1/{username}/email",
+    "PUT /users/v1/{username}/password"
+  ],
+  "known_vulnerabilities": [
+    {
+      "class": "BOLA",
+      "note": "view/edit other users by username",
+      "path": "/users/v1/{username}"
+    },
+    {
+      "class": "excessive_data_exposure",
+      "note": "all user details unauthenticated",
+      "path": "/users/v1/_debug"
+    },
+    {
+      "class": "mass_assignment",
+      "note": "admin field settable at register",
+      "path": "/users/v1/register"
+    },
+    {
+      "class": "JWT",
+      "note": "weak secret in default config",
+      "path": "/users/v1/login"
+    }
+  ]
+}
