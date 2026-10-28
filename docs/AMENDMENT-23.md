@@ -168,3 +168,19 @@ Notes:
 - An abandoned run dir `20261028T064156Z-janissary-r2` from an interrupted attempt was deleted before this commit. Its absence is intentional.
 - The 0.921 headline in README now has a measurement provenance on 7.5.0. No number changed; only the label.
 - All other Amendment 23 claims (real-world FP rate, held-out precision, competitor comparison, independent reproduction) remain unpublished Phase 3/4 items.
+
+### 2026-10-28 - FN-recovery inputs committed (force-add correction)
+
+The 2026-10-28 recovery result commit (`e9304df`) referenced `benchmark/track_a/_fn_extract_7_5_0.py` and `benchmark/track_a/_chunks/fn_recovery_7_5_0.csv` in its message, but both were skipped by `benchmark/.gitignore` (`_*` and `_chunks/` patterns). The recovery result (merged findings and both run manifests) was committed correctly; the recovery inputs were not.
+
+This addendum commits those two files with `git add -f` because they are inputs to a published measurement and belong in the record. The ignore pattern remains in place for future ad-hoc chunk files — the force-add is specific to these two files, not a policy change.
+
+Reproducibility state after this commit:
+
+- Base run: `benchmark/track_a/runs/20261027T220142Z-janissary-r1/` — committed.
+- Recovery inputs: `_fn_extract_7_5_0.py` + `_chunks/fn_recovery_7_5_0.csv` — committed.
+- Recovery pass: `benchmark/track_a/runs/20261028T065425Z-janissary-r2/` — committed.
+- Merged run: `benchmark/track_a/runs/20261027T220142Z-janissary-r1+rec/` — committed.
+- Per-run scores: `artifacts/7.5.0-baseline/summary/run-1-{unassisted,recovery}-score.txt` — committed.
+
+A third party with Docker and the target container can now reproduce the entire FN-recovery measurement from committed files only.
