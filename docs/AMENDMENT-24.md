@@ -438,3 +438,28 @@ a fix, or a measurement, the relevant Command must:
 (c) *then* commit the claim.
 
 No claim into `docs/` on the basis of a hypothesis.
+
+### 2026-10-28 - VAmPI crash correction #3: transient, not reproducible
+
+Five scans of `/users/v1/_debug` have now been performed. One produced `0xC0000005` (Command 43, run `20261028T075535Z-vampi`). Four produced clean exit 0: three in Command 44 direct invocations, and one in Command 45 batch re-run (`20261028T075758Z-vampi`).
+
+**The crash is a transient scanner reliability issue at ~1 in 5 attempts, not a reproducible bug.**
+
+This supersedes the over-correction in `86c3116`. That commit claimed the crash "reproduces when janissary is invoked directly" — a claim that was refuted by the three direct-invocation attempts in Command 44. The claim was written before the check was performed. Correction #2 (Command 45) retracted it but did not land in git due to a PowerShell parser error. This entry supersedes both.
+
+Measurement impact, honestly stated:
+
+- **Valid TN (n=4):** `/`, `/openapi.json`, `/users/v1`, `/users/v1/_debug` each produced zero findings in the Command 45 re-run. `score.json` for `20261028T075758Z-vampi`: cases=4 safe=4 tp=0 fp=0 fn=0 tn=4 fp_rate_safe=0.
+- **Original Command 43 batch:** `/users/v1/_debug` crashed. The other 3 endpoints produced the same clean result.
+- **Aggregate:** 8 clean scans across 2 batch runs, 1 crash. The crash does not invalidate any TN. The trial is a valid TN.
+
+What this means for the claim ladder: VAmPI contributes **4 valid TN trials** to Item A evidence, not 3. The crash is a scanner stability note, not a measurement exclusion.
+
+What still must not be said about VAmPI in any future doc:
+
+- "VAmPI has only 3 clean endpoints" — wrong. It has 4 valid TN endpoints.
+- "The crash reproduces" — wrong. It happened once in 5 attempts.
+- "The crash is a fixed bug" — wrong. It has not recurred, but it has not been diagnosed either.
+- "VAmPI vulnerable endpoints were tested" — still wrong. Path-param injection and detection classes are Phase 3 work.
+
+Process note: this is the fourth correction in the VAmPI workstream. Three of the four were triggered by writing claims before running the corresponding verification. Amendment 23 discipline at the claim level is the fix.
