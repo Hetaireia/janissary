@@ -16,3 +16,7 @@ gitea,/,GET,x,safe,true,,root_page_no_vuln
 gitea,/api/v1/version,GET,x,safe,true,,api_version_no_vuln
 gitea,/explore/repos,GET,x,safe,true,,public_repos_listing_no_vuln
 gitea,/explore/users,GET,x,safe,true,,public_users_listing_no_vuln
+nextcloud,/status.php,GET,x,safe,true,,status_json_no_vuln
+nextcloud,/,GET,x,safe,true,,root_redirect_no_vuln
+nextcloud,/index.php/login,GET,x,safe,true,,login_page_no_vuln
+nextcloud,/robots.txt,GET,x,safe,true,,robots_txt_no_vuln
