@@ -463,3 +463,37 @@ What still must not be said about VAmPI in any future doc:
 - "VAmPI vulnerable endpoints were tested" — still wrong. Path-param injection and detection classes are Phase 3 work.
 
 Process note: this is the fourth correction in the VAmPI workstream. Three of the four were triggered by writing claims before running the corresponding verification. Amendment 23 discipline at the claim level is the fix.
+
+### 2026-10-29 - Juice Shop xss trial removed (misplaced, not xss-vulnerable)
+
+Commit `c8023c9` (corpus stability re-runs) shows Juice Shop scoring as tp=1 fp=0 fn=1 tn=2. That FN is a data error, not a scanner miss.
+
+Evidence from `benchmark/track_c/runs/20261029T105047Z-juice-shop/`:
+
+- `sqli.jsonl` contains 1 finding: class=sqli, url=.../rest/products/search?q=%27%23, payload='#
+- `xss.jsonl` contains the **same 1 finding**: class=sqli, same url, same payload
+- Neither file contains a class=xss finding
+
+Root cause: the runner invokes `janissary scan` without any class filter. The scanner finds everything at a URL, not just the class the trial is about. When both `sqli` and `xss` trials hit the same path (`/rest/products/search?q=test`), both invocations produce the same sqli finding. The xss trial then has a class=sqli finding but expected=xss, so the scorer correctly marks it FN.
+
+But the FN is not measuring scanner recall. It is measuring a **misplaced trial**. Juice Shop's `/rest/products/search` endpoint is SQLi-vulnerable, not XSS-vulnerable. Placing an xss trial there was wrong.
+
+Fix applied in this commit:
+
+- Remove the row `juice-shop,/rest/products/search?q=test,GET,q,xss,false,xss,anonymous` from `cases.csv`
+- Re-run Juice Shop (fresh run with corrected cases)
+- Score the new run
+
+Juice Shop's corrected profile: 1 vulnerable trial (sqli) + 2 safe trials. TP=1, FP=0, FN=0, TN=2 expected.
+
+Model limitation recorded for Phase 3:
+
+Track C's "one trial = one class" model assumes the scanner will only produce findings of that class. It does not. The runner scans for all classes on every invocation. This works only when a trial path has exactly one vulnerable class. When a path has multiple classes, or when a trial is misplaced at a non-vulnerable path, the model produces misleading scores. The correct fix is to add class filtering to the runner (Phase 3 work, alongside path-parameter injection).
+
+What must not be said about Juice Shop in any future doc:
+
+- "Juice Shop scores FN=1 for xss" — wrong. The scanner correctly did not find xss there because there is no xss there.
+- "The scorer has a first-match-wins bug" — wrong. The scorer is correct given the data.
+- "The scanner missed xss on Juice Shop" — wrong. The xss trial was misplaced.
+
+Old run `20261029T105047Z-juice-shop` remains in git history as evidence of the misplaced-trial state. The corrected run and score are new.

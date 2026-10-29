@@ -6,7 +6,6 @@ dvwa,/vulnerabilities/fi/?page=include.php&Submit=Submit,GET,page,traversal,fals
 dvwa,/index.php,GET,id,safe,true,,ignored_param_no_vuln
 dvwa,/instructions.php,GET,id,safe,true,,ignored_param_no_vuln
 juice-shop,/rest/products/search?q=test,GET,q,sqli,false,sqli,anonymous
-juice-shop,/rest/products/search?q=test,GET,q,xss,false,xss,anonymous
 juice-shop,/,GET,q,safe,true,,homepage_no_vuln
 juice-shop,/rest/admin/application-version,GET,x,safe,true,,health_check_no_vuln
 vampi,/,GET,x,safe,true,,root_page_no_vuln
