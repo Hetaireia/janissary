@@ -12,3 +12,7 @@ vampi,/,GET,x,safe,true,,root_page_no_vuln
 vampi,/openapi.json,GET,x,safe,true,,openapi_spec_no_vuln
 vampi,/users/v1,GET,x,safe,true,,users_list_unauth_no_class_vuln
 vampi,/users/v1/_debug,GET,x,safe,true,,debug_leak_not_scanner_class
+gitea,/,GET,x,safe,true,,root_page_no_vuln
+gitea,/api/v1/version,GET,x,safe,true,,api_version_no_vuln
+gitea,/explore/repos,GET,x,safe,true,,public_repos_listing_no_vuln
+gitea,/explore/users,GET,x,safe,true,,public_users_listing_no_vuln

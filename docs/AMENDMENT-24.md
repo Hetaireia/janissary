@@ -497,3 +497,15 @@ What must not be said about Juice Shop in any future doc:
 - "The scanner missed xss on Juice Shop" — wrong. The xss trial was misplaced.
 
 Old run `20261029T105047Z-juice-shop` remains in git history as evidence of the misplaced-trial state. The corrected run and score are new.
+
+### 2026-10-29 - Gitea added as safe-only app
+
+Gitea joins the Track C corpus as the fourth app, safe-trials only. Image `gitea/gitea:1.22` digest `sha256:538658de667c5d098a274f2f63aa6ec891d88f670cdd5282cf27221ba747dda4`. Container `janissary-trackc-gitea` on port 3001.
+
+Safe endpoints: `/`, `/api/v1/version`, `/explore/repos`, `/explore/users`. None has a scanner-class vulnerability. Findings on them are FPs.
+
+First run: cases=4 safe=4 tp=0 fp=0 fn=0 tn=4 fp_rate_safe=0. See `benchmark/track_c/runs/20261029T113338Z-gitea/score.json`.
+
+Gitea contributes 4 more valid TN trials to Item A evidence. Corpus now: DVWA (mixed), Juice Shop (mixed, corrected), VAmPI (safe-only), Gitea (safe-only). Phase 2 progress: 4/5 apps.
+
+Gitea is not tested for any vulnerability here. Its known classes (path traversal in raw file serve, SSRF in webhooks, template injection in issue rendering) require either scanner detection classes that do not exist or path-parameter injection that the runner does not support. That is Phase 3 work, not Phase 2.
