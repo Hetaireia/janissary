@@ -105,5 +105,21 @@
       }
     ],
     "login": null
+  },
+  "gitea": {
+    "base_url": "http://127.0.0.1:3001",
+    "healthcheck": "/api/v1/version",
+    "image_digest": "sha256:538658de667c5d098a274f2f63aa6ec891d88f670cdd5282cf27221ba747dda4",
+    "security_level": null,
+    "excluded": false,
+    "trial_class": [],
+    "safe_endpoints": [
+      "/",
+      "/api/v1/version",
+      "/explore/repos",
+      "/explore/users"
+    ],
+    "known_vulnerable": [],
+    "login": null
   }
 }
