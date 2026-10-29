@@ -121,5 +121,21 @@
     ],
     "known_vulnerable": [],
     "login": null
+  },
+  "nextcloud": {
+    "base_url": "http://127.0.0.1:8082",
+    "healthcheck": "/status.php",
+    "image_digest": "sha256:515c072ea1cf82ece3503f301fdf75dd5a7148abcc8fa10aaefd5ec56643b703",
+    "security_level": null,
+    "excluded": false,
+    "trial_class": [],
+    "safe_endpoints": [
+      "/status.php",
+      "/",
+      "/index.php/login",
+      "/robots.txt"
+    ],
+    "known_vulnerable": [],
+    "login": null
   }
 }

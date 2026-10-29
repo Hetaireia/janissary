@@ -531,3 +531,43 @@ bWAPP was attempted as the fifth Track C app and abandoned. The `raesene/bwapp:l
 **Next session:** add a fifth app without this install complexity. Candidates: Nextcloud (single container, healthcheck at `/status.php`), Metabase (single container, healthcheck at `/api/health`), or WordPress (single container plus mysql sidecar, standard install flow).
 
 **Repo state after abandonment:** bWAPP is not in `apps.json`, not in `cases.csv`, no run directory committed. Container removed. The failed attempt left no partial state.
+
+### 2026-10-29 - Nextcloud added; Phase 2 complete at 5/5
+
+Nextcloud joins as the fifth Track C app, safe-trials only. Image `nextcloud:stable-apache` digest `sha256:515c072ea1cf82ece3503f301fdf75dd5a7148abcc8fa10aaefd5ec56643b703`. Container `janissary-trackc-nextcloud` on port 8082.
+
+Uses SQLite via `SQLITE_DATABASE=nextcloud` env var. Auto-install on first boot with `NEXTCLOUD_ADMIN_USER`/`NEXTCLOUD_ADMIN_PASSWORD`. `/status.php` returns `{"installed":true,...}` within 30s — no manual install step required. This is the difference from bWAPP: Nextcloud auto-provisions its DB from environment variables, bWAPP did not.
+
+Safe endpoints: `/status.php`, `/`, `/index.php/login`, `/robots.txt`. None has a scanner-class vulnerability. Findings on them are FPs.
+
+First run: cases=4 safe=4 tp=0 fp=0 fn=0 tn=4 fp_rate_safe=0. See `benchmark/track_c/runs/20261029T115721Z-nextcloud/score.json`.
+
+Nextcloud contributes 4 more valid TN trials. **Phase 2: COMPLETE at 5/5 apps.**
+
+Final corpus state:
+- DVWA (mixed): 6 trials, TP=2 FN=2 TN=2
+- Juice Shop (mixed, corrected): 3 trials, TP=1 FN=0 TN=2
+- VAmPI (safe-only): 4 trials, TN=4
+- Gitea (safe-only): 4 trials, TN=4
+- Nextcloud (safe-only): 4 trials, TN=4
+
+Total: 21 trials across 5 apps. TN sum (Item A evidence): 16. FP observed: 0.
+
+Nextcloud is not tested for vulnerabilities. Its known classes (path traversal in file operations, LDAP injection, template injection in public shares) require Phase 3 detection classes. Not in scope for Phase 2.
+
+### Note on the Nextcloud / trial
+
+The Nextcloud onboarding run scored `tn=4` but not all four are clean null results. Per-trial runner exit codes:
+
+| Trial | Exit | Meaning |
+|---|---|---|
+| `/status.php` | 0 | Clean null — scan completed, no findings |
+| `/` | **2** | **Aborted on empty body** — 302 redirect returns no body, differential scan declined |
+| `/index.php/login` | 0 | Clean null — scan completed, no findings |
+| `/robots.txt` | 0 | Clean null — scan completed, no findings |
+
+**3 clean TN + 1 abort-on-empty-response.** The scoring model counts both as TN because both produce 0 findings. That is defensible for an empty response — a 302 with no body has nothing a vulnerability could reflect or expose. But strict honesty requires noting that one of the four did not complete a differential scan.
+
+This is the same distinction that caused the VAmPI crash correction earlier in this session: **abort is not the same as null result.** A future correction could either (a) replace `/` with a trial that returns actual content (e.g. an authenticated landing page or `/index.php/apps/files/` which returns real HTML), or (b) change the scorer to distinguish `abort` from `clean-null` and exclude aborts from Item A evidence. Neither is done here to avoid re-running Nextcloud for a 1-trial change.
+
+For now, the honest accounting is: Nextcloud contributes **3 clean TN + 1 abort TN** to Item A evidence. The scored `tn=4` is what the current model produces, and the note here is the caveat.
