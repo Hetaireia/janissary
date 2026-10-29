@@ -110,7 +110,7 @@ def login(cfg: dict) -> requests.Session:
         r = s.post(base + login_cfg["post_url"], data=data, timeout=10, allow_redirects=True)
         print(f"  security set -> {r.status_code}, url={r.url}")
 
-    verify_url = base + "/vulnerabilities/sqli/?id=1"
+    verify_url = base + cfg.get("verify_url", "/vulnerabilities/sqli/?id=1")
     rv = s.get(verify_url, timeout=10, allow_redirects=True)
     if "login.php" in rv.url:
         raise SystemExit(f"not authenticated: {rv.url}")

@@ -93,10 +93,6 @@
     ],
     "known_vulnerable": [
       {
-        "path": "/books/v1/{book_title}",
-        "class": "sqli"
-      },
-      {
         "path": "/users/v1/_debug",
         "class": "info_disclosure"
       },
@@ -153,5 +149,39 @@
     ],
     "known_vulnerable": [],
     "login": null
+  },
+  "bwapp": {
+    "base_url": "http://127.0.0.1:8081",
+    "healthcheck": "/login.php",
+    "image_digest": null,
+    "security_level": "low",
+    "excluded": false,
+    "trial_class": [
+      "sqli"
+    ],
+    "safe_endpoints": [
+      "/",
+      "/info.php",
+      "/login.php",
+      "/install.php"
+    ],
+    "known_vulnerable": [
+      {
+        "path": "/sqli_1.php?title=test",
+        "class": "sqli"
+      }
+    ],
+    "login": {
+      "url": "/login.php",
+      "data": {
+        "login": "bee",
+        "password": "bug",
+        "security_level": "0",
+        "form": "submit"
+      },
+      "cookies": [],
+      "setup": []
+    },
+    "verify_url": "/portal.php"
   }
 }
