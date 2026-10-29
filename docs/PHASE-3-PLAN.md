@@ -129,3 +129,15 @@ VAmPI path SQLi is a **dev** trial. If `--inject-in path` implementation is foun
 - `docs/AMENDMENT-24.md` -- parent amendment
 - `docs/WORKFLOW.md` -- process discipline
 - `benchmark/track_c/SCHEMA.md` -- cases.csv schema (needs update when this lands)
+
+## Phase 3 — Corpus expansion
+
+### App 6: bWAPP (added cmd-79e)
+- Rationale: only candidate whose SQLi is a GET query param (`/sqli_1.php?title=`), testable by the query-param-only scanner with no new inject modes.
+- Rejected now: Juice Shop, crAPI (POST-body SQLi -> needs POST-body inject mode, the analogue of deferred 1c); WebGoat (lesson-gating + auth overhead).
+- Deployment: `raesene/bwapp` single container, host port 8081, DB install via `GET /install.php?install=yes` (must run once after boot).
+- Auth: POST /login.php with bee/bug + security_level=0 -> PHPSESSID cookie. Track_c runner obtains it via apps.json `login.data`; requests.Session persists.
+- Validation: track_c SQLi trial against `/sqli_1.php` with `-p title`, payload `'`. Success = scanner flags SQLi. First end-to-end positive detection in the corpus.
+- No CLI `--cookie` flag added: auth flows through apps.json login block, same as VAmPI JWT / DVWA cookies. Confirms §9 open risk is a non-issue.
+- Also folding in (same commit): correct VAmPI known_vulnerable — remove `/books/v1/{book_title}` sqli claim per cmd-77/78.
+- Scope stop: no app 7+, no POST-body mode, no crAPI/Juice Shop.
