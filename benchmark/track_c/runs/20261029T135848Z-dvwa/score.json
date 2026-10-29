@@ -1,0 +1,76 @@
+{
+  "app": "dvwa",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T135848Z-dvwa",
+  "cases": 6,
+  "vuln_cases": 4,
+  "safe_cases": 2,
+  "findings": 2,
+  "unmatched_findings": 0,
+  "tp": 2,
+  "fp": 0,
+  "fn": 2,
+  "tn": 2,
+  "aborts": 0,
+  "precision": 1.0,
+  "recall": 0.5,
+  "f1": 0.6667,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/vulnerabilities/sqli/?id=test&Submit=Submit",
+      "safe": false,
+      "expected": [
+        "sqli"
+      ],
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
+    },
+    {
+      "path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit",
+      "safe": false,
+      "expected": [
+        "sqli_blind"
+      ],
+      "findings": 0,
+      "outcome": "FN",
+      "aborted": false
+    },
+    {
+      "path": "/vulnerabilities/xss_r/?name=test",
+      "safe": false,
+      "expected": [
+        "xss"
+      ],
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
+    },
+    {
+      "path": "/vulnerabilities/fi/?page=include.php&Submit=Submit",
+      "safe": false,
+      "expected": [
+        "traversal"
+      ],
+      "findings": 0,
+      "outcome": "FN",
+      "aborted": false
+    },
+    {
+      "path": "/index.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/instructions.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    }
+  ]
+}

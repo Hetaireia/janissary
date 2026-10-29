@@ -51,6 +51,24 @@ def collect_findings(run_dir: Path) -> list[dict]:
     return findings
 
 
+def load_exit_codes(run_dir: Path) -> dict[str, dict]:
+    p = run_dir / "exit_codes.json"
+    if not p.exists():
+        return {}
+    try:
+        rows = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    out = {}
+    for r in rows:
+        try:
+            k = str(r["path"]) + "|" + str(r["method"]) + "|" + str(r["param"])
+        except KeyError:
+            continue
+        out[k] = r
+    return out
+
+
 def category_of(f: dict) -> str:
     return f.get("class") or f.get("category") or f.get("rule_id") or f.get("ruleId") or ""
 
@@ -103,6 +121,7 @@ def main() -> None:
 
     cases = load_cases(args.app)
     findings = collect_findings(run_dir)
+    exit_codes = load_exit_codes(run_dir)
 
     # Assign each finding to case(s) by class-aware attribution
     by_case: dict[int, list[dict]] = {}
@@ -121,6 +140,7 @@ def main() -> None:
         unmatched_findings += 1
 
     tp = fp = fn = tn = 0
+    aborts = 0
     per_case = []
     for c in cases:
         is_safe = (c.get("safe") or "false").strip().lower() == "true"
@@ -151,7 +171,24 @@ def main() -> None:
             "expected": sorted(expected_classes(c)) if not is_safe else [],
             "findings": len(cf),
             "outcome": outcome,
+            "aborted": False,
         })
+
+    for i, c in enumerate(cases):
+        k = str(c["path"]) + "|" + str(c["method"]) + "|" + str(c["param"])
+        ec = exit_codes.get(k, {})
+        if not ec.get("aborted"):
+            continue
+        if per_case[i]["findings"] > 0:
+            continue
+        if per_case[i]["safe"] and per_case[i]["outcome"] == "TN":
+            tn -= 1
+            aborts += 1
+            per_case[i]["outcome"] = "abort"
+            per_case[i]["aborted"] = True
+        elif not per_case[i]["safe"] and per_case[i]["outcome"] == "FN":
+            aborts += 1
+            per_case[i]["aborted"] = True
 
     P = tp / (tp + fp) if (tp + fp) else 0.0
     R = tp / (tp + fn) if (tp + fn) else 0.0
@@ -166,7 +203,7 @@ def main() -> None:
         "safe_cases": fp + tn,
         "findings": len(findings),
         "unmatched_findings": unmatched_findings,
-        "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+        "tp": tp, "fp": fp, "fn": fn, "tn": tn, "aborts": aborts,
         "precision": round(P, 4),
         "recall": round(R, 4),
         "f1": round(F1, 4),
@@ -176,7 +213,7 @@ def main() -> None:
     (run_dir / "score.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
     summary = {k: out[k] for k in (
         "app", "cases", "vuln_cases", "safe_cases", "findings",
-        "unmatched_findings", "tp", "fp", "fn", "tn",
+        "unmatched_findings", "tp", "fp", "fn", "tn", "aborts",
         "precision", "recall", "f1", "fp_rate_safe",
     )}
     print(json.dumps(summary, indent=2))
