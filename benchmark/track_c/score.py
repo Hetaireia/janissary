@@ -66,6 +66,10 @@ def case_path(c: dict) -> str:
     return p if p else "/"
 
 
+def is_safe_case(c: dict) -> bool:
+    return (c.get("safe") or "false").strip().lower() == "true"
+
+
 def finding_matches_case(f: dict, c: dict) -> bool:
     return finding_path(f).endswith(case_path(c))
 
@@ -100,16 +104,21 @@ def main() -> None:
     cases = load_cases(args.app)
     findings = collect_findings(run_dir)
 
-    # Assign each finding to at most one case (by URL match)
+    # Assign each finding to case(s) by class-aware attribution
     by_case: dict[int, list[dict]] = {}
     unmatched_findings = 0
     for f in findings:
-        matches = [c for c in cases if finding_matches_case(f, c)]
-        if not matches:
-            unmatched_findings += 1
+        f_class = category_of(f)
+        strict = [c for c in cases if finding_matches_case(f, c) and (is_safe_case(c) or f_class in expected_classes(c))]
+        if strict:
+            for c in strict:
+                by_case.setdefault(id(c), []).append(f)
             continue
-        key = id(matches[0])
-        by_case.setdefault(key, []).append(f)
+        url_only = [c for c in cases if finding_matches_case(f, c)]
+        if url_only:
+            by_case.setdefault(id(url_only[0]), []).append(f)
+            continue
+        unmatched_findings += 1
 
     tp = fp = fn = tn = 0
     per_case = []
