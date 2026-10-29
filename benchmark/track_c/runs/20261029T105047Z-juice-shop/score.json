@@ -1,0 +1,51 @@
+{
+  "app": "juice-shop",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T105047Z-juice-shop",
+  "cases": 4,
+  "vuln_cases": 2,
+  "safe_cases": 2,
+  "findings": 2,
+  "unmatched_findings": 0,
+  "tp": 1,
+  "fp": 0,
+  "fn": 1,
+  "tn": 2,
+  "precision": 1.0,
+  "recall": 0.5,
+  "f1": 0.6667,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/rest/products/search?q=test",
+      "safe": false,
+      "expected": [
+        "sqli"
+      ],
+      "findings": 2,
+      "outcome": "TP"
+    },
+    {
+      "path": "/rest/products/search?q=test",
+      "safe": false,
+      "expected": [
+        "xss"
+      ],
+      "findings": 0,
+      "outcome": "FN"
+    },
+    {
+      "path": "/",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/rest/admin/application-version",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    }
+  ]
+}
