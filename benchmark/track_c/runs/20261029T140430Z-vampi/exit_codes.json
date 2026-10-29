@@ -1,0 +1,57 @@
+[
+  {
+    "path": "/",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/openapi.json",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/users/v1",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/users/v1/_debug",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/me",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  }
+]

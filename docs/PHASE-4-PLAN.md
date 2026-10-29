@@ -47,7 +47,7 @@ Read: **the scanner never lies.** Every miss is on a known-vulnerable endpoint w
 
 ## The one known abort
 
-### ABORT-1: `preflight()` returns `"empty body"` on 302-redirecting roots
+### ABORT-1: `preflight()` returns `"empty body"` on 302-redirecting roots (CLOSED in cmd-91)
 - Affected: nextcloud `/` (302 → `/index.php/login`), bwapp `/` (302 → `/portal.php`), likely any login-gated app root.
 - Current code: `src/janissary/engine/scanner.py` line 398: `if not (r.text or "").strip(): return False, "empty body"`.
 - **Gap:** preflight doesn't follow redirects on the initial probe, so it sees the empty 302 body and aborts before any real scan.

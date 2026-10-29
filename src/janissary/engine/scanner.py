@@ -286,7 +286,7 @@ class Scanner:
             headers["X-Forwarded-For"] = "127.0.0.1"
         return headers
 
-    def _request(self, url: str, param: str, value: str) -> requests.Response | None:
+    def _request(self, url: str, param: str, value: str, allow_redirects: bool = False) -> requests.Response | None:
         if self.inject_in == "param-name":
             # OWASP Benchmark "getParameterNames" cases: the payload is
             # delivered as the parameter *name*, whose value is the
@@ -298,14 +298,14 @@ class Scanner:
                     headers=self._headers(),
                     data={value: param},
                     timeout=self.timeout,
-                    allow_redirects=False,
+                    allow_redirects=allow_redirects,
                     proxies=self.proxies,
                 )
             return self.session.get(
                 build_url(self.target, value, param),
                 headers=self._headers(),
                 timeout=self.timeout,
-                allow_redirects=False,
+                allow_redirects=allow_redirects,
                 proxies=self.proxies,
             )
 
@@ -315,7 +315,7 @@ class Scanner:
             kwargs = {
                 "headers": hdrs,
                 "timeout": self.timeout,
-                "allow_redirects": False,
+                "allow_redirects": allow_redirects,
                 "proxies": self.proxies,
             }
             if self.method == "POST":
@@ -327,7 +327,7 @@ class Scanner:
                 "headers": self._headers(),
                 "cookies": {param: value},
                 "timeout": self.timeout,
-                "allow_redirects": False,
+                "allow_redirects": allow_redirects,
                 "proxies": self.proxies,
             }
             if self.method == "POST":
@@ -348,14 +348,14 @@ class Scanner:
                 headers=self._headers(),
                 data={param: value},
                 timeout=self.timeout,
-                allow_redirects=False,
+                allow_redirects=allow_redirects,
                 proxies=self.proxies,
             )
         return self.session.get(
             build_url(url, param, value),
             headers=self._headers(),
             timeout=self.timeout,
-            allow_redirects=False,
+            allow_redirects=allow_redirects,
             proxies=self.proxies,
         )
 
@@ -387,7 +387,7 @@ class Scanner:
         """
         param = self.params[0] if self.params else "q"
         try:
-            r = self._request(self.target, param, "1")
+            r = self._request(self.target, param, "1", allow_redirects=True)
         except requests.RequestException as e:
             return False, f"request error: {e}"
         if r is None:
