@@ -571,3 +571,20 @@ The Nextcloud onboarding run scored `tn=4` but not all four are clean null resul
 This is the same distinction that caused the VAmPI crash correction earlier in this session: **abort is not the same as null result.** A future correction could either (a) replace `/` with a trial that returns actual content (e.g. an authenticated landing page or `/index.php/apps/files/` which returns real HTML), or (b) change the scorer to distinguish `abort` from `clean-null` and exclude aborts from Item A evidence. Neither is done here to avoid re-running Nextcloud for a 1-trial change.
 
 For now, the honest accounting is: Nextcloud contributes **3 clean TN + 1 abort TN** to Item A evidence. The scored `tn=4` is what the current model produces, and the note here is the caveat.
+
+### 2026-10-29 - case_path/finding_path root-path bug fixed
+
+**Bug:** `case_path("/")` returned `""` (empty string), because `"/".rstrip("/")` produces empty. Since Python`s `"anything".endswith("")` returns `True`, **every finding URL matched the root-path case**. Under the old first-match-wins attribution, the bug was hidden (root case was rarely first in CSV order). Under cmd-70`s class-aware attribution, it surfaced as a false positive: juice-shop`s sqli finding at `/rest/products/search` falsely matched the `/` safe trial, producing fp=1.
+
+**Fix:** `case_path` and `finding_path` in `score.py` now return `/` when the derived path is empty:
+
+```python
+    p = urlparse(url).path.rstrip("/")
+    return p if p else "/"
+```
+
+**Verification:** Juice Shop 112842 re-scored post-fix produces tp=1 fp=0 fn=0 tn=2 cases=3 — exactly matching the cmd-49 committed state. The fp=1 seen in cmd-70 was the bug, not a scanner false positive.
+
+**Note on cmd-70 regression:** cmd-70`s auto-revert restored score.py but did not restore score.json files it had corrupted during its regression-check pass. juice-shop 112842`s score.json was left in the corrupted state (tp=1 fp=1 tn=1) until cmd-71 re-scored it with the fixed logic. This is a workflow gap: reversion must include restoring any score.json files touched during the failed run.
+
+**Foundation for Phase 1b:** with case_path/finding_path correct, class-aware attribution (cmd-73) can be retried safely. The prior attempt (cmd-70) failed because it correctly attributed findings to multiple cases — but only produced correct output once the empty-path collision was eliminated.
