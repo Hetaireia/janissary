@@ -1,0 +1,35 @@
+[
+  {
+    "path": "/rest/products/search?q=test",
+    "method": "GET",
+    "param": "q",
+    "vuln_class": "sqli",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 2034,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/",
+    "method": "GET",
+    "param": "q",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/rest/admin/application-version",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  }
+]
