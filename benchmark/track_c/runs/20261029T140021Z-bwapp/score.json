@@ -1,15 +1,16 @@
 {
   "app": "bwapp",
-  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T135350Z-bwapp",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T140021Z-bwapp",
   "cases": 7,
   "vuln_cases": 3,
   "safe_cases": 4,
-  "findings": 10,
+  "findings": 2,
   "unmatched_findings": 0,
   "tp": 2,
   "fp": 0,
   "fn": 1,
   "tn": 4,
+  "aborts": 0,
   "precision": 1.0,
   "recall": 0.6667,
   "f1": 0.8,
@@ -21,36 +22,41 @@
       "expected": [
         "sqli"
       ],
-      "findings": 8,
-      "outcome": "TP"
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
     },
     {
       "path": "/portal.php",
       "safe": true,
       "expected": [],
       "findings": 0,
-      "outcome": "TN"
+      "outcome": "TN",
+      "aborted": false
     },
     {
       "path": "/info.php",
       "safe": true,
       "expected": [],
       "findings": 0,
-      "outcome": "TN"
+      "outcome": "TN",
+      "aborted": false
     },
     {
       "path": "/login.php",
       "safe": true,
       "expected": [],
       "findings": 0,
-      "outcome": "TN"
+      "outcome": "TN",
+      "aborted": false
     },
     {
       "path": "/install.php",
       "safe": true,
       "expected": [],
       "findings": 0,
-      "outcome": "TN"
+      "outcome": "TN",
+      "aborted": false
     },
     {
       "path": "/xss_get.php?firstname=test&lastname=placeholder&form=submit",
@@ -58,8 +64,9 @@
       "expected": [
         "xss"
       ],
-      "findings": 2,
-      "outcome": "TP"
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
     },
     {
       "path": "/directory_traversal_1.php?page=test",
@@ -68,7 +75,8 @@
         "traversal"
       ],
       "findings": 0,
-      "outcome": "FN"
+      "outcome": "FN",
+      "aborted": false
     }
   ]
 }

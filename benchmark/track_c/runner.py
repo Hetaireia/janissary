@@ -137,9 +137,37 @@ def wait_healthy(cfg: dict, timeout_s: int = 90) -> None:
     raise SystemExit(f"{url} never became healthy")
 
 
-def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -> None:
+def _dedupe_jsonl(path: Path) -> int:
+    """Keep at most one row per fingerprint in the JSONL at `path`.
+
+    The scanner emits one row per (payload, url, class) hit; trial-level
+    semantics want one row per (fingerprint). Returns number of dropped rows.
+    """
+    if not path.exists() or path.stat().st_size == 0:
+        return 0
+    lines = path.read_text(encoding="utf-8").splitlines()
+    kept, seen = [], set()
+    for line in lines:
+        s = line.strip()
+        if not s:
+            continue
+        try:
+            rec = json.loads(s)
+        except json.JSONDecodeError:
+            kept.append(s); continue
+        fp = rec.get("fingerprint")
+        if fp is None or fp not in seen:
+            seen.add(fp) if fp is not None else None
+            kept.append(s)
+    dropped = len(lines) - len(kept)
+    if dropped:
+        path.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    return dropped
+
+
+def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -> dict:
     base = cfg["base_url"]
-    url = base + case["path"]  # path carries the full query string (DVWA needs Submit=Submit, etc.)
+    url = base + case["path"]
     cmd = [
         "janissary", "scan",
         "-u", url,
@@ -155,19 +183,41 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -
         cmd += ["--cookie", cookie_hdr]
     out = out_dir / f"{case['vuln_class']}.jsonl"
     err = out_dir / f"{case['vuln_class']}.stderr"
+    record = {
+        "path": case["path"],
+        "method": case["method"],
+        "param": case["param"],
+        "vuln_class": case["vuln_class"],
+        "safe": (case.get("safe") or "false").strip().lower() == "true",
+        "exit": None,
+        "out_bytes": 0,
+        "dropped": 0,
+        "aborted": False,
+    }
     try:
         with open(out, "w", encoding="utf-8") as fout, open(err, "w", encoding="utf-8") as ferr:
             proc = subprocess.run(cmd, stdout=fout, stderr=ferr, timeout=180)
+        err_text = ""
+        try:
+            err_text = err.read_text(encoding="utf-8")
+        except OSError:
+            pass
+        dropped = _dedupe_jsonl(out)
         sz = out.stat().st_size
+        aborted = proc.returncode == 2 or "aborted" in err_text
+        record.update(exit=proc.returncode, out_bytes=sz, dropped=dropped, aborted=aborted)
         line = f"  {case['method']} {case['path']} param={case['param']} ({case['vuln_class']}) -> exit {proc.returncode}, {sz}B"
-        if proc.returncode not in (0, 1):
-            with open(err, encoding="utf-8") as f:
-                preview = f.read(500).strip().replace("\n", " ")
+        if dropped:
+            line += f" [dedupe: -{dropped}]"
+        if aborted and proc.returncode not in (0, 1):
+            preview = err_text.strip().replace("\n", " ")[:200]
             if preview:
-                line += f"   [stderr: {preview[:200]}]"
+                line += f"   [stderr: {preview}]"
         print(line)
     except subprocess.TimeoutExpired:
         print(f"  {case['method']} {case['path']} ({case['vuln_class']}) -> TIMEOUT")
+        record.update(exit=-1, aborted=False)
+    return record
 
 
 def main() -> None:
@@ -192,14 +242,16 @@ def main() -> None:
     out_dir.mkdir(parents=True)
     print(f"[track_c] run dir: {out_dir}")
 
+    records = []
     for c in cases:
-        scan_case(cfg, session, c, out_dir)
+        records.append(scan_case(cfg, session, c, out_dir))
 
     (out_dir / "manifest.json").write_text(json.dumps({
         "app": args.app,
         "cases": len(cases),
         "stamp": stamp,
     }, indent=2))
+    (out_dir / "exit_codes.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
     print(f"[track_c] done: {out_dir}")
 
 
