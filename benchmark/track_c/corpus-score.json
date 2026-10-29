@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-29T14:04:58Z",
+  "timestamp": "2026-10-29T15:15:03Z",
   "apps": {
     "dvwa": {
       "recall": 0.5,
@@ -67,28 +67,97 @@
       "tp": 0
     },
     "bwapp": {
-      "recall": 0.6667,
-      "tn": 4,
-      "run": "20261029T140449Z-bwapp",
-      "unmatched": 0,
-      "f1": 0.8,
-      "precision": 1.0,
-      "fp_rate_safe": 0.0,
+      "app": "bwapp",
+      "cases": 7,
+      "vuln_cases": 3,
+      "safe_cases": 4,
+      "findings": 3,
+      "unmatched_findings": 0,
+      "tp": 3,
       "fp": 0,
-      "fn": 1,
+      "fn": 0,
+      "tn": 4,
       "aborts": 0,
-      "tp": 2
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "fp_rate_safe": 0.0,
+      "per_case": [
+        {
+          "path": "/sqli_1.php?title=test",
+          "safe": false,
+          "expected": [
+            "sqli"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        },
+        {
+          "path": "/portal.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/info.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/login.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/install.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/xss_get.php?firstname=test&lastname=placeholder&form=submit",
+          "safe": false,
+          "expected": [
+            "xss"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        },
+        {
+          "path": "/directory_traversal_1.php?page=test",
+          "safe": false,
+          "expected": [
+            "traversal"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        }
+      ],
+      "run": "20261029T151248Z-bwapp"
     }
   },
   "totals": {
-    "tp": 5,
+    "tp": 6,
     "fp": 0,
-    "fn": 3,
+    "fn": 2,
     "tn": 21,
     "aborts": 0,
     "precision": 1.0,
-    "recall": 0.625,
-    "f1": 0.7692,
+    "recall": 0.75,
+    "f1": 0.8571,
     "fp_rate_safe": 0.0,
     "unmatched_findings": 0
   },
