@@ -1,0 +1,74 @@
+{
+  "app": "bwapp",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T134857Z-bwapp",
+  "cases": 7,
+  "vuln_cases": 3,
+  "safe_cases": 4,
+  "findings": 8,
+  "unmatched_findings": 0,
+  "tp": 1,
+  "fp": 0,
+  "fn": 2,
+  "tn": 4,
+  "precision": 1.0,
+  "recall": 0.3333,
+  "f1": 0.5,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/sqli_1.php?title=test",
+      "safe": false,
+      "expected": [
+        "sqli"
+      ],
+      "findings": 8,
+      "outcome": "TP"
+    },
+    {
+      "path": "/",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/info.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/login.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/install.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN"
+    },
+    {
+      "path": "/xss_get.php?name=test",
+      "safe": false,
+      "expected": [
+        "xss"
+      ],
+      "findings": 0,
+      "outcome": "FN"
+    },
+    {
+      "path": "/directory_traversal_1.php?page=test",
+      "safe": false,
+      "expected": [
+        "traversal"
+      ],
+      "findings": 0,
+      "outcome": "FN"
+    }
+  ]
+}
