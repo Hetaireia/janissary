@@ -1,89 +1,87 @@
-# Phase 4 — Detection Gaps & Mode Extensions
+# Phase 4 - Detection Gaps & Mode Extensions
 
-**Status:** proposed (design only, no code yet)
-**Prerequisite:** Phase 3 closed at `725f942` — corpus-wide baseline measured.
+**Status:** CLOSED. All FNs resolved in Phase 4 execution.
+**Prerequisite:** Phase 3 closed at `725f942` - corpus-wide baseline measured.
 **Parent:** `docs/AMENDMENT-24.md` (Phase 3 harness), `docs/PHASE-3-PLAN.md`.
 
 ## Baseline state at Phase 3 close (commit `725f942`)
 
 Corpus-wide aggregate from `benchmark/track_c/corpus-score.json`:
 
-| Metric | Value | Note |
-|---|---|---|
-| Apps | 6 | dvwa, juice-shop, vampi, gitea, nextcloud, bwapp |
-| tp | 5 | dvwa 2, juice-shop 1, bwapp 2 |
-| fp | 0 | across all 21 safe trials |
-| fn | 3 | dvwa 2, bwapp 1 — all confirmed-vulnerable endpoints |
-| tn | 20 | scanner correctly quiet on safe endpoints |
-| aborts | 1 | nextcloud `/` (302 redirect) |
-| precision | 1.0 | no false positives |
-| recall | 0.625 | every miss is a *detection gap*, not a false claim |
-| f1 | 0.7692 | |
-| fp_rate_safe | 0.0 | |
-| unmatched_findings | 0 | no scanner hallucination on un-asked URLs |
+| Metric | Value |
+|---|---|
+| Apps | 6 (dvwa, juice-shop, vampi, gitea, nextcloud, bwapp) |
+| tp | 5 |
+| fp | 0 |
+| fn | 3 |
+| tn | 20 |
+| precision | 1.0 |
+| recall | 0.625 |
+| f1 | 0.7692 |
 
-Read: **the scanner never lies.** Every miss is on a known-vulnerable endpoint we've confirmed is real. That's the honest interpretation — Phase 4 is about closing FNs, not cleaning FPs.
+Read: **the scanner never lies.** Every miss was on a known-vulnerable endpoint. Phase 4 was about closing FNs, not cleaning FPs.
 
-## The three FNs (all confirmed vulnerable)
+## Closeout (Phase 4 execution)
 
-### FN-1: dvwa `/vulnerabilities/sqli_blind/?id=` (class `sqli_blind`)
-- Endpoint returns distinct responses for TRUE vs FALSE conditions (blind injection is by definition real).
-- Current scanner requires either a SQL error string or a response-shape delta the collapse oracle recognizes.
-- **Gap:** the collapse oracle's `_aux_tiny_body` threshold (10% × baseline_mean, per handover §5) and the length-delta thresholds are too conservative for blind cases where the delta is small but consistent.
-- **Fix shape:** add a blind-SQLi aux oracle — request the endpoint with a TRUE-condition payload and FALSE-condition payload, measure response length delta, require consistency across ≥2 pairs. Unit-testable with synthetic responses.
+All three FNs closed. Corpus: **tp=8 fp=0 fn=0 tn=21 recall=1.0 f1=1.0**.
 
-### FN-2: dvwa `/vulnerabilities/fi/?page=include.php` (class `traversal`)
-- Endpoint returns distinct file content for different `page=` values (file inclusion is by definition real).
-- Current scanner's traversal oracle compares baseline vs payload body but requires a signature-shaped delta the local-file-inclusion case doesn't produce (it returns different HTML, not an error page).
-- **Gap:** traversal oracle too narrow — it looks for "canary is missing" or "error page replaced content," but LFI returns *different valid content*.
-- **Fix shape:** add an LFI-shape oracle — request two distinct file paths known to exist on DVWA (e.g. `include.php` vs `include2.php`), verify response bodies differ meaningfully, then inject traversal payloads and require a third distinct body that isn't a 404 page.
+| FN | Endpoint | Initial classification | Actual root cause | Commit |
+|---|---|---|---|---|
+| FN-3 | bwapp `/directory_traversal_1.php` | needs LFI-shape oracle | Confirmed: content-injection oracle needed | `bcb140e` |
+| FN-2 | dvwa `/vulnerabilities/fi/` | "oracle too narrow" | **Wrong.** Payload-library depth gap (3-deep vs 5-deep) | `1ee061d` |
+| FN-1 | dvwa `/vulnerabilities/sqli_blind/` | "temporal/paired-request" | **Wrong.** Status-code delta, not timing | `502c54a` |
 
-### FN-3: bwapp `/directory_traversal_1.php?page=` (class `traversal`)
-- Direct probe of `page=../../../etc/passwd` returns `root:x:` in the body (confirmed in cmd-81 §A).
-- Same gap as FN-2 — scanner emits nothing because the body-content differential isn't a shape it recognizes.
-- **Fix shape:** shares FN-2's new oracle. Would fire on bwapp immediately if FN-2's oracle is generic.
+### FN-3 closeout - LFI content oracle
 
-**Combined estimate for FN-1 + FN-2 + FN-3:** one to two sessions. FN-2's oracle is the hardest — it needs a body-content fingerprint that recognizes "different valid content" vs "error page" vs "same content reflected."
+The collapse oracle (`ADR-006`) catches structural removal. It cannot catch
+in-page LFI where the file content appears inside a preserved page structure.
+Fix: `src/janissary/detection/lfi_oracle.py` - content-signature oracle
+(passwd/shadow/hosts/win.ini/group regexes), fires when the signature
+appears in the payload response but not in any baseline snapshot.
 
-## The one known abort
+### FN-2 closeout - payload depth, not oracle
 
-### ABORT-1: `preflight()` returns `"empty body"` on 302-redirecting roots (CLOSED in cmd-91)
-- Affected: nextcloud `/` (302 → `/index.php/login`), bwapp `/` (302 → `/portal.php`), likely any login-gated app root.
-- Current code: `src/janissary/engine/scanner.py` line 398: `if not (r.text or "").strip(): return False, "empty body"`.
-- **Gap:** preflight doesn't follow redirects on the initial probe, so it sees the empty 302 body and aborts before any real scan.
-- **Fix shape:** in `preflight()`, either (a) pass `allow_redirects=True` on the probe request, or (b) treat 3xx as preflight-pass (a live app that redirects is a live app). Option (a) is more useful — it gives a real body to work with.
-- **Cost:** one line, one test.
-- **Justification:** two corpus apps hit this. Not speculative.
+Original analysis: "traversal oracle too narrow - it looks for canary-is-missing,
+but LFI returns different valid content."
 
-## The one mode gap (deferred from Phase 1c)
+Empirical probe against DVWA at `low` security showed:
+- `page=file1.php` through `file4.php` all return distinct valid content (page param honored)
+- Traversal depth 1-4 all return uniform 3244B (not deep enough)
+- Traversal depth 5+ (`../../../../../etc/passwd`) and absolute `/etc/passwd` both return 4219B with passwd content
 
-### POST-BODY-INJECT — structural analogue of Phase 1c (`--inject-in path`)
-- Current scanner: query-param inject only. `--inject-in` accepts `query` (default); `path` is unimplemented (deferred 1c).
-- Candidate apps needing POST-body inject: **crAPI** (`/workshop/...` form and JSON bodies), **Juice Shop** (`/rest/user/login` JSON body — SQLi in email field, XSS in multiple).
-- **Decision recorded in Phase 3 §5:** do not build until a real corpus app justifies it. That justification is now available (Juice Shop is already in the corpus with 1 vuln case; crAPI is not yet added). But Juice Shop's *current* vuln case (search param) already fires — POST-body would only increase depth, not add new coverage unless we add crAPI or expand Juice Shop's case set.
-- **Provisional sequencing:** do NOT start POST-body inject until (a) FN-1/2/3 are closed and (b) crAPI is added to the corpus as app 7, at which point POST-body mode has two justifying apps.
+Root cause: DVWA's FI page sits 5 path segments from `/`; the payload library
+only shipped 3-deep payloads (tuned for bWAPP, 2 segments). The LFI oracle
+was correct - it just never saw passwd content because the payload couldn't
+reach the file.
 
-## Non-goals
+Fix: added `traversal_passwd_deep` (`../../../../../etc/passwd`) and
+`traversal_passwd_abs` (`/etc/passwd`) to `DEFAULT_PAYLOADS` in `scanner.py`.
+No oracle change.
 
-- **No new scanner features without a real target.** Same discipline as Phase 1c / §5.
-- **No score.py or emitter changes.** Both were hardened in `725f942`; further changes come from measurement needs, not speculative cleanup.
-- **No `src/` tree dedupe.** The tree has two nested git repos (`janissary/.git` outer, `janissary/janissary/.git` inner) plus a 7.5.0 worktree. Which copies are load-bearing for the venv / inner repo hasn't been determined. Requires its own diagnostic (identify what's tracked where) before any rm. Not a Phase 4 concern.
+### FN-1 closeout - status-code delta, not timing
 
-## Suggested sequencing
+Original analysis: "requires a temporal/paired-request oracle."
 
-1. **ABORT-1 first** (root-URL preflight fix). 1 line, 1 test, closes 1 abort in the corpus, demonstrates the "measure → fix → re-measure" loop. Lowest risk, highest clarity.
-2. **FN-3 (bwapp traversal) next.** The body-content differential is the simplest case — confirmed by direct probe, single-payload shape.
-3. **FN-2 (dvwa LFI) next** — same oracle as FN-3, adds one more app's coverage.
-4. **FN-1 (blind SQLi) last of the FNs** — requires a temporal/paired-request oracle, most code.
-5. **POST-body inject + crAPI** — only after 1-4 land, as its own design + implementation phase.
+Empirical probe against DVWA at `low` security showed:
+- `1' AND SLEEP(3)#` returns in 3.01s (MySQL SLEEP blocked from returning data, but the time delay fires - however this is unreliable cross-platform)
+- **Status code delta is the reliable signal:** `1' OR '1'='1` -> 200, `1' AND '1'='2` -> 404
+- Body length is essentially identical (4561 vs 4567, delta 0.1%) - length alone would not fire
+- Numeric pairs (`1 OR 1=1` vs `1 AND 1=2`) do not differentiate (MySQL type coercion)
 
-## On each phase-4 item, the loop is:
+Fix: `src/janissary/detection/blind_sqli_oracle.py` - paired-request oracle
+gated on status code, with length-delta fallback when neither payload is
+reflected. Quoted string payloads only (`1' OR '1'='1` vs `1' AND '1'='2`).
 
-design commit → implementation → trial run → score → commit. If a trial doesn't fire, diagnostic first, minimal fix. Same discipline that closed Phase 3.
+## Non-goals (unchanged)
+
+- No new scanner features without a real target.
+- No score.py or emitter changes without a measurement need.
+- POST-body inject deferred until crAPI is added as a real corpus app.
 
 ## Reference
 
-- `benchmark/track_c/corpus-score.json` — the baseline that Phase 4 improves against.
-- `docs/PHASE-3-PLAN.md` — prior phase.
-- `docs/AMENDMENT-24.md` — the trial model (TP/FP/FN/TN).
-- `benchmark/track_c/SCHEMA.md` — case schema, abort field added in `725f942`.
+- `benchmark/track_c/corpus-score.json` - the live baseline.
+- `docs/PHASE-3-PLAN.md` - prior phase.
+- `docs/AMENDMENT-24.md` - the trial model (TP/FP/FN/TN).
+- `benchmark/track_c/SCHEMA.md` - case schema.
+- `docs/decisions/ADR-006-traversal-collapse-oracle.md` - collapse oracle design.
