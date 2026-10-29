@@ -57,11 +57,13 @@ def category_of(f: dict) -> str:
 
 def finding_path(f: dict) -> str:
     url = f.get("url") or ""
-    return urlparse(url).path.rstrip("/")
+    p = urlparse(url).path.rstrip("/")
+    return p if p else "/"
 
 
 def case_path(c: dict) -> str:
-    return c["path"].split("?")[0].rstrip("/")
+    p = c["path"].split("?")[0].rstrip("/")
+    return p if p else "/"
 
 
 def finding_matches_case(f: dict, c: dict) -> bool:
