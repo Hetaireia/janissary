@@ -624,3 +624,23 @@ For now, the honest accounting is: Nextcloud contributes **3 clean TN + 1 abort 
 **Effect on measurement:** VAmPI now contributes 5 valid TN trials instead of 4. Two of them (`/users/v1/_debug`, `/me`) require auth.
 
 **Concrete impact on future work:** JWT-authenticated endpoints are now testable. This is the harness capability required for Item A measurement on apps with token-based auth (Juice Shop, Nextcloud, future apps).
+
+### 2026-10-29 - Phase 1b: class-aware attribution in score.py
+
+**Feature:** findings are now attributed to case(s) by class, not just URL. This is a scorer-only change (no runner or scanner modification).
+
+**The bug this fixes:** when two trials share the same URL with different expected classes (e.g. `sqli` and `xss` trials both targeting `/rest/products/search`), the old first-match-wins logic attributed every finding to the first row in `cases.csv`. The second trial always got 0 findings → FN.
+
+**The mechanism of the fix:** each finding is now assigned to:
+
+1. **Strict matches** — cases whose URL matches AND (case is safe OR finding class is in `expected_classes(case)`). All strict matches receive the finding. This is the correct behavior when a URL has one trial per class.
+2. **URL-only fallback** — if no strict matches, the finding is assigned to the first URL match, preserving the old behavior for the safe-trial case where a wrong-class finding should still count as FP.
+3. **Unmatched** — if no URL match, `unmatched_findings` is incremented (unchanged).
+
+**Helper added:** `is_safe_case(c) -> bool` (reads `c.get("safe")` field, handles absent and case-insensitive).
+
+**Verification:** cmd-74 pre-edit fresh baseline on all 6 current-case-set runs, post-edit fresh re-score, all 6 matched exactly. Zero regressions.
+
+**Forward-looking nature:** the current corpus has no trial with two same-URL cases of different classes (the Juice Shop xss trial was removed in commit `5970b4c`). So this fix does not change any current score. Its value is correctness for future trials that legitimately exercise multiple vulnerability classes at one endpoint.
+
+**Foundation for Phase 1c:** with case_path/finding_path fixed (cmd-72) and class-aware attribution correct (this change), the scorer will correctly handle a future path-param injection trial whose URL path differs by payload but whose base path overlaps other trials.
