@@ -65,6 +65,28 @@ def login(cfg: dict) -> requests.Session:
         return s
     base = cfg["base_url"]
 
+    if "capture_jwt_from_json" in login_cfg:
+        if "pre_register" in login_cfg:
+            pr = login_cfg["pre_register"]
+            try:
+                s.post(base + pr["url"], json=pr["json"], timeout=10)
+            except requests.RequestException as e:
+                print(f"  pre_register failed: {e}")
+        r = s.post(base + login_cfg["url"], json=login_cfg["data"], timeout=10)
+        if r.status_code != 200:
+            raise SystemExit(f"login POST failed: {r.status_code}")
+        try:
+            resp = r.json()
+        except Exception as e:
+            raise SystemExit(f"login response not JSON: {e}")
+        jwt_field = login_cfg["capture_jwt_from_json"]
+        jwt = resp.get(jwt_field)
+        if not jwt:
+            raise SystemExit(f"login missing field {jwt_field!r}; keys={list(resp.keys())}")
+        s._jns_bearer = jwt
+        print(f"  JWT captured from {jwt_field!r}: {len(jwt)} chars")
+        return s
+
     ok, where = _login_once(s, base, login_cfg)
     print(f"  login #1 -> ok={ok}, where={where}")
     if not ok:
@@ -126,6 +148,8 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -
         "--jsonl", "--quiet",
         "--no-waf",
     ]
+    if hasattr(session, "_jns_bearer") and session._jns_bearer:
+        cmd += ["--bearer", session._jns_bearer]
     if session.cookies:
         cookie_hdr = "; ".join(f"{c.name}={c.value}" for c in session.cookies)
         cmd += ["--cookie", cookie_hdr]

@@ -588,3 +588,39 @@ For now, the honest accounting is: Nextcloud contributes **3 clean TN + 1 abort 
 **Note on cmd-70 regression:** cmd-70`s auto-revert restored score.py but did not restore score.json files it had corrupted during its regression-check pass. juice-shop 112842`s score.json was left in the corrupted state (tp=1 fp=1 tn=1) until cmd-71 re-scored it with the fixed logic. This is a workflow gap: reversion must include restoring any score.json files touched during the failed run.
 
 **Foundation for Phase 1b:** with case_path/finding_path correct, class-aware attribution (cmd-73) can be retried safely. The prior attempt (cmd-70) failed because it correctly attributed findings to multiple cases — but only produced correct output once the empty-path collision was eliminated.
+
+### 2026-10-29 - Phase 1a: JWT auth support in runner
+
+**Feature:** `runner.py` now supports JWT-based authentication for targets that return a token in a JSON response body instead of a Set-Cookie header.
+
+**Runner change (login() function):**
+
+- New config key `login.capture_jwt_from_json` names the JSON field holding the token.
+- On login, POST credentials as JSON, extract the field, store on the session object as `_jns_bearer`.
+- Optional `login.pre_register` sub-config: POST a registration payload first (for targets requiring an initial user).
+
+**Runner change (scan_case() function):**
+
+- If session has `_jns_bearer`, append `--bearer <token>` to the janissary scan command.
+
+**VAmPI wiring (apps.json):**
+
+- `login.url=/users/v1/login`, `data={username, password}`, `capture_jwt_from_json=auth_token`.
+- `pre_register.url=/users/v1/register`, `json={username, password, email}` — idempotent, safe if user exists.
+- `/me` added to `safe_endpoints`.
+
+**Trial added (cases.csv):**
+
+- `vampi,/me,GET,x,safe,true,,me_user_info_via_jwt`
+
+**Verification (cmd-69, run `20261029T125015Z-vampi`):**
+
+- Manual login: 151-char JWT captured from `auth_token` field.
+- `/me` with `Authorization: Bearer <jwt>` returns HTTP 200.
+- `/me` without Bearer returns HTTP 401.
+- Runner captured JWT on its own (`JWT captured from auth_token: 151 chars`).
+- 5 vampi trials: tp=0 fp=0 fn=0 tn=5, findings=0.
+
+**Effect on measurement:** VAmPI now contributes 5 valid TN trials instead of 4. Two of them (`/users/v1/_debug`, `/me`) require auth.
+
+**Concrete impact on future work:** JWT-authenticated endpoints are now testable. This is the harness capability required for Item A measurement on apps with token-based auth (Juice Shop, Nextcloud, future apps).

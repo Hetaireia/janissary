@@ -88,7 +88,8 @@
       "/",
       "/openapi.json",
       "/users/v1",
-      "/users/v1/_debug"
+      "/users/v1/_debug",
+      "/me"
     ],
     "known_vulnerable": [
       {
@@ -104,7 +105,22 @@
         "class": "mass_assignment"
       }
     ],
-    "login": null
+    "login": {
+      "url": "/users/v1/login",
+      "data": {
+        "username": "jns_test",
+        "password": "JNSRY_t3st_pw"
+      },
+      "capture_jwt_from_json": "auth_token",
+      "pre_register": {
+        "url": "/users/v1/register",
+        "json": {
+          "username": "jns_test",
+          "password": "JNSRY_t3st_pw",
+          "email": "jns@example.invalid"
+        }
+      }
+    }
   },
   "gitea": {
     "base_url": "http://127.0.0.1:3001",
