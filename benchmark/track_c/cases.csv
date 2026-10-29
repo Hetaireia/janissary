@@ -22,3 +22,9 @@ nextcloud,/index.php/login,GET,x,safe,true,,login_page_no_vuln
 nextcloud,/robots.txt,GET,x,safe,true,,robots_txt_no_vuln
 vampi,/me,GET,x,safe,true,,me_user_info_via_jwt
 bwapp,/sqli_1.php?title=test,GET,title,sqli,false,sqli,requires_low_security_and_login
+bwapp,/,GET,x,safe,true,,safe_endpoint_no_vuln
+bwapp,/info.php,GET,x,safe,true,,safe_endpoint_no_vuln
+bwapp,/login.php,GET,x,safe,true,,safe_endpoint_no_vuln
+bwapp,/install.php,GET,x,safe,true,,safe_endpoint_no_vuln
+bwapp,/xss_get.php?name=test,GET,name,xss,false,xss,requires_low_security_and_login
+bwapp,/directory_traversal_1.php?page=test,GET,page,traversal,false,traversal,requires_low_security_and_login
