@@ -1,5 +1,36 @@
 # Changelog
 
+## [7.6.0] - 2026-10-30
+
+Phase 4 completion. Closes all three FNs from the track C baseline (dvwa, bwapp).
+
+### Added
+- **LFI content oracle** (`src/janissary/detection/lfi_oracle.py`) - detects in-page
+  file-content injection via passwd/shadow/hosts/win.ini/group signature matching.
+  Fires when a payload response contains a known-file signature absent from every
+  baseline snapshot. Closes FN-3 (bwapp `/directory_traversal_1.php`).
+- **Blind SQLi paired oracle** (`src/janissary/detection/blind_sqli_oracle.py`) -
+  paired TRUE/FALSE payload detection (`1' OR '1'='1` vs `1' AND '1'='2`). Status
+  code delta is authoritative; length delta is gated on no-reflection. Closes FN-1
+  (dvwa `/vulnerabilities/sqli_blind/`).
+- **Deep + absolute traversal payloads** - `traversal_passwd_deep`
+  (`../../../../../etc/passwd`) and `traversal_passwd_abs` (`/etc/passwd`) added to
+  `DEFAULT_PAYLOADS`. The original 3-deep payloads work on bWAPP (2 segments) but
+  cannot reach `/etc/passwd` from DVWA (5 segments). Closes FN-2
+  (dvwa `/vulnerabilities/fi/`).
+- 14 new unit tests (5 LFI oracle, 9 blind SQLi oracle). Total unit suite: 550.
+
+### Measurement
+Track C corpus: **tp=8 fp=0 fn=0 tn=21 recall=1.0 precision=1.0 f1=1.0** across
+6 apps. Previously tp=5 fn=3 recall=0.625 f1=0.7692. Precision maintained at 1.0;
+zero false positives across all 21 safe trials.
+
+### Notes
+- `PHASE-4-PLAN.md` corrected: FN-1 was misdiagnosed as "temporal oracle needed"
+  (actually status-code delta); FN-2 as "oracle too narrow" (actually payload-depth
+  gap). FN-3 classification was correct.
+- SSRF detection (7.5.0) unchanged.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
