@@ -30,6 +30,7 @@ from janissary.detection import (
 )
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
 from janissary.detection.lfi_oracle import check_lfi_content_oracle
+from janissary.detection.blind_sqli_oracle import check_blind_sqli_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
 from janissary.output.raw_http import (
@@ -68,6 +69,8 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal", "critical"),
     ("traversal_passwd_deep", "../../../../../etc/passwd", "traversal", "critical"),
     ("traversal_passwd_abs", "/etc/passwd", "traversal", "critical"),
+    ("sqli_blind_true", "1' OR '1'='1", "sqli_blind", "high"),
+    ("sqli_blind_false", "1' AND '1'='2", "sqli_blind", "high"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
     ("cmdi_sleep", "; sleep 5", "cmdi", "critical"),
     # cmdi on Linux without a shell wrapper: Runtime.exec() splits the
@@ -619,6 +622,9 @@ class Scanner:
                 )
 
             ldap_wild_snap = None
+            sqli_blind_true_snap = None
+            sqli_blind_true_status = 0
+            sqli_blind_true_payload = ""
             ldap_wild_resp = None
             for name, value, category, _severity in self._payloads:
                 try:
@@ -736,6 +742,44 @@ class Scanner:
                                 f"| {lf['detail'][:80]}"
                             )
 
+                # Blind SQLi paired oracle (Phase 4, FN-1).
+                if arming.armed and name == "sqli_blind_false" and sqli_blind_true_snap is not None:
+                    blind_raw = check_blind_sqli_oracle(
+                        true_snapshot=sqli_blind_true_snap,
+                        true_status=sqli_blind_true_status,
+                        true_payload=sqli_blind_true_payload,
+                        false_snapshot=snapshot,
+                        false_status=r.status_code,
+                        false_payload=value,
+                        param=param,
+                    )
+                    for bl in blind_raw:
+                        blind_req = getattr(r, "request", None)
+                        blind_finding = ScanFinding(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            category=bl["category"],
+                            severity=bl["severity"],
+                            finding_type=bl["type"],
+                            detail=bl["detail"],
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(blind_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(blind_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(blind_finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {name} -> blind_sqli "
+                                f"| {bl['detail'][:80]}"
+                            )
+
                 # Trustbound session-sink oracle: per-scan high-entropy
                 # marker payload; fires only when the marker is echoed
                 # into the "saved in session" sink.
@@ -842,6 +886,11 @@ class Scanner:
 
                 if name == "traversal_passwd":
                     traversal_snap = snapshot
+
+                if name == "sqli_blind_true":
+                    sqli_blind_true_snap = snapshot
+                    sqli_blind_true_status = r.status_code
+                    sqli_blind_true_payload = value
                 elif name == "sql_single_quote":
                     sqli_quote_snap = snapshot
                     sqli_quote_resp = r
