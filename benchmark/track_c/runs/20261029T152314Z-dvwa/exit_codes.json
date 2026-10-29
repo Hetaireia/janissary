@@ -1,0 +1,68 @@
+[
+  {
+    "path": "/vulnerabilities/sqli/?id=test&Submit=Submit",
+    "method": "GET",
+    "param": "id",
+    "vuln_class": "sqli",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 1214,
+    "dropped": 7,
+    "aborted": false
+  },
+  {
+    "path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit",
+    "method": "GET",
+    "param": "id",
+    "vuln_class": "sqli_blind",
+    "safe": false,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/vulnerabilities/xss_r/?name=test",
+    "method": "GET",
+    "param": "name",
+    "vuln_class": "xss",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 6036,
+    "dropped": 1,
+    "aborted": false
+  },
+  {
+    "path": "/vulnerabilities/fi/?page=include.php&Submit=Submit",
+    "method": "GET",
+    "param": "page",
+    "vuln_class": "traversal",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 5774,
+    "dropped": 1,
+    "aborted": false
+  },
+  {
+    "path": "/index.php",
+    "method": "GET",
+    "param": "id",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/instructions.php",
+    "method": "GET",
+    "param": "id",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  }
+]

@@ -1,18 +1,81 @@
 {
-  "timestamp": "2026-10-29T15:15:03Z",
+  "timestamp": "2026-10-29T15:26:36Z",
   "apps": {
     "dvwa": {
-      "recall": 0.5,
-      "tn": 2,
-      "run": "20261029T140418Z-dvwa",
-      "unmatched": 0,
-      "f1": 0.6667,
-      "precision": 1.0,
-      "fp_rate_safe": 0.0,
+      "app": "dvwa",
+      "cases": 6,
+      "vuln_cases": 4,
+      "safe_cases": 2,
+      "findings": 3,
+      "unmatched_findings": 0,
+      "tp": 3,
       "fp": 0,
-      "fn": 2,
+      "fn": 1,
+      "tn": 2,
       "aborts": 0,
-      "tp": 2
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571,
+      "fp_rate_safe": 0.0,
+      "per_case": [
+        {
+          "path": "/vulnerabilities/sqli/?id=test&Submit=Submit",
+          "safe": false,
+          "expected": [
+            "sqli"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        },
+        {
+          "path": "/vulnerabilities/sqli_blind/?id=test&Submit=Submit",
+          "safe": false,
+          "expected": [
+            "sqli_blind"
+          ],
+          "findings": 0,
+          "outcome": "FN",
+          "aborted": false
+        },
+        {
+          "path": "/vulnerabilities/xss_r/?name=test",
+          "safe": false,
+          "expected": [
+            "xss"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        },
+        {
+          "path": "/vulnerabilities/fi/?page=include.php&Submit=Submit",
+          "safe": false,
+          "expected": [
+            "traversal"
+          ],
+          "findings": 1,
+          "outcome": "TP",
+          "aborted": false
+        },
+        {
+          "path": "/index.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/instructions.php",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        }
+      ],
+      "run": "20261029T152314Z-dvwa"
     },
     "juice-shop": {
       "recall": 1.0,
@@ -146,18 +209,18 @@
           "aborted": false
         }
       ],
-      "run": "20261029T151248Z-bwapp"
+      "run": "20261029T152433Z-bwapp"
     }
   },
   "totals": {
-    "tp": 6,
+    "tp": 7,
     "fp": 0,
-    "fn": 2,
+    "fn": 1,
     "tn": 21,
     "aborts": 0,
     "precision": 1.0,
-    "recall": 0.75,
-    "f1": 0.8571,
+    "recall": 0.875,
+    "f1": 0.9333,
     "fp_rate_safe": 0.0,
     "unmatched_findings": 0
   },

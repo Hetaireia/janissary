@@ -66,6 +66,8 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("xss_img", "<img src=x onerror=alert(1)>", "xss", "high"),
     ("traversal_passwd", "../../../etc/passwd", "traversal", "critical"),
     ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal", "critical"),
+    ("traversal_passwd_deep", "../../../../../etc/passwd", "traversal", "critical"),
+    ("traversal_passwd_abs", "/etc/passwd", "traversal", "critical"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
     ("cmdi_sleep", "; sleep 5", "cmdi", "critical"),
     # cmdi on Linux without a shell wrapper: Runtime.exec() splits the
