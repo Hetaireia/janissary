@@ -509,3 +509,25 @@ First run: cases=4 safe=4 tp=0 fp=0 fn=0 tn=4 fp_rate_safe=0. See `benchmark/tra
 Gitea contributes 4 more valid TN trials to Item A evidence. Corpus now: DVWA (mixed), Juice Shop (mixed, corrected), VAmPI (safe-only), Gitea (safe-only). Phase 2 progress: 4/5 apps.
 
 Gitea is not tested for any vulnerability here. Its known classes (path traversal in raw file serve, SSRF in webhooks, template injection in issue rendering) require either scanner detection classes that do not exist or path-parameter injection that the runner does not support. That is Phase 3 work, not Phase 2.
+
+### 2026-10-29 - bWAPP abandoned (container cannot be provisioned)
+
+bWAPP was attempted as the fifth Track C app and abandoned. The `raesene/bwapp:latest` image does not ship a usable install flow.
+
+**What was tried:**
+
+1. `GET /install.php` returns a 2,195-byte page with no `<form>`, no inputs. Not a normal bWAPP install page (real one is 8-15 KB with a form).
+2. `POST /install.php` with 4 payload variants (`install=install`, `create_db=Create+or+reset+database`, `install=Install`, `button=install`) — all ignored, all return the same 2,195 bytes.
+3. Direct `mysql -u root -e "CREATE DATABASE bWAPP"` inside the container — worked, database created.
+4. Schema search `find / -name "*.sql" -type f` — found 4 files, all MySQL system files (`mysql_test_data_timezone.sql`, `fill_help_tables.sql`, `mysql_system_tables.sql`, `mysql_system_tables_data.sql`). No bWAPP schema dump.
+5. Load attempt with the wrong `.sql` — `ERROR 1146 Table 'bWAPP.time_zone_name' doesn't exist`. Confirms the SQL files present are not bWAPP schema.
+
+**Conclusion:** the container ships bWAPP web files but no schema, and its install.php does not work in this image. The DB can be created but not populated. Without `users` table, login fails ("Table 'bWAPP.users' doesn't exist"). Without login, no authenticated scan is possible.
+
+**What was NOT tried:** pulling a different bWAPP image, using docker-compose (this image does not ship one), or fetching bWAPP schema from the upstream GitHub repo to load manually. Any of these would be a fresh approach, not a continuation of the current attempt. Documented here so a future session doesn't retry the same 5 steps.
+
+**Impact:** Phase 2 remains at 4/5 apps. Corpus: DVWA (mixed), Juice Shop (mixed, corrected), VAmPI (safe-only), Gitea (safe-only). 17 trials, 12 TN, 0 FP observed.
+
+**Next session:** add a fifth app without this install complexity. Candidates: Nextcloud (single container, healthcheck at `/status.php`), Metabase (single container, healthcheck at `/api/health`), or WordPress (single container plus mysql sidecar, standard install flow).
+
+**Repo state after abandonment:** bWAPP is not in `apps.json`, not in `cases.csv`, no run directory committed. Container removed. The failed attempt left no partial state.
