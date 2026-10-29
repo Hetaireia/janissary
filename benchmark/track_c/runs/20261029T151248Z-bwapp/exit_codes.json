@@ -1,0 +1,79 @@
+[
+  {
+    "path": "/sqli_1.php?title=test",
+    "method": "GET",
+    "param": "title",
+    "vuln_class": "sqli",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 3552,
+    "dropped": 7,
+    "aborted": false
+  },
+  {
+    "path": "/portal.php",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/info.php",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/login.php",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/install.php",
+    "method": "GET",
+    "param": "x",
+    "vuln_class": "safe",
+    "safe": true,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
+  },
+  {
+    "path": "/xss_get.php?firstname=test&lastname=placeholder&form=submit",
+    "method": "GET",
+    "param": "firstname",
+    "vuln_class": "xss",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 14894,
+    "dropped": 1,
+    "aborted": false
+  },
+  {
+    "path": "/directory_traversal_1.php?page=test",
+    "method": "GET",
+    "param": "page",
+    "vuln_class": "traversal",
+    "safe": false,
+    "exit": 1,
+    "out_bytes": 15779,
+    "dropped": 0,
+    "aborted": false
+  }
+]

@@ -29,6 +29,7 @@ from janissary.detection import (
     check_xpath_error_oracle,
 )
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
+from janissary.detection.lfi_oracle import check_lfi_content_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
 from janissary.output.raw_http import (
@@ -689,6 +690,48 @@ class Scanner:
                             _say(
                                 f"  [{param}] {name} -> traversal_collapse "
                                 f"| {cf['detail'][:80]}"
+                            )
+
+                    # LFI content-injection oracle (Phase 4, FN-2/FN-3).
+                    # Complements collapse oracle: collapse catches when
+                    # traversal *removes* page structure. This catches
+                    # in-page LFI where the page keeps its structure and
+                    # file contents appear inside an element (bWAPP
+                    # /directory_traversal_1.php, DVWA /vulnerabilities/fi/).
+                    # Fires at most once per payload; requires the
+                    # signature to be absent from every baseline snapshot.
+                    lfi_raw = check_lfi_content_oracle(
+                        baseline=baseline,
+                        snapshot=snapshot,
+                        response_status=r.status_code,
+                        payload_value=value,
+                        payload_name=name,
+                    )
+                    for lf in lfi_raw:
+                        lfi_req = getattr(r, "request", None)
+                        lfi_finding = ScanFinding(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            category=lf["category"],
+                            severity=lf["severity"],
+                            finding_type=lf["type"],
+                            detail=lf["detail"],
+                            response_status=r.status_code,
+                            response_length=len(r.text or ""),
+                            response_time=snapshot.elapsed,
+                            response_content_type=snapshot.content_type,
+                            url=getattr(lfi_req, "url", None) or self.target,
+                            method=self.method,
+                            raw_request=serialize_request(lfi_req),
+                            raw_response=serialize_response(r),
+                        )
+                        summary.findings.append(lfi_finding)
+                        summary.finding_count += 1
+                        if not quiet:
+                            _say(
+                                f"  [{param}] {name} -> lfi_content "
+                                f"| {lf['detail'][:80]}"
                             )
 
                 # Trustbound session-sink oracle: per-scan high-entropy
