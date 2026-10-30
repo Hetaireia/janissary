@@ -1537,3 +1537,108 @@ No undisclosed baseline r2 exists.
 ### Artifacts
 
     python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/20261025T062837Z-janissary-r3
+
+
+---
+
+### Amendment 23 — 2026-10-30 — Track C (live-application differential DAST) added
+
+**Status:** Applied at v7.7.0. Track C is a new benchmark track, not a
+change to Track A or Track B.
+
+**Why now:** Tracks A and B measure against curated benchmarks (OWASP 2,258
+cases) and a single WAF-fronted target respectively. Neither tests the
+scanner against a battery of live-vulnerable web applications running real
+frameworks, real authentication, and real endpoint topologies. Track C
+fills that gap: 7 self-hosted vulnerable apps, 33 endpoints, 6 detection
+classes.
+
+**Does this change the Track A or Track B claims?** No. Track A's F1=0.921
+headline and Track B's WAF survivability result are unchanged and
+independently scorable from their existing artifacts. Track C is additive
+measurement.
+
+**Does this claim generalization to unseen targets?** Not yet. See "Caveats"
+below.
+
+#### Track C — Corpus
+
+Seven apps, self-hosted in Docker, exercised against a fixed case set.
+
+| App | Notes | Vuln endpoints | Safe endpoints |
+|---|---|---|---|
+| DVWA | Damn Vulnerable Web App (low security) | 4 | 2 |
+| juice-shop | OWASP Juice Shop | 1 | 2 |
+| VAmPI | Vulnerable API (JWT auth) | 0 | 5 |
+| Gitea | Self-hosted git server | 0 | 4 |
+| Nextcloud | Self-hosted file sync | 0 | 4 |
+| bWAPP | Buggy Web Application | 3 | 4 |
+| crAPI | OWASP modern vulnerable SPA (JWT auth, JSON bodies) | 1 | 3 |
+| **Total** | | **9** | **24** |
+
+The safe-only apps (VAmPI, Gitea, Nextcloud) test the false-positive
+discipline: 13 endpoints the scanner should not fire on. Detection classes
+exercised: sqli (3), traversal (2), xss (2), sqli_blind (1), ssrf (1).
+
+#### Track C — Results at v7.7.0
+
+| Metric | Value |
+|---|---|
+| True positives | 9 |
+| False positives | 0 |
+| False negatives | 0 |
+| True negatives | 24 |
+| Aborts | 0 |
+| Precision | 1.0 |
+| Recall | 1.0 |
+| **F1** | **1.0** |
+| FP rate (safe) | 0.0 |
+
+Every finding is backed by raw request/response artifacts committed
+alongside the score. Full trail at `benchmark/track_c/`: `cases.csv`
+(trial definition), `apps.json` (per-app config: base URL, auth flow, safe
+endpoints, known vulnerable endpoints), `runs/<timestamp>-<app>/`
+(per-run jsonl findings, exit codes, scores), `corpus-score.json`
+(aggregate + per-app breakdown), `templates/` (JSON body templates for
+structured-field inject cases).
+
+#### Track C — Caveats
+
+1. **Corpus is not held out.** Every app in Track C has been used for
+   feature development. Each oracle was tuned against its target during
+   the Phase 3/4 build. A held-out corpus (track D, if pursued) is the
+   test of generalization, not this.
+2. **33 cases vs 2,258.** Track C is a hand-curated spot-check, not a
+   statistical sample. It tests that the scanner works on real
+   frameworks, not that its F1 on unseen apps will equal 1.0.
+3. **Snapshot, not contract.** The number is timestamped. As more apps
+   are added, the corpus will evolve. The v7.7.0 snapshot
+   (2026-10-30T03:32:55Z) is what is claimed for this release.
+4. **Not comparable to Track A F1.** Track A's 0.921 is measured against
+   a 2,258-case statistically-designed corpus with defined exclusions.
+   Track C's 1.0 is measured against 33 cases with no exclusions. The
+   two numbers answer different questions and should not be combined or
+   compared as if they measured the same thing.
+
+#### Track C — Hypotheses (retroactive; stated for future runs)
+
+Track C was not pre-registered - it was developed iteratively through
+Phase 3 and Phase 4. This amendment records the falsifiable hypotheses
+the corpus implicitly tests, so that future runs can be measured against
+the same standard:
+
+1. **H-C1 (precision):** Zero false positives across the 24 safe
+   endpoints. Falsified by any FP.
+2. **H-C2 (recall):** All 9 vulnerable endpoints emit at least one
+   correctly-classed finding. Falsified by any FN.
+3. **H-C3 (no aborts):** All 33 endpoints complete without abort. An
+   abort is a separate failure mode from FN: it means the scanner could
+   not evaluate the endpoint. Falsified by any abort.
+
+At v7.7.0: H-C1 holds, H-C2 holds (9/9), H-C3 holds.
+
+Future Track C measurements should be against these hypotheses, not
+against 1.0. A future run scoring 8/9 with 0 FP is a failure of H-C2 by
+this standard, even if F1 stays high - the hypothesis is "all", not
+"enough".
+
