@@ -113,3 +113,5 @@ Before an app is locked (Amendment 24 Phase 5):
 - `trial_class` must be non-empty
 - Every row in `cases.csv` for that app must have `safe` and
   `expected_finding_class` set (safe rows have empty `expected_finding_class`)
+
+**Negative-only apps** (e.g. gitea, nextcloud): apps included in the corpus solely to measure FP rate have no documented vulnerabilities by design. They are exempt from the `known_vulnerable` and `trial_class` non-empty rules, provided `safe_endpoints` is non-empty. Their FP rate is the whole point.

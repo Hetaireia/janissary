@@ -2,7 +2,7 @@
   "dvwa": {
     "base_url": "http://127.0.0.1:4280",
     "healthcheck": "/login.php",
-    "image_digest": null,
+    "image_digest": "sha256:dae203fe11646a86937bf04db0079adef295f426da68a92b40e3b181f337daa7",
     "security_level": "low",
     "excluded": false,
     "trial_class": [
@@ -52,7 +52,7 @@
   "juice-shop": {
     "base_url": "http://127.0.0.1:3000",
     "healthcheck": "/rest/admin/application-version",
-    "image_digest": null,
+    "image_digest": "sha256:9e437b456e444ff001d1663e4f6f05c796fe02f1058dd2651d6791a15b43dfeb",
     "security_level": null,
     "excluded": false,
     "trial_class": [
@@ -78,7 +78,7 @@
   "vampi": {
     "base_url": "http://127.0.0.1:5000",
     "healthcheck": "/",
-    "image_digest": null,
+    "image_digest": "sha256:0a5a224b6e14ae7da6a6ea265178ff71286ff903aec74adee98f660bb0e4ca12",
     "security_level": null,
     "excluded": false,
     "trial_class": [
@@ -157,7 +157,7 @@
   "bwapp": {
     "base_url": "http://127.0.0.1:8081",
     "healthcheck": "/login.php",
-    "image_digest": null,
+    "image_digest": "sha256:2f41183ea9f9e8fb36678d7a2a0c8a9db9a59f4569cee02fe6664b419b2600ee",
     "security_level": "low",
     "excluded": false,
     "trial_class": [
