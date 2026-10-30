@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-29T16:16:53Z",
+  "timestamp": "2026-10-30T02:56:27Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
@@ -210,7 +210,8 @@
         }
       ],
       "run": "20261029T152433Z-bwapp"
-    }
+    },
+    "crapi": null
   },
   "totals": {
     "tp": 8,

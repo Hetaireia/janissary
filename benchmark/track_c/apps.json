@@ -183,5 +183,44 @@
       "setup": []
     },
     "verify_url": "/portal.php"
+  },
+  "crapi": {
+    "base_url": "http://127.0.0.1:8888",
+    "healthcheck": "/",
+    "image_digest": null,
+    "security_level": "n/a",
+    "excluded": false,
+    "trial_class": [
+      "ssrf"
+    ],
+    "safe_endpoints": [
+      "/",
+      "/login",
+      "/signup",
+      "/dashboard"
+    ],
+    "known_vulnerable": [
+      {
+        "path": "/workshop/api/merchant/contact_mechanic",
+        "class": "ssrf"
+      }
+    ],
+    "login": {
+      "url": "/identity/api/auth/login",
+      "json": {
+        "email": "jns-trackc-fixed@example.com",
+        "password": "JnsTrackc!123"
+      },
+      "capture_jwt_from_json": "token",
+      "pre_register": {
+        "url": "/identity/api/auth/signup",
+        "json": {
+          "name": "JNS TrackC",
+          "email": "jns-trackc-fixed@example.com",
+          "number": "+15550001111",
+          "password": "JnsTrackc!123"
+        }
+      }
+    }
   }
 }
