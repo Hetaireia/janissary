@@ -1,0 +1,7 @@
+services:
+  bwapp:
+    image: raesene/bwapp
+    container_name: janissary-trackc-bwapp
+    ports:
+      - "8081:80"
+    restart: unless-stopped
