@@ -1,7 +1,4 @@
-
-vampi is self-contained: erev0s/vampi:latest bundles SQLite by default.
-Verified: docker start janissary-trackc-vampi alone brings /users/v1/_debug to 200.
-
+# Track C - Bootstrap
 
 How to start the 7 track_c apps. Pinned image digests live in
 `apps.json` (source of truth). See `SCHEMA.md` for lock rules.
@@ -30,7 +27,7 @@ differ:
 - gitea: `INSTALL_LOCK=true` on a fresh volume = broken (setup
   never ran). Run setup once or export the current volume.
 - nextcloud: env vars trigger unattended install; fresh works.
-- vampi: requires the DB container; data state may differ.
+- vampi: self-contained SQLite inside container; data state may differ between fresh deploys.
 
 **To reproduce exact numbers**: export and import the current
 named volumes. Procedure not automated.
