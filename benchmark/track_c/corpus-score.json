@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-30T03:32:55Z",
+  "timestamp": "2026-10-30T05:52:00Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
@@ -213,20 +213,19 @@
     },
     "crapi": {
       "app": "crapi",
-      "run": "20261030T032949Z-crapi",
-      "cases": 4,
-      "vuln_cases": 1,
+      "cases": 5,
+      "vuln_cases": 2,
       "safe_cases": 3,
       "findings": 1,
       "unmatched_findings": 0,
       "tp": 1,
       "fp": 0,
-      "fn": 0,
+      "fn": 1,
       "tn": 3,
       "aborts": 0,
       "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
+      "recall": 0.5,
+      "f1": 0.6667,
       "fp_rate_safe": 0.0,
       "per_case": [
         {
@@ -262,19 +261,30 @@
           "findings": 1,
           "outcome": "TP",
           "aborted": false
+        },
+        {
+          "path": "/workshop/api/shop/apply_coupon",
+          "safe": false,
+          "expected": [
+            "sqli"
+          ],
+          "findings": 0,
+          "outcome": "FN",
+          "aborted": false
         }
-      ]
+      ],
+      "run": "20261030T054658Z-crapi"
     }
   },
   "totals": {
     "tp": 9,
     "fp": 0,
-    "fn": 0,
+    "fn": 1,
     "tn": 24,
     "aborts": 0,
     "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0,
+    "recall": 0.9,
+    "f1": 0.9474,
     "fp_rate_safe": 0.0,
     "unmatched_findings": 0
   },

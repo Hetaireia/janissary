@@ -42,5 +42,16 @@
     "out_bytes": 23338,
     "dropped": 0,
     "aborted": false
+  },
+  {
+    "path": "/workshop/api/shop/apply_coupon",
+    "method": "POST",
+    "param": "coupon_code",
+    "vuln_class": "sqli",
+    "safe": false,
+    "exit": 0,
+    "out_bytes": 0,
+    "dropped": 0,
+    "aborted": false
   }
 ]

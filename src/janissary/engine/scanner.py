@@ -220,11 +220,19 @@ class ScanSummary:
 
 
 def _substitute_placeholder(obj, placeholder, value):
-    """Recursively replace placeholder in a template structure. Pure."""
+    """Recursively replace placeholder in a template structure. Pure.
+
+    Dict keys starting with underscore are metadata (e.g. _categories)
+    and are stripped from the request body before sending.
+    """
     if isinstance(obj, str):
         return obj.replace(placeholder, value) if placeholder in obj else obj
     if isinstance(obj, dict):
-        return {k: _substitute_placeholder(v, placeholder, value) for k, v in obj.items()}
+        return {
+            k: _substitute_placeholder(v, placeholder, value)
+            for k, v in obj.items()
+            if not (isinstance(k, str) and k.startswith('_'))
+        }
     if isinstance(obj, list):
         return [_substitute_placeholder(v, placeholder, value) for v in obj]
     return obj
@@ -295,14 +303,17 @@ class Scanner:
             ("trustbound_marker", self._trustbound_nonce, "trustbound", "high"),
         ]
         if self.inject_in == "json-body":
-            # json-body: filter to SSRF-only payloads. JSON body fields are
-            # structured values (URLs, IDs, structured input), not free-form
-            # strings. Sending SQLi/XSS/traversal payloads into a URL field
-            # causes the target to return 400 (malformed URL) and the scanner
-            # aborts before reaching the SSRF payload. Filter to SSRF category
-            # only. Future json-body field types (search, ID) would need
-            # their own filter.
-            self._payloads = [p for p in self._payloads if p[2] == "ssrf"]
+            # json-body: filter to categories declared in the template's
+            # _categories field. Default ["ssrf"] preserves backward
+            # compatibility with pre-7.8 templates (crapi_mechanic.json).
+            # The _categories key is stripped from the request body by
+            # _substitute_placeholder() before sending.
+            _json_cats = ["ssrf"]
+            if isinstance(self.json_template, dict):
+                _declared = self.json_template.get("_categories")
+                if isinstance(_declared, list) and _declared:
+                    _json_cats = [str(cc) for cc in _declared]
+            self._payloads = [p for p in self._payloads if p[2] in _json_cats]
         self.waf_profile: WAFProfile | None = None
         self._pacer: AdaptivePacer | None = None
 
