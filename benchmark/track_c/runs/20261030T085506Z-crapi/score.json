@@ -1,0 +1,64 @@
+{
+  "app": "crapi",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\benchmark\\track_c\\runs\\20261030T085506Z-crapi",
+  "cases": 5,
+  "vuln_cases": 2,
+  "safe_cases": 3,
+  "findings": 2,
+  "unmatched_findings": 0,
+  "tp": 2,
+  "fp": 0,
+  "fn": 0,
+  "tn": 3,
+  "aborts": 0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/workshop/api/shop/products",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/identity/api/v2/user/dashboard",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/workshop/api/merchant/contact_mechanic",
+      "safe": false,
+      "expected": [
+        "ssrf"
+      ],
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
+    },
+    {
+      "path": "/workshop/api/shop/apply_coupon",
+      "safe": false,
+      "expected": [
+        "sqli_blind"
+      ],
+      "findings": 1,
+      "outcome": "TP",
+      "aborted": false
+    }
+  ]
+}
