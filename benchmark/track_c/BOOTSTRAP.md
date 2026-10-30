@@ -17,9 +17,6 @@ session. Reconstructed below from `docker inspect`.
 | nextcloud | nextcloud:stable-apache | 8082:80 | /var/www/html | SQLITE_DATABASE=nextcloud, NEXTCLOUD_ADMIN_USER=admin, NEXTCLOUD_ADMIN_PASSWORD=admin, NEXTCLOUD_TRUSTED_DOMAINS=127.0.0.1 localhost |
 | vampi | erev0s/vampi:latest | 5000:5000 | none | DB_HOST=janissary-trackc-vampi-db, DB_USER=vampi, DB_PASSWORD=vampi, DB_NAME=vampi, vulnerable=1 |
 
-vampi also requires the `janissary-trackc-vampi-db` DB container
-(not captured here - inspect with `docker inspect
-janissary-trackc-vampi-db`).
 ## The state gap
 
 The locked corpus numbers in `corpus-score.json` were scored
@@ -43,3 +40,6 @@ Image identity - same digests = same binary behavior. Not volume
 identity - same digests + different data may produce different
 detector results. `apps.json` is authoritative for digests;
 `corpus-score.json` is authoritative for numbers.
+
+vampi is self-contained: erev0s/vampi:latest bundles SQLite by default.
+Verified: docker start janissary-trackc-vampi alone brings /users/v1/_debug to 200.
