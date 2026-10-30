@@ -400,7 +400,13 @@ class Scanner:
         if self.inject_in == "path":
             from urllib.parse import quote as _quote
             path_url = url.replace(f"{{{param}}}", _quote(value, safe=""))
-            return self.session.get(path_url, headers=self._headers(), timeout=self.timeout, allow_redirects=allow_redirects, proxies=self.proxies)
+            kwargs = dict(
+                headers=self._headers(), timeout=self.timeout,
+                allow_redirects=allow_redirects, proxies=self.proxies,
+            )
+            if self.method == "POST":
+                return self.session.post(path_url, **kwargs)
+            return self.session.get(path_url, **kwargs)
 
         if self.inject_in == "body" or (
             self.inject_in == "auto" and self.method == "POST"
