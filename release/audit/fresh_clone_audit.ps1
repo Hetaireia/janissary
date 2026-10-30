@@ -35,11 +35,11 @@ $expectedVer = (Select-String -Path "pyproject.toml" -Pattern '^version' | Selec
 if ($ver -notmatch [regex]::Escape($expectedVer)) { Log "FAIL: version is not $expectedVer (got: $ver)"; exit 1 }
 Log "  [ok] version $expectedVer"
 
-Log "`n=== 4. Verify tag v7.7.0 exists remotely ==="
-$remoteTag = ((git ls-remote origin refs/tags/v7.7.0) -split '\s+')[0]
-Log "  remote tag v7.7.0: $remoteTag"
-if (-not $remoteTag) { Log "FAIL: v7.7.0 tag not on remote"; exit 1 }
-Log "  [ok] tag present"
+Log "`n=== 4. Verify tag v$verAtHead exists remotely ==="
+$remoteTag = ((git ls-remote origin refs/tags/v$verAtHead) -split '\s+')[0]
+Log "  remote tag v${verAtHead}: $remoteTag"
+if (-not $remoteTag) { Log "FAIL: v$verAtHead tag not on remote"; exit 1 }
+Log "  [ok] tag v$verAtHead present"
 
 Log "`n=== 5. Verify key files present in clone ==="
 $required = @(
@@ -80,8 +80,8 @@ Log "`n=== 9. Create fresh venv + install ==="
 & python -m venv .venv 2>&1 | Out-Null
 $py = ".\.venv\Scripts\python.exe"
 & $py -m pip install --quiet --upgrade pip 2>&1 | Out-Null
-& $py -m pip install --quiet -e ".[dev]" 2>&1 | Out-Null
-if ($LASTEXITCODE -ne 0) { Log "FAIL: pip install failed"; exit 1 }
+$pipOut = & $py -m pip install -e ".[dev]" 2>&1
+if ($LASTEXITCODE -ne 0) { Log "FAIL: pip install failed. Full output:"; $pipOut | ForEach-Object { Log ("  " + $_) }; exit 1 }
 $installedVer = (& $py -c "import janissary; print(janissary.__version__)" 2>&1).Trim()
 $pipVer = (& $py -m pip show janissary 2>&1 | Select-String "Version:" | Select-Object -First 1).Line.Trim()
 $pyprojectVer = (Select-String -Path "pyproject.toml" -Pattern "^version" | Select-Object -First 1).Line -replace '.*"([^"]+)".*','$1'

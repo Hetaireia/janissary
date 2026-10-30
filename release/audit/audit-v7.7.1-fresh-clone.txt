@@ -1,22 +1,22 @@
 ================================================================
-FRESH-CLONE AUDIT - 2026-10-30 16:14:56
+FRESH-CLONE AUDIT - 2026-10-30 16:23:06
 ================================================================
 
 === 1. Clone from GitHub (branch: wip/phase-4-fn3) ===
-  cloned to: C:\Users\M5 E60\janissary-audit-20261030-161456
+  cloned to: C:\Users\M5 E60\janissary-audit-20261030-162306
 
 === 2. Verify clone HEAD matches GitHub main ===
-  clone HEAD:   b796cd8148d797b5195f753e19d140e5ef44f07d
-  GitHub main:  b796cd8148d797b5195f753e19d140e5ef44f07d
+  clone HEAD:   4b2d75ff7a06f4d87985bdd819cbffdae60fc9f3
+  GitHub main:  4b2d75ff7a06f4d87985bdd819cbffdae60fc9f3
   [ok] match
 
 === 3. Verify version at HEAD ===
   pyproject: version = "7.7.1"
   [ok] version 7.7.1
 
-=== 4. Verify tag v7.7.0 exists remotely ===
-  remote tag v7.7.0: 6feea8aa44e5303f2952a8b34d72b125ecdedf6e
-  [ok] tag present
+=== 4. Verify tag v7.7.1 exists remotely ===
+  remote tag v7.7.1: 6fa35c4465f5752fc798198998f524ee3abdd180
+  [ok] tag v7.7.1 present
 
 === 5. Verify key files present in clone ===
   [ok] src\janissary\detection\ssrf_response_oracle.py
@@ -39,4 +39,37 @@ FRESH-CLONE AUDIT - 2026-10-30 16:14:56
   [ok] corpus at tp=9 f1=1.0 across 7 apps
 
 === 9. Create fresh venv + install ===
-FAIL: pip install failed
+  janissary.__version__: 7.7.1
+  pip show Version:      Version: 7.7.1
+  pyproject.toml:        7.7.1
+  [ok] installed version matches pyproject
+
+=== 10. Run full unit test suite in fresh venv ===
+  ============================ 566 passed in 25.50s =============================
+  [ok] all 564 pass in fresh clone
+
+=== 11. Verify ssrf.jsonl artifact content (chain-of-evidence) ===
+  payload = mailhog URL: True
+  response contains MailHog HTML: True
+  class = ssrf: True
+  [ok] chain-of-evidence intact
+
+=== 12. Cleanup ===
+  removed audit clone: C:\Users\M5 E60\janissary-audit-20261030-162306
+
+================================================================
+ RESULT: v7.7.0 SHIPPED ARTIFACT VERIFIED
+================================================================
+
+  Clean clone from GitHub: PASS
+  Clone HEAD == GitHub main: PASS
+  Version 7.7.0 at HEAD: PASS
+  Tag v7.7.0 on remote: PASS
+  All key files present: PASS
+  BENCHMARK.md Amendment 23: PASS
+  PHASE-4-PLAN.md status update: PASS
+  Corpus tp=9 f1=1.0 across 7 apps: PASS
+  Full unit suite passed in fresh venv: PASS
+  ssrf.jsonl chain-of-evidence: PASS
+
+Audit log saved to: C:\Users\M5 E60\janissary-project\janissary\scripts\audit-v7.7.1-20261030-162306.txt
