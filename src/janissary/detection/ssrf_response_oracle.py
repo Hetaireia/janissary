@@ -17,6 +17,7 @@ Pure. No I/O.
 from __future__ import annotations
 
 from janissary.detection.analyzer import Baseline, ResponseSnapshot
+import urllib.parse
 
 
 def check_ssrf_response_oracle(
@@ -44,8 +45,22 @@ def check_ssrf_response_oracle(
     # Markers still present after stripping must have come from
     # somewhere else - typically the fetched response body.
     body_for_markers = body
-    if payload_value and payload_value in body_for_markers:
-        body_for_markers = body_for_markers.replace(payload_value, "", 1)
+    if payload_value:
+        # Strip all encoding variants of the payload before marker
+        # search. Targets commonly URL-encode query params in links
+        # (e.g. redirect_to=X), sometimes double-encoding. Without
+        # this, a reflected "http://mailhog:8025/" is missed and
+        # markers inside the encoded URL trigger a false positive.
+        _encoded_variants = {
+            payload_value,
+            urllib.parse.quote(payload_value, safe=""),
+            urllib.parse.quote(urllib.parse.quote(payload_value, safe=""), safe=""),
+            urllib.parse.quote(payload_value, safe="/:"),
+            payload_value.replace("/", "%2F").replace(":", "%3A"),
+        }
+        for _v in _encoded_variants:
+            if _v and _v in body_for_markers:
+                body_for_markers = body_for_markers.replace(_v, "", 1)
 
     body_lower = body_for_markers.lower()
     hits = [m for m in fetch_markers if m and m.lower() in body_lower]

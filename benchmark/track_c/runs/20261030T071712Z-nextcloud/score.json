@@ -1,6 +1,6 @@
 {
-  "app": "gitea",
-  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\janissary\\benchmark\\track_c\\runs\\20261029T135907Z-gitea",
+  "app": "nextcloud",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\benchmark\\track_c\\runs\\20261030T071712Z-nextcloud",
   "cases": 4,
   "vuln_cases": 0,
   "safe_cases": 4,
@@ -17,6 +17,14 @@
   "fp_rate_safe": 0.0,
   "per_case": [
     {
+      "path": "/status.php",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
       "path": "/",
       "safe": true,
       "expected": [],
@@ -25,7 +33,7 @@
       "aborted": false
     },
     {
-      "path": "/api/v1/version",
+      "path": "/index.php/login",
       "safe": true,
       "expected": [],
       "findings": 0,
@@ -33,15 +41,7 @@
       "aborted": false
     },
     {
-      "path": "/explore/repos",
-      "safe": true,
-      "expected": [],
-      "findings": 0,
-      "outcome": "TN",
-      "aborted": false
-    },
-    {
-      "path": "/explore/users",
+      "path": "/robots.txt",
       "safe": true,
       "expected": [],
       "findings": 0,

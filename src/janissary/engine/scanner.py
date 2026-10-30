@@ -830,7 +830,7 @@ class Scanner:
                                 _say(f"  [{param}] {name} -> ssrf_response | {sf['detail'][:80]}")
 
                 # Blind SQLi paired oracle (Phase 4, FN-1).
-                if arming.armed and name == "sqli_blind_false" and sqli_blind_true_snap is not None:
+                if (arming.armed or self.inject_in == "json-body") and name == "sqli_blind_false" and sqli_blind_true_snap is not None:
                     blind_raw = check_blind_sqli_oracle(
                         true_snapshot=sqli_blind_true_snap,
                         true_status=sqli_blind_true_status,
