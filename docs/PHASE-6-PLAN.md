@@ -212,7 +212,7 @@ Fix shape: write a scan adapter (target, context) -> list[Finding], register
 it at cli.py:904, add a test. ~45-90 min. Additive; no change to agent.py or
 scan. Measurement at e8e1b47 and a33cbb0.
 
-**FN-5 - Missing --nuclei-path CLI flag.** `NucleiRunner(nuclei_path=...)`
+**FN-5 - SHIPPED (`ebb449b`) - --nuclei-path CLI flag.** `NucleiRunner(nuclei_path=...)`
 exists but `janissary attack nuclei` has no CLI flag to set it. The runner's
 own error message advertises the capability ("or pass nuclei_path explicitly").
 Fix shape: add `--nuclei-path` arg to the subparser at cli.py:1461, plumb
@@ -228,7 +228,7 @@ semantic. One-line help update later; no behavior change.
 ### Environment carry notes for next session
 
 - Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
-  needs manual PATH prepend, or use FN-5's fix once shipped. `go install` would
+  needs manual PATH prepend, or use the shipped `--nuclei-path` flag (FN-5, `ebb449b`). `go install` would
   put it on PATH but fails on Go 1.27 (dependency graph mismatch); winget is
   flaky; direct download is the reliable path.
 - `nuclei -update-templates` hangs at cleanup on this machine (observed 6+ min
