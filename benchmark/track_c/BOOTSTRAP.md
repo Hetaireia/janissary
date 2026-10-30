@@ -1,4 +1,7 @@
-# Track C - Bootstrap
+
+vampi is self-contained: erev0s/vampi:latest bundles SQLite by default.
+Verified: docker start janissary-trackc-vampi alone brings /users/v1/_debug to 200.
+
 
 How to start the 7 track_c apps. Pinned image digests live in
 `apps.json` (source of truth). See `SCHEMA.md` for lock rules.
