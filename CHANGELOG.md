@@ -7,6 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.10.2] - 2026-10-30
+
+Version-string catch-up: pyproject.toml was still 7.7.1 while five git
+tags (v7.8.0 through v7.10.1) had already been published. `janissary
+--version` reported 7.7.1 on every one. Bumped to 7.10.2 so the
+package metadata matches the newest tag.
+
+### Fixed
+- pyproject.toml version 7.7.1 -> 7.10.2.
+- Editable install reinstalled; runtime `janissary.__version__` now
+  reports 7.10.2.
+
+## [7.10.1] - 2026-10-30
+
+Phase 5 complete: crAPI locked via image_digests array.
+
+### Added
+- apps.json: image_digests array on crAPI covering all 10 containers
+  (workshop, web, identity, community, chatbot, gateway, mailhog,
+  postgres, mongo, chromadb).
+- SCHEMA.md: image_digests field for multi-container apps.
+
+### Changed
+- SCHEMA.md Locked-run rule: image_digest non-null OR image_digests
+  non-empty array.
+
+## [7.10.0] - 2026-10-30
+
+Phase 5: locked corpus under pinned image digests.
+
+### Added
+- apps.json: image_digest pins for dvwa, bwapp, juice-shop, vampi.
+- SCHEMA.md: negative-only apps exemption (gitea, nextcloud) from
+  known_vulnerable / trial_class non-empty rules.
+
+### Notes
+- 6 of 7 apps locked. crAPI remained dev-only (10 containers) -
+  closed in v7.10.1.
+
+## [7.9.1] - 2026-10-30
+
+Fix --method POST --inject-in path dispatch.
+
+### Fixed
+- scanner.py _request(): path branch called session.get()
+  unconditionally, ignoring self.method. POST+path sent GET.
+- GET path behavior byte-identical to v7.9.0. POST path now sends POST.
+
+### Added
+- tests/test_scanner_path_dispatch.py: 4 mock-based tests.
+
+## [7.9.0] - 2026-10-30
+
+Phase 1c: --inject-in path mode for path-segment injection.
+
+### Added
+- scanner.py: inject_in="path" with {param} in URL; baseline_value
+  parameter. _request() dispatches path mode before query/body.
+- cli.py: --inject-in path + --baseline-value flag.
+- runner.py + cases.csv: inject_in, baseline_value columns.
+- score.py: two-priority attribution.
+- tests/test_placeholder_path_match.py: 6 multi-segment tests.
+
+### Notes
+- New VAmPI case: /users/v1/{username}, baseline_value=name1.
+- Corpus: 11/0/0/24 f1=1.0 (was 10/0/0/24).
+
+## [7.8.0] - 2026-10-30
+
+Phase 4 FN-3 and SSRF-FP-1 fixes.
+
+### Fixed
+- scanner.py:833: removed DOM-hash arming gate from blind SQLi oracle.
+- blind_sqli_oracle.py: two-tier length-delta thresholds.
+- ssrf_response_oracle.py: strip URL-encoded reflection variants.
+- cases.csv: crAPI apply_coupon expected class sqli -> sqli_blind.
+
+### Notes
+- Corpus: 10/0/0/24 f1=1.0. Preceded by measurement commit 4a2d0d1
+  (fn=1 at f1=0.9474) - kept in history as audit trail.
+
 ## [7.7.1] - 2026-10-30
 
 Fix version reporting: `janissary --version` and `janissary.__version__`
