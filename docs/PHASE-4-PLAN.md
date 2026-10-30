@@ -85,3 +85,48 @@ reflected. Quoted string payloads only (`1' OR '1'='1` vs `1' AND '1'='2`).
 - `docs/AMENDMENT-24.md` - the trial model (TP/FP/FN/TN).
 - `benchmark/track_c/SCHEMA.md` - case schema.
 - `docs/decisions/ADR-006-traversal-collapse-oracle.md` - collapse oracle design.
+
+
+---
+
+## Status update — 2026-10-30 — v7.7.0 (Session B) closed the ADR-012 D2 SSRF-response-body path
+
+The original Phase 4 plan (and the 7.5.0 release notes for ADR-012) noted
+that three SSRF payloads (`metadata_http`, `metadata_v6`, `file`) could
+not be detected via collaborator OOB alone and required a "response-body
+detection path" that was **"deferred to a follow-up response-body detection
+path."**
+
+v7.7.0 implements that follow-up path:
+
+- `src/janissary/detection/ssrf_response_oracle.py` — response-body oracle.
+  Detects server-side fetch by matching fetched-service content in the
+  response body. Gated by (a) baseline-differential (marker absent from
+  baseline), (b) reflection stripping (marker must survive removal of the
+  reflected payload — this distinguishes actual fetch from XSS-in-JSON).
+- `--inject-in json-body --json-template PATH` — payload injection mode
+  that substitutes into a JSON body template's `{{PAYLOAD}}` placeholder.
+  Required because crAPI's SSRF endpoint accepts a URL inside a JSON body,
+  not a query parameter.
+- crAPI added as app 7 to the track-C corpus. Its SSRF endpoint
+  (`POST /workshop/api/merchant/contact_mechanic`) is now detected:
+  previously documented as `fn=1 aborts=1`, now `tp=1`.
+
+Corpus impact:
+- v7.6.0: `tp=8 fn=1 tn=21 aborts=1` (7 apps, crAPI included as gap)
+- v7.7.0: `tp=9 fn=0 tn=24 aborts=0` (7 apps, gap closed)
+- Precision 1.0 maintained, F1 0.9412 → 1.0
+
+### What is still deferred
+
+`--inject-in path` (Phase 1c) is still deferred. That is a **distinct
+concern** from the SSRF response-body path: path-parameter injection is
+about URL structure (`/api/users/{id}` vs `/api/users/1`), not SSRF
+detection. Not closed by v7.7.0. When a corpus app justifies it, it
+remains a Phase 1c candidate.
+
+See also:
+- `BENCHMARK.md` Amendment 23 (2026-10-30) — Track C corpus documented,
+  hypotheses H-C1/H-C2/H-C3 stated as the falsifiable standard for
+  future runs.
+- `CHANGELOG.md` v7.7.0 entry — full feature description.
