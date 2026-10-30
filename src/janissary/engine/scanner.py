@@ -259,6 +259,7 @@ class Scanner:
         collaborator: object | None = None,
         ssrf_timeout: float = 10.0,
         json_template: dict | None = None,
+        baseline_value: str = "",
     ):
         self.target = repair_url(target)
         self.params = params
@@ -273,6 +274,7 @@ class Scanner:
         self.collaborator = collaborator
         self.ssrf_timeout = ssrf_timeout
         self.json_template = json_template
+        self.baseline_value = baseline_value
         self._ssrf_poll_delays: list[float] = [2.0, 3.0, 5.0]
         self._consecutive_401s: int = 0
         self._ua = DEFAULT_USER_AGENT
@@ -286,10 +288,14 @@ class Scanner:
             "header",
             "param-name",
             "json-body",
+            "path",
         }:
             raise ValueError(f"invalid inject_in: {inject_in!r}")
         if self.inject_in == "json-body" and not self.json_template:
             raise ValueError("inject_in='json-body' requires json_template")
+        if self.inject_in == "path":
+            if not any(f"{{{p}}}" in self.target for p in self.params):
+                raise ValueError("inject_in='path' requires a {param} placeholder in URL")
 
         cfg = pacer_config or PacerConfig(base_delay=delay)
         if cfg.min_delay < delay:
@@ -390,6 +396,11 @@ class Scanner:
                 allow_redirects=allow_redirects,
                 proxies=self.proxies,
             )
+
+        if self.inject_in == "path":
+            from urllib.parse import quote as _quote
+            path_url = url.replace(f"{{{param}}}", _quote(value, safe=""))
+            return self.session.get(path_url, headers=self._headers(), timeout=self.timeout, allow_redirects=allow_redirects, proxies=self.proxies)
 
         if self.inject_in == "body" or (
             self.inject_in == "auto" and self.method == "POST"
@@ -495,8 +506,11 @@ class Scanner:
         """
         baseline = Baseline()
         parsed = urlparse(self.target)
-        existing = parse_qs(parsed.query, keep_blank_values=True).get(param)
-        value = existing[0] if existing else "1"
+        if self.inject_in == "path" and self.baseline_value:
+            value = self.baseline_value
+        else:
+            existing = parse_qs(parsed.query, keep_blank_values=True).get(param)
+            value = existing[0] if existing else "1"
         for _ in range(self.baseline_count):
             try:
                 r = self._paced_request(self.target, param, value)

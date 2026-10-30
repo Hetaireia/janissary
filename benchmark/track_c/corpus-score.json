@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-10-30T07:19:20Z",
+  "timestamp": "2026-10-30T07:39:45Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
-      "run": "20261030T071644Z-dvwa",
+      "run": "20261030T073723Z-dvwa",
       "cases": 6,
       "vuln_cases": 4,
       "safe_cases": 2,
@@ -79,7 +79,7 @@
     },
     "juice-shop": {
       "app": "juice-shop",
-      "run": "20261030T071653Z-juice-shop",
+      "run": "20261030T073743Z-juice-shop",
       "cases": 3,
       "vuln_cases": 1,
       "safe_cases": 2,
@@ -124,21 +124,78 @@
       ]
     },
     "vampi": {
-      "recall": 0.0,
-      "tn": 5,
-      "run": "20261029T140430Z-vampi",
-      "unmatched": 0,
-      "f1": 0.0,
-      "precision": 0.0,
-      "fp_rate_safe": 0.0,
+      "app": "vampi",
+      "run": "20261030T073748Z-vampi",
+      "cases": 6,
+      "vuln_cases": 1,
+      "safe_cases": 5,
+      "findings": 9,
+      "unmatched_findings": 0,
+      "tp": 1,
       "fp": 0,
       "fn": 0,
+      "tn": 5,
       "aborts": 0,
-      "tp": 0
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "fp_rate_safe": 0.0,
+      "per_case": [
+        {
+          "path": "/",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/openapi.json",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/users/v1",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/users/v1/_debug",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/me",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/users/v1/{username}",
+          "safe": false,
+          "expected": [
+            "sqli"
+          ],
+          "findings": 9,
+          "outcome": "TP",
+          "aborted": false
+        }
+      ]
     },
     "gitea": {
       "app": "gitea",
-      "run": "20261030T071705Z-gitea",
+      "run": "20261030T073808Z-gitea",
       "cases": 4,
       "vuln_cases": 0,
       "safe_cases": 4,
@@ -190,7 +247,7 @@
     },
     "nextcloud": {
       "app": "nextcloud",
-      "run": "20261030T071712Z-nextcloud",
+      "run": "20261030T073815Z-nextcloud",
       "cases": 4,
       "vuln_cases": 0,
       "safe_cases": 4,
@@ -242,7 +299,7 @@
     },
     "bwapp": {
       "app": "bwapp",
-      "run": "20261030T071721Z-bwapp",
+      "run": "20261030T073823Z-bwapp",
       "cases": 7,
       "vuln_cases": 3,
       "safe_cases": 4,
@@ -324,7 +381,7 @@
     },
     "crapi": {
       "app": "crapi",
-      "run": "20261030T071731Z-crapi",
+      "run": "20261030T073834Z-crapi",
       "cases": 5,
       "vuln_cases": 2,
       "safe_cases": 3,
@@ -388,7 +445,7 @@
     }
   },
   "totals": {
-    "tp": 10,
+    "tp": 11,
     "fp": 0,
     "fn": 0,
     "tn": 24,

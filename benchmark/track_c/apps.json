@@ -99,6 +99,10 @@
       {
         "path": "/users/v1/register",
         "class": "mass_assignment"
+      },
+      {
+        "path": "/users/v1/{username}",
+        "class": "sqli"
       }
     ],
     "login": {

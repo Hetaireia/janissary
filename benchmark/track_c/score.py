@@ -92,6 +92,18 @@ def finding_matches_case(f: dict, c: dict) -> bool:
     return finding_path(f).endswith(case_path(c))
 
 
+def _placeholder_path_match(fp: str, cp: str) -> bool:
+    """Match a finding path against a case path containing {param} placeholders.
+
+    /users/v1/{username} matches /users/v1/name1 but NOT /users/v1 or
+    /users/v1/name1/email (exactly one segment per placeholder).
+    """
+    import re as _re
+    pat = _re.escape(cp)
+    pat = _re.sub(r"\\\{[^}]+\\\}", "[^/?#]+", pat)
+    return _re.search(pat + r"($|[?#])", fp) is not None
+
+
 def expected_classes(c: dict) -> set[str]:
     """Classes that count as TP for this case."""
     eff = (c.get("expected_finding_class") or "").strip()
@@ -128,15 +140,28 @@ def main() -> None:
     unmatched_findings = 0
     for f in findings:
         f_class = category_of(f)
-        strict = [c for c in cases if finding_matches_case(f, c) and (is_safe_case(c) or f_class in expected_classes(c))]
-        if strict:
-            for c in strict:
+        fp = finding_path(f)
+
+        # Priority 1: literal path match (preserves existing behavior
+        # for non-placeholder cases).
+        literal = [c for c in cases if "{" not in case_path(c) and finding_matches_case(f, c)]
+        if literal:
+            strict = [c for c in literal if is_safe_case(c) or f_class in expected_classes(c)]
+            for c in (strict or literal):
                 by_case.setdefault(id(c), []).append(f)
             continue
-        url_only = [c for c in cases if finding_matches_case(f, c)]
-        if url_only:
-            by_case.setdefault(id(url_only[0]), []).append(f)
+
+        # Priority 2: placeholder path match (Phase 1c path-param cases).
+        placeholder = [
+            c for c in cases
+            if "{" in case_path(c) and _placeholder_path_match(fp, case_path(c))
+        ]
+        if placeholder:
+            strict = [c for c in placeholder if is_safe_case(c) or f_class in expected_classes(c)]
+            for c in (strict or placeholder):
+                by_case.setdefault(id(c), []).append(f)
             continue
+
         unmatched_findings += 1
 
     tp = fp = fn = tn = 0
