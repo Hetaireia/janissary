@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-30T02:57:39Z",
+  "timestamp": "2026-10-30T03:05:24Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
@@ -211,17 +211,70 @@
       ],
       "run": "20261029T152433Z-bwapp"
     },
-    "crapi": null
+    "crapi": {
+      "app": "crapi",
+      "cases": 4,
+      "vuln_cases": 1,
+      "safe_cases": 3,
+      "findings": 0,
+      "unmatched_findings": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "tn": 3,
+      "aborts": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "fp_rate_safe": 0.0,
+      "per_case": [
+        {
+          "path": "/",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/workshop/api/shop/products",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/identity/api/v2/user/dashboard",
+          "safe": true,
+          "expected": [],
+          "findings": 0,
+          "outcome": "TN",
+          "aborted": false
+        },
+        {
+          "path": "/workshop/api/merchant/contact_mechanic",
+          "safe": false,
+          "expected": [
+            "ssrf"
+          ],
+          "findings": 0,
+          "outcome": "FN",
+          "aborted": true
+        }
+      ],
+      "run": "20261030T030328Z-crapi"
+    }
   },
   "totals": {
     "tp": 8,
     "fp": 0,
-    "fn": 0,
-    "tn": 21,
-    "aborts": 0,
+    "fn": 1,
+    "tn": 24,
+    "aborts": 1,
     "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0,
+    "recall": 0.8889,
+    "f1": 0.9412,
     "fp_rate_safe": 0.0,
     "unmatched_findings": 0
   },
