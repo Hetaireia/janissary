@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.1] - 2026-10-30
+
+Fix version reporting: `janissary --version` and `janissary.__version__`
+reported 7.5.1 on 7.7.0 installs.
+
+A fresh-clone audit of the 7.7.0 shipped artifact surfaced the drift: the
+installed metadata (what `pip show janissary` reports) correctly showed
+7.7.0, but the runtime version string was a hardcoded constant in
+`src/janissary/__init__.py` that had not been updated since 7.5.1. Users
+running the primary version command (`janissary --version`) saw 7.5.1
+and had no way to know whether they had successfully installed 7.7.0.
+
+### Fixed
+- `src/janissary/__init__.py` now reads `__version__` from
+  `importlib.metadata.version("janissary")` — the same source of truth as
+  `pip show`. Cannot drift from `pyproject.toml` going forward.
+- Added `tests/unit/test_version_consistency.py` with two assertions:
+  runtime `__version__` matches `pyproject.toml`, and does not fall back
+  to the source-uninstalled placeholder.
+
+### Notes
+- The 7.7.0 release is preserved as-is (tag, GitHub release, artifacts
+  unchanged). Users on 7.7.0 see 7.5.1 from `janissary --version` until
+  they install 7.7.1.
+- The fresh-clone audit script is being tightened in this release to
+  assert `__version__` matches `pyproject.toml`. The 7.7.0 audit printed
+  the mismatch but did not fail on it — the assertion is now explicit.
+- Test count: 564 -> 566 (net +2).
+
 ## [7.7.0] - 2026-10-30
 
 Session B: SSRF response-body detection for JSON-bodied targets.
