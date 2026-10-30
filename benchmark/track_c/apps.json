@@ -192,6 +192,18 @@
     "base_url": "http://127.0.0.1:8888",
     "healthcheck": "/",
     "image_digest": null,
+    "image_digests": [
+      "crapi/crapi-chatbot:latest@sha256:36d274d54182a8baddba7ede17282035bb43ab9cb9cf87927e1fe7109901e0aa",
+      "crapi/crapi-web:latest@sha256:b27d246c646bd33898e7d1d2095b6e7576c0993a7b81a73aa7386929493d7151",
+      "crapi/crapi-workshop:latest@sha256:d4d2d94d35a31e211b04d5a771881f5ae13e358e8fa0804463ae3bace05dd815",
+      "crapi/crapi-community:latest@sha256:8ba0c7eda86ae065a673f1fa554d0109a24f25c5a8d65097ae024e5ee715c54e",
+      "crapi/crapi-identity:latest@sha256:5d1db5b3ba8e02bc68711ec6fc4e35ed7cd8b87e63785ece9e7ff5b5e36c5260",
+      "crapi/gateway-service:latest@sha256:97dade9daf0e758547b1686e2d3303c8c9b79838167f728a9211f0ee1f4622b0",
+      "crapi/mailhog:latest@sha256:015c23f79d40c9dc1800cd0a458503b89aeda3b585a12c37d53829d6c7d61fdd",
+      "postgres:14@sha256:0472f5295d05c211cc42b3daa5e84a128e390c5267b60ced9fe044bcf4edfdb8",
+      "mongo:4.4@sha256:4be76f674fc4b27859816811b8baa3c51830eb1dbf4ca81a51e26b79edd662ef",
+      "chromadb/chroma:latest@sha256:1e0b73a187a28757c572acba508c46f48c9e8b0acaf5c20e6d95cdedce1acdf6"
+    ],
     "security_level": "n/a",
     "excluded": false,
     "trial_class": [
