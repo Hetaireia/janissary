@@ -175,6 +175,22 @@ before any fix. Not part of task 1. Fix is a separate forward commit.
 Open question: does `janissary scan <url>` (single-module, no orchestrator)
 work against vampi and produce SARIF? If yes, the gap is orchestrator-only;
 if no, the gap is broader. That is the next measurement, not the next fix.
+### FN-4 scope conclusion (measured 2026-10-30, scan-vs-agent)
+
+janissary scan -u http://127.0.0.1:5000 --export scan-out.sarif
+  exit 0, SARIF 3682 bytes, schema-valid vs OASIS 2.1.0
+  artifacts: benchmark/track_c/runs/20261030-233727-scan-demo2/
+
+janissary agent http://127.0.0.1:5000 --attack-confirm --export out.sarif
+  exit 2, "no platforms detected and no fallback scan adapter registered"
+  artifacts: benchmark/track_c/runs/20261030-233451-sarif-demo/
+
+**Conclusion:** FN-4 is orchestrator-scoped. The single-module scan path is
+correct; the gap is in the agent module registry / platform detection path.
+Fix shape: fallback scan adapter invoked when platform detection yields no
+modules, instead of aborting. Narrow, additive, no change to scan.
+
+Fix is a separate forward commit; not part of Candidate A task 1.
 ## Exit criteria template
 
 Whichever direction is chosen, Phase 6 is done when:
