@@ -135,7 +135,7 @@ Original estimate: "Medium if stubs." Audit falsifies the stub premise. Scope wa
 Remaining work:
 1. [DONE 2026-10-30] SARIF live demo - out.sarif schema-valid vs OASIS 2.1.0 on aborted-scan path (see benchmark/track_c/runs/20261030-233451-sarif-demo/). Zero code change; measurement only.
    validate against the schema fixture. Zero code required; this is measurement, not build.
-2. Nuclei install + live demo - install binary, run `janissary attack nuclei <url>
+2. [DONE 2026-10-31] Nuclei live demo - exit 0, nuclei_exit 0, aborted false, 0 findings, 70.7s. Export JSON parses. See benchmark/track_c/runs/20261031-000218-nuclei-demo4/. Zero code change.
    --attack-confirm --templates <path>` against one corpus app.
 3. Record measurement - if either fails live (likely for Nuclei under real template/output
    variation), record as a measurement commit before the fix, exactly as 4a2d0d1 did for FN-3.
@@ -191,6 +191,61 @@ Fix shape: fallback scan adapter invoked when platform detection yields no
 modules, instead of aborting. Narrow, additive, no change to scan.
 
 Fix is a separate forward commit; not part of Candidate A task 1.
+## Phase 6 close status (2026-10-31)
+
+**Candidate A - Integration arms: COMPLETE.** Both arms live-proven with
+schema-valid exports against a running corpus app.
+
+- SARIF: aborted-scan path produced schema-valid SARIF 2.1.0 (e8e1b47)
+- Nuclei: completed run, exit 0, valid JSON (20261031-000218-nuclei-demo4)
+
+Neither needed code changes. Audit's "Medium if stubs" estimate was wrong;
+reality was Small, and Small is now zero remaining work.
+
+### Deferred work items (fully specified, not started)
+
+**FN-4 - Agent orchestrator gap.** `janissary agent` against vampi exits 2
+with "no platforms detected and no fallback scan adapter registered".
+`agent.py:189` already has the fallback hook (`plan = ["scan"] if "scan" in
+self.adapters else []`), but no `"scan"` adapter is registered by `cli.py:904`.
+Fix shape: write a scan adapter (target, context) -> list[Finding], register
+it at cli.py:904, add a test. ~45-90 min. Additive; no change to agent.py or
+scan. Measurement at e8e1b47 and a33cbb0.
+
+**FN-5 - Missing --nuclei-path CLI flag.** `NucleiRunner(nuclei_path=...)`
+exists but `janissary attack nuclei` has no CLI flag to set it. The runner's
+own error message advertises the capability ("or pass nuclei_path explicitly").
+Fix shape: add `--nuclei-path` arg to the subparser at cli.py:1461, plumb
+through to `NucleiRunner(...)`, add a test. ~15-30 min.
+
+### Flag semantics discovery (worth a CLI docs fix, not yet filed)
+
+`--rate-limit` is total requests/second across all templates, not per-template.
+Observed: 219 templates at rate-limit 10 exceeded 120s; same set at rate-limit
+100 completed in 70.7s. `--rate-limit` help text (cli.py:1480) is silent on the
+semantic. One-line help update later; no behavior change.
+
+### Environment carry notes for next session
+
+- Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
+  needs manual PATH prepend, or use FN-5's fix once shipped. `go install` would
+  put it on PATH but fails on Go 1.27 (dependency graph mismatch); winget is
+  flaky; direct download is the reliable path.
+- `nuclei -update-templates` hangs at cleanup on this machine (observed 6+ min
+  past template download completion). Templates are complete; kill the process,
+  don't re-run.
+- PS7 8.3 short-name expansion: `Remove-Item $env:TEMP\...` fails with "object
+  at path C:\Users\XXXXXX~1 does not exist" even when `Test-Path` returned true.
+  Use `[System.IO.File]::Delete` / `[Environment]::GetFolderPath('...')` and
+  avoid `$env:TEMP` / `$env:LOCALAPPDATA` in PS provider cmdlets.
+
+## Candidate A exit criteria - met
+
+- [x] SARIF arm produces schema-valid output on a live invocation
+- [x] Nuclei arm completes a live run with valid JSON export
+- [x] Both demonstrated against a running corpus app (vampi)
+- [x] Zero code changes required (as the audit predicted, once "Medium" was corrected to "Small")
+- [x] Evidence committed as run dirs, auditable in git log
 ## Exit criteria template
 
 Whichever direction is chosen, Phase 6 is done when:
