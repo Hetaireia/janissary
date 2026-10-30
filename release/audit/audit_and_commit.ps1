@@ -5,11 +5,21 @@ Set-Location "C:\Users\M5 E60\janissary-project\janissary"
 Get-ChildItem "scripts\audit-v*.txt" -ErrorAction SilentlyContinue | Remove-Item -Force
 
 Write-Host "`n=== Running audit ===" -ForegroundColor Cyan
-& "C:\Users\M5 E60\janissary-project\janissary\scripts\fresh_clone_audit.ps1"
-$auditExit = $LASTEXITCODE
-
-# Return to working tree regardless of audit outcome
-Set-Location "C:\Users\M5 E60\janissary-project\janissary"
+$auditExit = 0
+try {
+    & "C:\Users\M5 E60\janissary-project\janissary\scripts\fresh_clone_audit.ps1"
+    $auditExit = $LASTEXITCODE
+} catch {
+    Write-Host "`n[audit threw] $_" -ForegroundColor Red
+    $auditExit = 1
+} finally {
+    # ALWAYS escape the clone, even if the audit crashed mid-run
+    Set-Location "C:\Users\M5 E60\janissary-project\janissary"
+    # Cleanup any leftover clone
+    Get-ChildItem "C:\Users\M5 E60" -Directory -Filter "janissary-audit-*" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -gt (Get-Date).AddMinutes(-30) } |
+        ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
 
 # Find the log
 $log = Get-ChildItem "scripts\audit-v*.txt" -ErrorAction SilentlyContinue |
@@ -53,7 +63,7 @@ Fixes in this commit:
 - Step 9 pip install now captures and logs full output on failure (was --quiet | Out-Null, so failures had no context).
 - New release/audit/audit_and_commit.ps1 wrapper: runs audit, checks for verification banner, commits ONLY on success. If audit fails, wrapper throws and no commit happens.
 
-The log committed here comes from an audit run that reached RESULT: v7.7.1 SHIPPED ARTIFACT VERIFIED with all 11 checks green.
+The log committed here comes from an audit run whose RESULT banner matches the version asserted in step 3 and step 9. ad0e84b's committed log had a v7.7.0 banner despite 7.7.1 being the actual asserted version (step 3 verified pyproject = 7.7.1, step 9 verified installed __version__ = 7.7.1). This commit's log banner shows v7.7.1.
 
 False-claim commit chain corrected by this commit (7 total):
   296db18 - README + CHANGELOG claimed, only CHANGELOG updated

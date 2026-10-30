@@ -96,12 +96,25 @@ Log "  [ok] installed version matches pyproject"
 
 Log "`n=== 10. Run full unit test suite in fresh venv ==="
 $testOutput = & $py -m pytest tests\unit\ -q 2>&1
-$testLines = $testOutput | Select-String "passed|failed"
-$summary = ($testLines | Select-Object -Last 1).Line.Trim()
+$testExit = $LASTEXITCODE
+$testLines = @($testOutput | Select-String "passed|failed")
+if ($testLines.Count -eq 0) {
+    Log "FAIL: pytest produced no summary line (exit $testExit). Full output:"
+    $testOutput | ForEach-Object { Log "  $_" }
+    exit 1
+}
+$summary = ($testLines | Select-Object -Last 1).Line
+if (-not $summary) {
+    Log "FAIL: summary Line property was empty. Raw summary object:"
+    Log ("  " + ($testLines | Select-Object -Last 1 | Out-String))
+    exit 1
+}
+$summary = $summary.Trim()
 Log "  $summary"
-if ($summary -match "failed|error") { Log "FAIL: test run had failures/errors"; Log $testOutput; exit 1 }
+if ($testExit -ne 0) { Log "FAIL: pytest exit code $testExit"; Log $testOutput; exit 1 }
+if ($summary -match "\bfailed\b|\berror\b") { Log "FAIL: test run had failures/errors"; Log $testOutput; exit 1 }
 if ($summary -notmatch "passed") { Log "FAIL: no 'passed' in summary - unexpected pytest output"; Log $testOutput; exit 1 }
-Log "  [ok] all 564 pass in fresh clone"
+Log "  [ok] all tests passed in fresh clone"
 
 Log "`n=== 11. Verify ssrf.jsonl artifact content (chain-of-evidence) ==="
 $ssrfLine = Get-Content "benchmark\track_c\runs\20261030T032949Z-crapi\ssrf.jsonl" -First 1 | ConvertFrom-Json
