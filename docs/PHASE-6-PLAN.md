@@ -97,15 +97,72 @@ Audit Candidate A. Cheap (~30 min), may collapse the decision (if the SARIF
 and Nuclei arms already work, the build is small), and costs nothing if you
 then choose B or C. Do this before committing to any direction.
 
+## Audit Results (2026-10-30)
+
+Filled in after the plan was written. Falsifies the "stubs" hypothesis in Candidate A.
+
+### Both arms are wired into the CLI
+
+- src/janissary/cli.py:300-301, 1260 - scan `--export *.sarif` -> `_write_sarif`
+- src/janissary/cli.py:953-955 - agent `--export *.sarif` -> `_write_sarif`
+- src/janissary/cli.py:732-802, 1461-1484 - `janissary attack nuclei` -> `NucleiRunner`
+
+### Both arms are unit/integration proven
+
+- SARIF: 41 tests pass (test_sarif_output 10, test_sarif_schema 12, test_sarif_rules 19).
+  Schema-validated against OASIS SARIF 2.1.0 fixture (tests/fixtures/sarif/sarif-schema-2.1.0.json,
+  3389 lines, 43 schema refs, 0 mocks).
+- Nuclei: 22 tests pass, but 11 mock refs (subprocess patched). No live binary exercise.
+
+### Neither arm has ever produced a live artifact in this repo
+
+- No .sarif tracked in benchmark/track_c/runs/ (git ls-files)
+- No .sarif on disk (untracked scan returned none)
+- nuclei binary not on PATH (`Get-Command nuclei` fails)
+
+### Commit history for the source modules
+
+- 95e0eff feat(ssrf): wire scanner._ssrf_phase, CLI flags, SARIF + grouping (ADR-012 D3-D5)
+- 3f89e55 feat(sarif): rule catalog module (0.3c-a)
+- 535e97d P3.2: Nuclei runner (257 tests, --templates required, subprocess wrapper)
+
+SARIF touched recently. Nuclei last touched at P3.2 - settled, not iterated.
+
+## Revised scope for Candidate A
+
+Original estimate: "Medium if stubs." Audit falsifies the stub premise. Scope is Small.
+
+Remaining work:
+1. SARIF live demo - run a real scan or agent export with `--export out.sarif`,
+   validate against the schema fixture. Zero code required; this is measurement, not build.
+2. Nuclei install + live demo - install binary, run `janissary attack nuclei <url>
+   --attack-confirm --templates <path>` against one corpus app.
+3. Record measurement - if either fails live (likely for Nuclei under real template/output
+   variation), record as a measurement commit before the fix, exactly as 4a2d0d1 did for FN-3.
+
 ## Decision
 
-Direction: _unresolved_
+Direction: **Candidate A - Integration arms**
+Status: audit complete; first task not yet started
+Rationale: Both arms are wired and unit-proven. The only gap between claim and evidence
+is a live run. This is the smallest Phase 6 direction that produces real audit material.
+Candidate B (new app) is higher-value but multi-hour. Candidate C (deeper corpus) risks
+padding without generalization evidence.
 
-Chosen: ______
-Rationale: ______
-First concrete task: ______
-Exit criteria: ______
+First concrete task: SARIF live export against existing artifacts or an empty findings
+store, validated against the OASIS schema fixture. No code change.
 
+Exit criteria (adapted from the template below): live SARIF export validates against
+OASIS 2.1.0; nuclei binary installed and one live run completes against a corpus app;
+any failure recorded in git history before fix.
+
+## Open questions for the first task
+
+- Is a corpus app container currently running? If not, agent-path export against the
+  findings store is the fallback (empty findings still produce schema-valid SARIF -
+  test_sarif_empty_findings_still_schema_valid proves it).
+- Nuclei template source - does the repo ship any, or must the user supply? `--templates`
+  is required per cli.py:1465, so a template path is needed for the demo.
 ## Exit criteria template
 
 Whichever direction is chosen, Phase 6 is done when:
