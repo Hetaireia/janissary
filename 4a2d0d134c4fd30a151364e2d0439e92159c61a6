@@ -1,0 +1,1 @@
+FN-3 measured: apply_coupon JSON-body SQLi, corpus tp=9 fp=0 fn=1 tn=24 f1=0.9474. Oracle fix pending v7.8.0.
