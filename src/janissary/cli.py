@@ -795,6 +795,7 @@ def cmd_attack_nuclei(args: argparse.Namespace) -> int:
             tags=tags,
             timeout=args.timeout,
             rate_limit=args.rate_limit,
+            nuclei_path=getattr(args, "nuclei_path", None),
         )
     except AttackConfirmationRequired as exc:
         print(f"[!] {exc}", file=sys.stderr)
@@ -1466,6 +1467,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--templates",
         required=True,
         help="comma-separated list of template paths or directories",
+    )
+    nuclei.add_argument(
+        "--nuclei-path", dest="nuclei_path", default=None, metavar="PATH",
+        help="Path to the nuclei binary. Defaults to resolving 'nuclei' on PATH.",
     )
     nuclei.add_argument(
         "--severity", default=None, help="filter by severity (e.g. high,critical)"
