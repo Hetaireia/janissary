@@ -130,10 +130,10 @@ SARIF touched recently. Nuclei last touched at P3.2 - settled, not iterated.
 
 ## Revised scope for Candidate A
 
-Original estimate: "Medium if stubs." Audit falsifies the stub premise. Scope is Small.
+Original estimate: "Medium if stubs." Audit falsifies the stub premise. Scope was Small - task 1 now DONE, zero code written.
 
 Remaining work:
-1. SARIF live demo - run a real scan or agent export with `--export out.sarif`,
+1. [DONE 2026-10-30] SARIF live demo - out.sarif schema-valid vs OASIS 2.1.0 on aborted-scan path (see benchmark/track_c/runs/20261030-233451-sarif-demo/). Zero code change; measurement only.
    validate against the schema fixture. Zero code required; this is measurement, not build.
 2. Nuclei install + live demo - install binary, run `janissary attack nuclei <url>
    --attack-confirm --templates <path>` against one corpus app.
@@ -163,6 +163,18 @@ any failure recorded in git history before fix.
   test_sarif_empty_findings_still_schema_valid proves it).
 - Nuclei template source - does the repo ship any, or must the user supply? `--templates`
   is required per cli.py:1465, so a template path is needed for the demo.
+### FN-4 candidate (measured 2026-10-30, task 1 run)
+
+Agent orchestrator exits 2 against vampi with "no platforms detected and no
+fallback scan adapter registered". vampi is a locked corpus app with 4 known
+vulnerability classes in apps.json.
+
+Recorded in benchmark/track_c/runs/20261030-233451-sarif-demo/FN-4.md
+before any fix. Not part of task 1. Fix is a separate forward commit.
+
+Open question: does `janissary scan <url>` (single-module, no orchestrator)
+work against vampi and produce SARIF? If yes, the gap is orchestrator-only;
+if no, the gap is broader. That is the next measurement, not the next fix.
 ## Exit criteria template
 
 Whichever direction is chosen, Phase 6 is done when:
