@@ -273,6 +273,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         collaborator=collaborator_client,
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
         json_template=_json_template,
+        baseline_value=args.baseline_value or "",
     )
 
     if not args.quiet:
@@ -1219,7 +1220,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(
         "--inject-in",
-        choices=["auto", "query", "body", "cookie", "header", "param-name", "json-body"],
+        choices=["auto", "query", "body", "cookie", "header", "param-name", "json-body", "path"],
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST)",
@@ -1242,6 +1243,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="JSON body template for --inject-in json-body. Must contain a {{PAYLOAD}} placeholder.",
     )
+    scan.add_argument("--baseline-value", default="", metavar="VAL", help="Known-good value for --inject-in path baseline.")
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)
     scan.add_argument("--baseline-count", type=int, default=10)
