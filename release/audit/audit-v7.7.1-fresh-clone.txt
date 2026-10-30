@@ -1,13 +1,13 @@
 ================================================================
-FRESH-CLONE AUDIT - 2026-10-30 16:23:06
+FRESH-CLONE AUDIT - 2026-10-30 16:26:45
 ================================================================
 
 === 1. Clone from GitHub (branch: wip/phase-4-fn3) ===
-  cloned to: C:\Users\M5 E60\janissary-audit-20261030-162306
+  cloned to: C:\Users\M5 E60\janissary-audit-20261030-162645
 
 === 2. Verify clone HEAD matches GitHub main ===
-  clone HEAD:   4b2d75ff7a06f4d87985bdd819cbffdae60fc9f3
-  GitHub main:  4b2d75ff7a06f4d87985bdd819cbffdae60fc9f3
+  clone HEAD:   ad0e84bda19e5ccd44f97e41ce3d6132c094b76e
+  GitHub main:  ad0e84bda19e5ccd44f97e41ce3d6132c094b76e
   [ok] match
 
 === 3. Verify version at HEAD ===
@@ -45,8 +45,8 @@ FRESH-CLONE AUDIT - 2026-10-30 16:23:06
   [ok] installed version matches pyproject
 
 === 10. Run full unit test suite in fresh venv ===
-  ============================ 566 passed in 25.50s =============================
-  [ok] all 564 pass in fresh clone
+  ============================ 566 passed in 17.49s =============================
+  [ok] all tests passed in fresh clone
 
 === 11. Verify ssrf.jsonl artifact content (chain-of-evidence) ===
   payload = mailhog URL: True
@@ -55,7 +55,7 @@ FRESH-CLONE AUDIT - 2026-10-30 16:23:06
   [ok] chain-of-evidence intact
 
 === 12. Cleanup ===
-  removed audit clone: C:\Users\M5 E60\janissary-audit-20261030-162306
+  removed audit clone: C:\Users\M5 E60\janissary-audit-20261030-162645
 
 ================================================================
  RESULT: v7.7.0 SHIPPED ARTIFACT VERIFIED
@@ -72,4 +72,4 @@ FRESH-CLONE AUDIT - 2026-10-30 16:23:06
   Full unit suite passed in fresh venv: PASS
   ssrf.jsonl chain-of-evidence: PASS
 
-Audit log saved to: C:\Users\M5 E60\janissary-project\janissary\scripts\audit-v7.7.1-20261030-162306.txt
+Audit log saved to: C:\Users\M5 E60\janissary-project\janissary\scripts\audit-v7.7.1-20261030-162645.txt
