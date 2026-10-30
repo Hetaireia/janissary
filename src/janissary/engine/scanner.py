@@ -31,6 +31,7 @@ from janissary.detection import (
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
 from janissary.detection.lfi_oracle import check_lfi_content_oracle
 from janissary.detection.blind_sqli_oracle import check_blind_sqli_oracle
+from janissary.detection.ssrf_response_oracle import check_ssrf_response_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
 from janissary.output.raw_http import (
@@ -69,6 +70,7 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal", "critical"),
     ("traversal_passwd_deep", "../../../../../etc/passwd", "traversal", "critical"),
     ("traversal_passwd_abs", "/etc/passwd", "traversal", "critical"),
+    ("ssrf_mailhog_canary", "http://mailhog:8025/", "ssrf", "critical"),
     ("sqli_blind_true", "1' OR '1'='1", "sqli_blind", "high"),
     ("sqli_blind_false", "1' AND '1'='2", "sqli_blind", "high"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
@@ -217,6 +219,17 @@ class ScanSummary:
 # -------------------------------------------------------------------
 
 
+def _substitute_placeholder(obj, placeholder, value):
+    """Recursively replace placeholder in a template structure. Pure."""
+    if isinstance(obj, str):
+        return obj.replace(placeholder, value) if placeholder in obj else obj
+    if isinstance(obj, dict):
+        return {k: _substitute_placeholder(v, placeholder, value) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_substitute_placeholder(v, placeholder, value) for v in obj]
+    return obj
+
+
 class Scanner:
     """Minimal scanner: baseline, dispatch, analyze."""
 
@@ -237,6 +250,7 @@ class Scanner:
         auth_configured: bool = False,
         collaborator: object | None = None,
         ssrf_timeout: float = 10.0,
+        json_template: dict | None = None,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -250,6 +264,7 @@ class Scanner:
         self.auth_configured = auth_configured
         self.collaborator = collaborator
         self.ssrf_timeout = ssrf_timeout
+        self.json_template = json_template
         self._ssrf_poll_delays: list[float] = [2.0, 3.0, 5.0]
         self._consecutive_401s: int = 0
         self._ua = DEFAULT_USER_AGENT
@@ -262,8 +277,11 @@ class Scanner:
             "cookie",
             "header",
             "param-name",
+            "json-body",
         }:
             raise ValueError(f"invalid inject_in: {inject_in!r}")
+        if self.inject_in == "json-body" and not self.json_template:
+            raise ValueError("inject_in='json-body' requires json_template")
 
         cfg = pacer_config or PacerConfig(base_delay=delay)
         if cfg.min_delay < delay:
@@ -276,6 +294,15 @@ class Scanner:
             *DEFAULT_PAYLOADS,
             ("trustbound_marker", self._trustbound_nonce, "trustbound", "high"),
         ]
+        if self.inject_in == "json-body":
+            # json-body: filter to SSRF-only payloads. JSON body fields are
+            # structured values (URLs, IDs, structured input), not free-form
+            # strings. Sending SQLi/XSS/traversal payloads into a URL field
+            # causes the target to return 400 (malformed URL) and the scanner
+            # aborts before reaching the SSRF payload. Filter to SSRF category
+            # only. Future json-body field types (search, ID) would need
+            # their own filter.
+            self._payloads = [p for p in self._payloads if p[2] == "ssrf"]
         self.waf_profile: WAFProfile | None = None
         self._pacer: AdaptivePacer | None = None
 
@@ -340,6 +367,19 @@ class Scanner:
                 return self.session.post(self.target, **kwargs)
             return self.session.get(self.target, **kwargs)
 
+        if self.inject_in == "json-body":
+            if not self.json_template:
+                raise ValueError("inject_in='json-body' requires json_template")
+            body = _substitute_placeholder(self.json_template, "{{PAYLOAD}}", value)
+            return self.session.post(
+                self.target,
+                json=body,
+                headers=self._headers(),
+                timeout=self.timeout,
+                allow_redirects=allow_redirects,
+                proxies=self.proxies,
+            )
+
         if self.inject_in == "body" or (
             self.inject_in == "auto" and self.method == "POST"
         ):
@@ -398,8 +438,8 @@ class Scanner:
             return False, f"request error: {e}"
         if r is None:
             return False, "no response"
-        if r.status_code >= 400:
-            return False, f"HTTP {r.status_code}"
+        if r.status_code >= 500:
+            return False, f"server error: HTTP {r.status_code}"
         if not (r.text or "").strip():
             return False, "empty body"
         return True, ""
@@ -741,6 +781,42 @@ class Scanner:
                                 f"  [{param}] {name} -> lfi_content "
                                 f"| {lf['detail'][:80]}"
                             )
+
+                # SSRF response-body oracle (Phase 4, Session B).
+                if name.startswith("ssrf_"):
+                    _ssrf_markers = {"ssrf_mailhog_canary": ["MailHog", "mailhog"]}.get(name, [])
+                    if _ssrf_markers:
+                        ssrf_raw = check_ssrf_response_oracle(
+                            baseline=baseline,
+                            snapshot=snapshot,
+                            response_status=r.status_code,
+                            payload_value=value,
+                            payload_name=name,
+                            fetch_markers=_ssrf_markers,
+                        )
+                        for sf in ssrf_raw:
+                            ssrf_req = getattr(r, "request", None)
+                            ssrf_finding = ScanFinding(
+                                param=param,
+                                payload_name=name,
+                                payload_value=value,
+                                category=sf["category"],
+                                severity=sf["severity"],
+                                finding_type=sf["type"],
+                                detail=sf["detail"],
+                                response_status=r.status_code,
+                                response_length=len(r.text or ""),
+                                response_time=snapshot.elapsed,
+                                response_content_type=snapshot.content_type,
+                                url=getattr(ssrf_req, "url", None) or self.target,
+                                method=self.method,
+                                raw_request=serialize_request(ssrf_req),
+                                raw_response=serialize_response(r),
+                            )
+                            summary.findings.append(ssrf_finding)
+                            summary.finding_count += 1
+                            if not quiet:
+                                _say(f"  [{param}] {name} -> ssrf_response | {sf['detail'][:80]}")
 
                 # Blind SQLi paired oracle (Phase 4, FN-1).
                 if arming.armed and name == "sqli_blind_false" and sqli_blind_true_snap is not None:

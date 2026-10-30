@@ -50,7 +50,7 @@ def test_preflight_still_aborts_on_empty_final_body():
     assert "empty" in reason.lower()
 
 
-def test_preflight_still_aborts_on_4xx():
+def test_preflight_does_not_abort_on_4xx():
     from janissary.engine.scanner import Scanner
 
     scanner = Scanner(target="http://example/", params=["x"])
@@ -65,5 +65,4 @@ def test_preflight_still_aborts_on_4xx():
 
     scanner._request = fake_request
     ok, reason = scanner.preflight()
-    assert ok is False
-    assert "404" in reason
+    assert ok is True

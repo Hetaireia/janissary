@@ -1,0 +1,5 @@
+{
+  "mechanic_api": "{{PAYLOAD}}",
+  "repetitions": 1,
+  "repeat_message": "jns-probe"
+}
