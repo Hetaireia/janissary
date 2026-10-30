@@ -243,6 +243,20 @@ def cmd_scan(args: argparse.Namespace) -> int:
             print(f"[!] --collaborator: {exc}", file=sys.stderr)
             return 64
 
+    _json_template = None
+    if getattr(args, "json_template", None):
+        import json as _json
+        from pathlib import Path as _Path
+        _jt_path = _Path(args.json_template)
+        if not _jt_path.exists():
+            print(f"[!] --json-template: {_jt_path} not found", file=sys.stderr)
+            return 64
+        try:
+            _json_template = _json.loads(_jt_path.read_text(encoding="utf-8"))
+        except _json.JSONDecodeError as _exc:
+            print(f"[!] --json-template: invalid JSON: {_exc}", file=sys.stderr)
+            return 64
+
     scanner = Scanner(
         target=args.url,
         params=params,
@@ -258,6 +272,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         auth_configured=not auth_cfg.is_empty,
         collaborator=collaborator_client,
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
+        json_template=_json_template,
     )
 
     if not args.quiet:
@@ -1204,7 +1219,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(
         "--inject-in",
-        choices=["auto", "query", "body", "cookie", "header", "param-name"],
+        choices=["auto", "query", "body", "cookie", "header", "param-name", "json-body"],
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST)",
@@ -1220,6 +1235,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=10.0,
         help="Seconds to wait for SSRF collaborator hits (default 10).",
+    )
+    scan.add_argument(
+        "--json-template",
+        default=None,
+        metavar="PATH",
+        help="JSON body template for --inject-in json-body. Must contain a {{PAYLOAD}} placeholder.",
     )
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)

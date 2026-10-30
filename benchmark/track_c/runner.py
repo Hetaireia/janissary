@@ -176,6 +176,11 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -
         "--jsonl", "--quiet",
         "--no-waf",
     ]
+    _notes = case.get("notes", "") or ""
+    if "json_body:" in _notes:
+        _template_rel = _notes.split("json_body:", 1)[1].split(",")[0].strip()
+        _template_abs = Path(__file__).parent / _template_rel
+        cmd += ["--inject-in", "json-body", "--json-template", str(_template_abs)]
     if hasattr(session, "_jns_bearer") and session._jns_bearer:
         cmd += ["--bearer", session._jns_bearer]
     if session.cookies:

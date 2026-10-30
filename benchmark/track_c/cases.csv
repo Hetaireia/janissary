@@ -31,4 +31,4 @@ bwapp,/directory_traversal_1.php?page=test,GET,page,traversal,false,traversal,re
 crapi,/,GET,x,safe,true,,public_landing
 crapi,/workshop/api/shop/products,GET,x,safe,true,,product_list_api
 crapi,/identity/api/v2/user/dashboard,GET,x,safe,true,,user_profile_api
-crapi,/workshop/api/merchant/contact_mechanic,POST,mechanic_api,ssrf,false,ssrf,requires_json_body_inject
+crapi,/workshop/api/merchant/contact_mechanic,POST,mechanic_api,ssrf,false,ssrf,json_body:templates/crapi_mechanic.json
