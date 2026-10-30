@@ -1,4 +1,4 @@
-# Track C — Schema (v2)
+# Track C — Schema (v2.1)
 
 Amendment 24 reference: `docs/AMENDMENT-24.md`. This file defines the
 data model for the real-world negatives campaign. It is the contract
@@ -40,7 +40,9 @@ One row per trial. **A trial is `(app, path, method, param)`.**
 | `vuln_class` | string | trial category (informational); used as fallback for `expected_finding_class` |
 | `safe` | `true`\|`false` | `true` = this trial expects **no findings**. Any finding on it is FP |
 | `expected_finding_class` | string | class a finding must carry to count as TP. Empty for safe trials |
-| `notes` | string | free-form |
+| `notes` | string | free-form. Structured suffix: `json_body:<path>`. |
+| `inject_in` | string | optional; auto/query/body/cookie/header/param-name/json-body/path. Empty=auto. path mode: {param} in path + baseline_value. |
+| `baseline_value` | string | optional; baseline sample value for inject_in=path. |
 
 **Row semantics:**
 
@@ -57,7 +59,10 @@ The FP rate reported under Amendment 23 Item A is computed over the
 
 Per-trial accounting. For each row in `cases.csv`:
 
-1. Find findings whose URL path matches the trial's path (last-segment match, case-sensitive).
+1. Attribute findings to trials by URL path (two-priority):
+   - Priority 1 (literal): endswith() for cases without {param}.
+   - Priority 2 (placeholder): [^/?#]+ per {param} placeholder,
+     only when priority 1 matches no case.
 2. If `safe=true`:
    - any matching findings → **FP** (1 per trial, regardless of how many findings)
    - no matching findings → **TN**
@@ -92,6 +97,10 @@ The `apps.json` v1 schema only had `base_url`, `healthcheck`, `login`.
 Existing apps are backfilled with `image_digest=null`, `security_level=null`,
 `excluded=false`, `trial_class=[]`, `safe_endpoints=[]`,
 `known_vulnerable=[]`, `login.cookies=[]`, `login.setup=[]`.
+
+### v2 -> v2.1
+
+Additive: cases.csv gained optional inject_in and baseline_value columns. Empty values = v2 behavior. Attribution adds placeholder matching (priority 2); literal unchanged (priority 1).
 
 ## Locked-run requirements
 
