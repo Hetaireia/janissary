@@ -30,7 +30,7 @@ differ:
 - vampi: self-contained SQLite inside container; data state may differ between fresh deploys.
 
 **To reproduce exact numbers**: export and import the current
-named volumes. Procedure not automated.
+See `scripts/export-volumes.ps1` (run while containers are healthy) and `scripts/import-volumes.ps1` (run after fresh deploy).
 **To run on a fresh install**: expect login-flow variance; app
 scores may differ from `corpus-score.json`.
 
