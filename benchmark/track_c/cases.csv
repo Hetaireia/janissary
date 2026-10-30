@@ -28,3 +28,7 @@ bwapp,/login.php,GET,x,safe,true,,safe_endpoint_no_vuln
 bwapp,/install.php,GET,x,safe,true,,safe_endpoint_no_vuln
 bwapp,/xss_get.php?firstname=test&lastname=placeholder&form=submit,GET,firstname,xss,false,xss,requires_low_security_and_login
 bwapp,/directory_traversal_1.php?page=test,GET,page,traversal,false,traversal,requires_low_security_and_login
+crapi,/,,GET,x,safe,true,,public_landing
+crapi,/login,,GET,x,safe,true,,public_login
+crapi,/signup,,GET,x,safe,true,,public_signup
+crapi,/workshop/api/merchant/contact_mechanic,POST,mechanic_api,ssrf,false,ssrf,requires_json_body_inject
