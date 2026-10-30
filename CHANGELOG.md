@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.7.0] - 2026-10-30
+
+Session B: SSRF response-body detection for JSON-bodied targets.
+
+Adds JSON-body payload injection and a response-body oracle that detects
+server-side fetch by matching fetched-service content in the response body.
+Verified end-to-end against crAPI (OWASP modern vulnerable SPA): the scanner
+now detects crAPI's SSRF at POST /workshop/api/merchant/contact_mechanic,
+previously a documented false negative due to (1) no JSON body inject mode,
+and (2) collaborator-only SSRF detection requiring external OOB infrastructure.
+
+### Added
+- **JSON-body inject mode** (`--inject-in json-body` + `--json-template PATH`):
+  substitutes payload into a JSON body template's `{{PAYLOAD}}` placeholder.
+  Filters payload list to SSRF category because URL-shaped fields structurally
+  reject SQLi/XSS payloads (HTTP 400 -> abort before SSRF payload reached).
+- **SSRF response-body oracle** (`src/janissary/detection/ssrf_response_oracle.py`):
+  detects server-side fetch by searching the response body for content from
+  the fetched service. Payload reflection alone is not sufficient (that's
+  XSS-in-JSON, not SSRF): the oracle strips the reflected payload once before
+  marker search, then asserts each marker is absent from baseline snapshots.
+- **crAPI added as app 7** to the track-C corpus: OWASP's modern vulnerable
+  SPA with JWT auth and JSON-bodied endpoints.
+- **Template config** (`benchmark/track_c/templates/crapi_mechanic.json`):
+  JSON body template for the crAPI SSRF case.
+- 14 new unit tests: 7 for the SSRF response-body oracle, 7 for the
+  preflight abort policy.
+
+### Changed
+- **Preflight abort policy**: 5xx aborts (server broken); 4xx passes
+  (endpoint alive but rejected benign probe). Previously 4xx also aborted,
+  preventing scanning of any endpoint that validates input shape - crAPI
+  URL fields, GraphQL, and XML-RPC all return 400 on malformed probes.
+
+### Measurement
+Track C corpus now covers 7 apps: dvwa, juice-shop, vampi, gitea, nextcloud,
+bwapp, crapi. **tp=9 fp=0 fn=0 tn=24 aborts=0 precision=1.0 recall=1.0 f1=1.0.**
+At 7.6.0: tp=8 fn=0 tn=21 (6 apps). The f1=1.0 is measured, not claimed:
+crAPI's SSRF is real (verified by direct probe returning mailhog HTML in
+`response_from_mechanic_api`), detected by the new oracle, and attributed
+as TP by score.py.
+
+### Notes
+- Two design details surfaced during implementation:
+  1. argparse `choices=` needed `json-body` added separately from the
+     Scanner validation set (argparse rejects before Scanner is constructed).
+  2. The json-body payload filter is necessary because URL-shaped fields
+     return 400 on SQLi/XSS payloads, causing preflight-adjacent aborts
+     before the SSRF payload fires. Future json-body field types (search
+     text, ID fields) may need category-specific filters.
+- Test count: 550 -> 564 (net +14).
+- `docs/PHASE-4-PLAN.md`'s note about the response-body detection path being
+  deferred is now outdated; the path was implemented in this release.
+
 ## [7.6.0] - 2026-10-30
 
 Phase 4 completion. Closes all three FNs from the track C baseline (dvwa, bwapp).

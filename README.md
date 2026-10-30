@@ -2,7 +2,7 @@
 
 **Differential DAST for teams who need results they can trust.**
 
-`v7.6.0` — Apache 2.0
+`v7.7.0` — Apache 2.0
 
 > [!CAUTION]
 > **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By running any network command you accept the [Terms of Use](LEGAL.md). Review with `janissary terms show`.
@@ -42,14 +42,15 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 
 | | |
 |---|---|
-| **Version** | 7.6.0 (released 2026-10-30) |
+| **Version** | 7.7.0 (released 2026-10-30) |
+| **New in 7.7.0** | SSRF response-body oracle, JSON-body inject mode, crAPI (app 7) in corpus |
 | **New in 7.6.0** | LFI content oracle, blind SQLi oracle, deep/absolute traversal payloads |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
 | **Benchmark (OWASP)** | **F1 0.906 ± 0.002** unassisted (n=3); **0.921** with FN-recovery — Precision 1.000 (0 FP, n=3) — Recall 0.828 ± 0.004 |
 | **Detection classes** | SQLi, XSS, SSRF, traversal, cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
-| **Install** | `pip install janissary==7.6.0` |
+| **Install** | `pip install janissary==7.7.0` |
 
 ---
 
@@ -217,7 +218,7 @@ python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/<run-dir>
 ## Install
 
 ```bash
-pip install janissary==7.6.0
+pip install janissary==7.7.0
 
 # From source (development)
 git clone https://github.com/Hetaireia/janissary.git
