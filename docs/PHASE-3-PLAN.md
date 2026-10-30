@@ -1,6 +1,6 @@
 # PHASE-3-PLAN: Path-Parameter Injection (Phase 1c)
 
-**Status:** design -- awaiting implementation
+**Status:** shipped in v7.9.0 (2026-10-30) - Phase 1c complete
 **Parent:** `docs/AMENDMENT-24.md` (Phase 3 harness extension)
 **Predecessors:** Phase 1a (JWT auth, `5f54032`) and Phase 1b (class-aware attribution, `cbd33cd`)
 
@@ -82,7 +82,7 @@ Scanner source change adds a new CLI capability. Per SemVer:
 
 ### 6. Test target
 
-VAmPI `/books/v1/{book_title}`:
+VAmPI `/books/v1/{book_title}` (superseded - see addendum):
 
 - Requires JWT auth (Phase 1a support present).
 - Known SQLi vulnerability in book_title parameter.
@@ -141,3 +141,35 @@ VAmPI path SQLi is a **dev** trial. If `--inject-in path` implementation is foun
 - No CLI `--cookie` flag added: auth flows through apps.json login block, same as VAmPI JWT / DVWA cookies. Confirms §9 open risk is a non-issue.
 - Also folding in (same commit): correct VAmPI known_vulnerable — remove `/books/v1/{book_title}` sqli claim per cmd-77/78.
 - Scope stop: no app 7+, no POST-body mode, no crAPI/Juice Shop.
+
+## Addendum 2026-10-30: shipped in v7.9.0
+
+Phase 1c landed as v7.9.0 with one plan revision:
+
+**Target switched from `/books/v1/{book_title}` to `/users/v1/{username}`.**
+The original target was disconfirmed during Phase 3 (see "App 6: bWAPP"
+section note: "correct VAmPI known_vulnerable - remove
+`/books/v1/{book_title}` sqli claim per cmd-77/78"). A pre-implementation
+probe confirmed `/books/v1/{book_title}` returns 404 for all SQLi payloads
+(no SQL error, no content difference) - it is a genuine lookup, not a
+vulnerable endpoint.
+
+`/users/v1/{username}` confirmed vulnerable during v7.9.0 implementation:
+- baseline `name1`: 200, 48B, real user data
+- payload `'`: 500, 44642B with sqlite3.OperationalError traceback
+  (recognized by `DB_ERROR_PATTERNS["sqlite"]` - two patterns match)
+- payload `1' OR '1'='1`: 200, 48B - OR condition returns first row
+
+Standalone scanner test and full VAmPI trial both pass:
+`tp=1 fp=0 fn=0 tn=5 f1=1.0` for vampi, `tp=11 fp=0 fn=0 tn=24 f1=1.0`
+for full corpus.
+
+Implementation deltas from original plan:
+- `cases.csv` gained two columns at the end: `inject_in`, `baseline_value`
+  (additive; all 40+ existing rows padded with empty values).
+- `score.py` attribution gained two-priority matching: literal endswith
+  (preserves v7.8.0 behavior for non-placeholder cases) then placeholder
+  regex (one segment per `{param}`) for path-param rows.
+- New CLI flag `--baseline-value` (path mode only; ignored by other modes).
+
+Version 7.9.0. See commit ec447a6.
