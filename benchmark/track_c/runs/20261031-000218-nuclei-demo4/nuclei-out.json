@@ -1,0 +1,25 @@
+{
+  "target": "http://127.0.0.1:5000",
+  "templates": [
+    "C:\\Users\\M5 E60\\nuclei-templates\\http\\exposures\\configs"
+  ],
+  "command": [
+    "C:\\Users\\M5 E60\\AppData\\Local\\Programs\\nuclei\\nuclei.EXE",
+    "-target",
+    "http://127.0.0.1:5000",
+    "-jsonl",
+    "-silent",
+    "-no-color",
+    "-rate-limit",
+    "100",
+    "-t",
+    "C:\\Users\\M5 E60\\nuclei-templates\\http\\exposures\\configs"
+  ],
+  "findings": [],
+  "exit_code": 0,
+  "elapsed": 70.243,
+  "stdout_lines": 0,
+  "stderr_tail": "",
+  "aborted": false,
+  "abort_reason": ""
+}
