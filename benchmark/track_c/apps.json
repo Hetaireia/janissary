@@ -207,10 +207,6 @@
     ],
     "login": {
       "url": "/identity/api/auth/login",
-      "json": {
-        "email": "jns-trackc-fixed@example.com",
-        "password": "JnsTrackc!123"
-      },
       "capture_jwt_from_json": "token",
       "pre_register": {
         "url": "/identity/api/auth/signup",
@@ -220,6 +216,10 @@
           "number": "+15550001111",
           "password": "JnsTrackc!123"
         }
+      },
+      "data": {
+        "email": "jns-trackc-fixed@example.com",
+        "password": "JnsTrackc!123"
       }
     }
   }
