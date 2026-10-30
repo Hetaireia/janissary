@@ -1,0 +1,42 @@
+================================================================
+FRESH-CLONE AUDIT - 2026-10-30 16:14:56
+================================================================
+
+=== 1. Clone from GitHub (branch: wip/phase-4-fn3) ===
+  cloned to: C:\Users\M5 E60\janissary-audit-20261030-161456
+
+=== 2. Verify clone HEAD matches GitHub main ===
+  clone HEAD:   b796cd8148d797b5195f753e19d140e5ef44f07d
+  GitHub main:  b796cd8148d797b5195f753e19d140e5ef44f07d
+  [ok] match
+
+=== 3. Verify version at HEAD ===
+  pyproject: version = "7.7.1"
+  [ok] version 7.7.1
+
+=== 4. Verify tag v7.7.0 exists remotely ===
+  remote tag v7.7.0: 6feea8aa44e5303f2952a8b34d72b125ecdedf6e
+  [ok] tag present
+
+=== 5. Verify key files present in clone ===
+  [ok] src\janissary\detection\ssrf_response_oracle.py
+  [ok] tests\unit\test_ssrf_response_oracle.py
+  [ok] tests\unit\test_preflight_abort_policy.py
+  [ok] benchmark\track_c\templates\crapi_mechanic.json
+  [ok] benchmark\track_c\corpus-score.json
+  [ok] benchmark\track_c\runs\20261030T032949Z-crapi\ssrf.jsonl
+
+=== 6. Verify BENCHMARK.md Amendment 23 present ===
+  [ok] Amendment 23 present
+
+=== 7. Verify PHASE-4-PLAN.md status update present ===
+  [ok] status update present
+
+=== 8. Verify corpus-score.json integrity ===
+  apps: dvwa, juice-shop, vampi, gitea, nextcloud, bwapp, crapi
+  totals: tp=9 fp=0 fn=0 tn=24 aborts=0
+  precision=1 recall=1 f1=1
+  [ok] corpus at tp=9 f1=1.0 across 7 apps
+
+=== 9. Create fresh venv + install ===
+FAIL: pip install failed
