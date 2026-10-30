@@ -52,7 +52,7 @@ Copy-Item "scripts\fresh_clone_audit.ps1" "release\audit\fresh_clone_audit.ps1" 
 
 # Commit
 $msg = @"
-audit: v7.7.1 fresh-clone verification (supersedes 4b2d75f's overstated claim)
+audit: v7.7.1 fresh-clone verification (closes banner drift in 986bebf)
 
 4b2d75f committed an audit log whose content contradicted its message. The log shows the audit failed at step 9 (pip install failed, --quiet suppressed diagnostics). The message claimed "Fresh-venv install: __version__ = pip show = pyproject = 7.7.1" and "Full unit suite: 566 passed" - neither was in the log. Message also claimed the clone was at 241fde1 when actual HEAD was b796cd8.
 

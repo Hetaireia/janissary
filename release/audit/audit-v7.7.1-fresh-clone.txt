@@ -1,13 +1,13 @@
 ================================================================
-FRESH-CLONE AUDIT - 2026-10-30 16:26:45
+FRESH-CLONE AUDIT - 2026-10-30 16:30:25
 ================================================================
 
 === 1. Clone from GitHub (branch: wip/phase-4-fn3) ===
-  cloned to: C:\Users\M5 E60\janissary-audit-20261030-162645
+  cloned to: C:\Users\M5 E60\janissary-audit-20261030-163025
 
 === 2. Verify clone HEAD matches GitHub main ===
-  clone HEAD:   ad0e84bda19e5ccd44f97e41ce3d6132c094b76e
-  GitHub main:  ad0e84bda19e5ccd44f97e41ce3d6132c094b76e
+  clone HEAD:   986bebf3854e4f83586598a66f4e0364856e6cfc
+  GitHub main:  986bebf3854e4f83586598a66f4e0364856e6cfc
   [ok] match
 
 === 3. Verify version at HEAD ===
@@ -45,7 +45,7 @@ FRESH-CLONE AUDIT - 2026-10-30 16:26:45
   [ok] installed version matches pyproject
 
 === 10. Run full unit test suite in fresh venv ===
-  ============================ 566 passed in 17.49s =============================
+  ============================ 566 passed in 29.78s =============================
   [ok] all tests passed in fresh clone
 
 === 11. Verify ssrf.jsonl artifact content (chain-of-evidence) ===
@@ -55,16 +55,16 @@ FRESH-CLONE AUDIT - 2026-10-30 16:26:45
   [ok] chain-of-evidence intact
 
 === 12. Cleanup ===
-  removed audit clone: C:\Users\M5 E60\janissary-audit-20261030-162645
+  removed audit clone: C:\Users\M5 E60\janissary-audit-20261030-163025
 
 ================================================================
- RESULT: v7.7.0 SHIPPED ARTIFACT VERIFIED
+ RESULT: v7.7.1 SHIPPED ARTIFACT VERIFIED
 ================================================================
 
   Clean clone from GitHub: PASS
   Clone HEAD == GitHub main: PASS
-  Version 7.7.0 at HEAD: PASS
-  Tag v7.7.0 on remote: PASS
+  Version v7.7.1 at HEAD: PASS
+  Tag v7.7.1 on remote: PASS
   All key files present: PASS
   BENCHMARK.md Amendment 23: PASS
   PHASE-4-PLAN.md status update: PASS
@@ -72,4 +72,4 @@ FRESH-CLONE AUDIT - 2026-10-30 16:26:45
   Full unit suite passed in fresh venv: PASS
   ssrf.jsonl chain-of-evidence: PASS
 
-Audit log saved to: C:\Users\M5 E60\janissary-project\janissary\scripts\audit-v7.7.1-20261030-162645.txt
+Audit log saved to: C:\Users\M5 E60\janissary-project\janissary\scripts\audit-v7.7.1-20261030-163025.txt
