@@ -21,6 +21,8 @@ from janissary.detection.analyzer import ResponseSnapshot
 
 LENGTH_DELTA_PCT = 10.0
 MIN_BODY_BYTES = 100
+MIN_BODY_BYTES_LEN_DELTA = 20
+LARGE_LENGTH_DELTA_PCT = 50.0
 
 _SQL_ERROR_SIGNATURES = re.compile(
     r"(SQL\s+syntax|mysql_fetch|ORA-\d{5}|PostgreSQL.*ERROR|"
@@ -39,6 +41,20 @@ def _coherent(status: int, body: str) -> bool:
     return True
 
 
+def _coherent_for_length(status: int, body: str) -> bool:
+    """Absolute-floor coherence: only rejects tiny bodies.
+
+    Used as a pre-gate for the length-delta path so that
+    small-but-informative responses (e.g. JSON error payloads)
+    can still contribute evidence.
+    """
+    if status >= 500:
+        return False
+    if len(body) < MIN_BODY_BYTES_LEN_DELTA:
+        return False
+    return True
+
+
 def check_blind_sqli_oracle(
     *,
     true_snapshot: ResponseSnapshot,
@@ -53,9 +69,9 @@ def check_blind_sqli_oracle(
     true_body = true_snapshot.body or ""
     false_body = false_snapshot.body or ""
 
-    if not _coherent(true_status, true_body):
+    if not _coherent_for_length(true_status, true_body):
         return []
-    if not _coherent(false_status, false_body):
+    if not _coherent_for_length(false_status, false_body):
         return []
 
     if _SQL_ERROR_SIGNATURES.search(true_body):
@@ -66,14 +82,20 @@ def check_blind_sqli_oracle(
     true_reflected = bool(true_payload and true_payload in true_body)
     false_reflected = bool(false_payload and false_payload in false_body)
 
-    status_differs = true_status != false_status
+    both_large = (
+        _coherent(true_status, true_body)
+        and _coherent(false_status, false_body)
+    )
+
+    status_differs = (true_status != false_status) and both_large
 
     tl = len(true_body)
     fl = len(false_body)
     max_len = max(tl, fl)
     length_delta_pct = abs(tl - fl) / max_len * 100.0 if max_len > 0 else 0.0
+    required_delta = LENGTH_DELTA_PCT if both_large else LARGE_LENGTH_DELTA_PCT
     length_differs = (
-        length_delta_pct > LENGTH_DELTA_PCT
+        length_delta_pct > required_delta
         and not (true_reflected or false_reflected)
     )
 
