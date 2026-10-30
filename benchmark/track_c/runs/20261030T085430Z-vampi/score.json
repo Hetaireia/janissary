@@ -1,0 +1,70 @@
+{
+  "app": "vampi",
+  "run": "C:\\Users\\M5 E60\\janissary-project\\janissary\\benchmark\\track_c\\runs\\20261030T085430Z-vampi",
+  "cases": 6,
+  "vuln_cases": 1,
+  "safe_cases": 5,
+  "findings": 9,
+  "unmatched_findings": 0,
+  "tp": 1,
+  "fp": 0,
+  "fn": 0,
+  "tn": 5,
+  "aborts": 0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "fp_rate_safe": 0.0,
+  "per_case": [
+    {
+      "path": "/",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/openapi.json",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/users/v1",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/users/v1/_debug",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/me",
+      "safe": true,
+      "expected": [],
+      "findings": 0,
+      "outcome": "TN",
+      "aborted": false
+    },
+    {
+      "path": "/users/v1/{username}",
+      "safe": false,
+      "expected": [
+        "sqli"
+      ],
+      "findings": 9,
+      "outcome": "TP",
+      "aborted": false
+    }
+  ]
+}
