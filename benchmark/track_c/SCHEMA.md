@@ -106,12 +106,14 @@ Additive: cases.csv gained optional inject_in and baseline_value columns. Empty 
 
 Before an app is locked (Amendment 24 Phase 5):
 
-- `image_digest` must be non-null
+- `image_digest` must be non-null OR `image_digests` must be a non-empty array (see Multi-container apps below)
 - `security_level` must be non-null if the app has one
 - `safe_endpoints` must be non-empty
 - `known_vulnerable` must be non-empty
 - `trial_class` must be non-empty
 - Every row in `cases.csv` for that app must have `safe` and
   `expected_finding_class` set (safe rows have empty `expected_finding_class`)
+
+**Multi-container apps** (e.g. crAPI - 10 services): apps whose trial behavior depends on more than one container use `image_digests` (array of `image:tag@sha256:...` strings) instead of the scalar `image_digest`. Pinning one image would falsely claim reproducibility of behavior driven by the others. Every running container in the app's deployment must appear in the array.
 
 **Negative-only apps** (e.g. gitea, nextcloud): apps included in the corpus solely to measure FP rate have no documented vulnerabilities by design. They are exempt from the `known_vulnerable` and `trial_class` non-empty rules, provided `safe_endpoints` is non-empty. Their FP rate is the whole point.

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-30T08:55:26Z",
+  "timestamp": "2026-10-30T11:03:46Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
@@ -381,7 +381,7 @@
     },
     "crapi": {
       "app": "crapi",
-      "run": "20261030T085506Z-crapi",
+      "run": "20261030T110245Z-crapi",
       "cases": 5,
       "vuln_cases": 2,
       "safe_cases": 3,
