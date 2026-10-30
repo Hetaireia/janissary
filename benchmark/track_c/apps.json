@@ -212,13 +212,13 @@
         "url": "/identity/api/auth/signup",
         "json": {
           "name": "JNS TrackC",
-          "email": "jns-trackc-fixed@example.com",
-          "number": "+15550001111",
+          "email": "jns-trackc@example.com",
+          "number": "+15550002222",
           "password": "JnsTrackc!123"
         }
       },
       "data": {
-        "email": "jns-trackc-fixed@example.com",
+        "email": "jns-trackc@example.com",
         "password": "JnsTrackc!123"
       }
     }
