@@ -1224,7 +1224,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["auto", "query", "body", "cookie", "header", "param-name", "json-body", "path"],
         default="auto",
         help="where to place the payload "
-        "(default: auto = query for GET, body for POST)",
+        "(default: auto = query for GET, body for POST). For 'path', also pass --baseline-value with a known-good value; URL templates like /users/v1/{username} are substituted per request.",
     )
     scan.add_argument(
         "--collaborator",
