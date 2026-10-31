@@ -225,7 +225,10 @@ Observed: 219 templates at rate-limit 10 exceeded 120s; same set at rate-limit
 100 completed in 70.7s. `--rate-limit` help text (cli.py:1480) is silent on the
 semantic. One-line help update later; no behavior change.
 
-### Environment carry notes for next session
+#
+## FN-6 resolution (2026-11-01)
+...
+## Environment carry notes for next session
 
 - **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
 - Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
@@ -254,3 +257,55 @@ Whichever direction is chosen, Phase 6 is done when:
 - any gap found is recorded in git history before it is fixed;
 - full suite green and corpus numbers either reproduce or the delta is documented;
 - package version matches newest tag (guard: tests/test_version_tag_consistency.py).
+...any content — markdown, JSON, HTML, code...
+
+---
+
+## FN-6 resolution (2026-11-01)
+
+**Status: RESOLVED — not a detection gap.**
+
+The 2026-11-01 handover's FN-6 measurement was invalid. It ran
+`janissary scan -u URL -p param` with default `--inject-in auto`, which uses
+query-string injection for GET requests. Vampi's scored SQLi endpoint is
+`/users/v1/{username}` with injection-location `path` (`cases.csv` row
+`path_param_sqli`). Query injection against that route produces 0 findings
+correctly — the payloads never reach the SQL.
+
+**Verified correct invocation (9 findings / 2 groups):**
+
+    janissary scan \
+      -u "http://127.0.0.1:5000/users/v1/{username}" \
+      -p username \
+      --inject-in path \
+      --baseline-value name1
+
+Findings: `sql_single_quote`, `sql_union_null`, `sql_sleep_mysql`,
+`sql_paren_quote`, `sql_paren_double`, `sql_paren_union`, `sql_paren_or`,
+`sql_hash_comment`, and `sqli_quote_oracle`. All CRITICAL, matched SQLITE
+error signature plus bare-quote oracle.
+
+**H1 rejected:** vampi is a JSON API, no HTML forms to parse.
+
+**H2 rejected:** scanner runs 351 clean requests against `/` and reaches
+the differential phase on path routes without aborts or misdetection.
+
+**Actual cause:** `--inject-in path` + `--baseline-value` are required for
+path injection. Default `--inject-in auto` is query for GET. Both flags
+exist and work; the measurement just didn't use them.
+
+**Side findings filed:**
+
+- **FN-10:** `--baseline-value` requirement for `--inject-in path` is
+  undiscoverable from the `--inject-in` help text. Suggested fix: either
+  mention `--baseline-value` in `--inject-in path` help line, or auto-probe
+  common baselines (`admin`, `name1`, `1`, `test`).
+- **FN-11:** Vampi's `/createdb` is non-idempotent — `drop_all()` +
+  re-insert, random `bookTitle` collision mid-insert leaves DB half-seeded
+  and 500s. Recovery is retry once or twice; document in `BOOTSTRAP.md`
+  alongside the "state gap" section.
+
+**Recommendation:** add a `BOOTSTRAP.md` section documenting the corpus
+invocation per injectable-endpoint shape (query vs body vs path). This
+session spent ~90 minutes on FN-6 because the invocation pattern wasn't
+documented anywhere.
