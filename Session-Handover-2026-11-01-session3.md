@@ -1,3 +1,15 @@
+> **Session-5 opener — DECIDE FIRST (added session 4, 2026-11-01):**
+> 1. Adopt Phase 0 roadmap? — Yes → paste roadmap into `docs/ROADMAP.md`,
+>    then reclassify FN-12 in `docs/PHASE-6-PLAN.md` to Phase 0.2(b), then
+>    start Phase 0.1. No → FN-12 stays in Phase 6; other open items queue.
+> 2. Until that decision: **FN-12 is BLOCKED on Phase 0.1.** The classes
+>    `CandidateFinding`/`VerifiedFinding` and the field `verification_status`
+>    do not exist in the codebase as of `2b2bafd`. Phase 0.2(b) is not a
+>    standalone 1–2 hr fix; it is Phase 0.1 work. Do not edit
+>    `scanner.py:1048` in isolation.
+> 3. The roadmap `.txt` provided 2026-11-01 is **not on disk** — only a
+>    carvel module ROADMAP.md exists under `C:\Users\M5 E60`. Re-paste the
+>    roadmap content into `docs/ROADMAP.md` before any adoption work.
 # Janissary — Session Handover #3, 2026-11-01 (FN-12 reverted; reclassified as Phase 0.2(b))
 
 ## Executive summary
@@ -51,6 +63,19 @@ distinguish a payload-specific 500 from an any-unknown-input 500. It would
 fix juice-shop and reintroduce the `/traversal` misattribution the
 corroborator layer was built to prevent. That is why the fix is deferred
 to Phase 0.2(b), where the regression suite can catch the reintroduction.
+
+
+### Session-4 corrections to this diagnosis
+
+- Phase 0.2(b) cannot be delivered independently of Phase 0.1.
+  `CandidateFinding`, `VerifiedFinding`, and `verification_status` do not
+  exist in the codebase (`git grep` empty at `a141d00`). The output path
+  in `scanner.py:1060+` uses a single `ScanFinding` class with no
+  verification-status field. `scanner.py:1048` cannot be changed to
+  "emit as unproven" without first building the data model Phase 0.1
+  defines.
+- The earlier estimate "1–2 hrs standalone" was wrong. Correct shape:
+  Phase 0.1 data model → then Phase 0.2(b) becomes a natural extension.
 
 ## Roadmap alignment (recorded, not yet committed)
 
@@ -123,6 +148,20 @@ Pickup commands:
 - Transient git crash on 2026-11-01: `git tag --list` via pytest
   subprocess returned STATUS_ACCESS_VIOLATION (0xC0000005). Interactive
   `git tag` works; clean re-run passes. Suspected AV/PATH/transient.
+
+
+- `git commit` occasionally produces no output at all when invoked
+  without `-v`, even on success (`2b2bafd`). Re-run with `git commit -v`
+  or check `git log --oneline -1` before assuming failure.
+- Pre-commit verification pattern must include a **negative** grep
+  (string that must NOT be present), not only positive greps. Session 4
+  produced a commit (`a141d00`) with a wrong count because the positive
+  grep pattern `'669 passed|0-1 skipped|1 skipped|671 passed'` didn't
+  match the wrong string `'670 passed'`.
+- **Before any `git restore <path>` or `git checkout -- <path>`, run
+  `git diff -- <path>` first.** Session 4's `git restore` discarded
+  already-correct working-tree edits because the "dirty" state was the
+  desired state, not the pre-edit state.
 
 ## Session failures (honest)
 
