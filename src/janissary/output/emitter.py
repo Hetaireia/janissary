@@ -187,6 +187,8 @@ def _normalize_finding(finding: Any) -> dict:
         "raw_response": _coerce_str(m.get("raw_response")),
         "signals": _normalize_value(m.get("signals")) or [],
         "root_cause_group": _coerce_str(m.get("root_cause_group")),
+        "verification_status": _coerce_str(m.get("verification_status")),
+        "verification_reason": _coerce_str(m.get("verification_reason")),
         "timestamp": _coerce_str(m.get("timestamp")) or _iso_now(),
     }
     return {

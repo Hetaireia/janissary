@@ -70,6 +70,8 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
                 "reflection_context": f.reflection_context,
                 "response_content_type": f.response_content_type,
                 "fingerprint": f.fingerprint,
+                "verification_status": f.verification_status,
+                "verification_reason": f.verification_reason,
             }
             for f in summary.findings
         ],
@@ -1049,6 +1051,8 @@ def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
                     "param": f.param,
                     "payload": f.payload_name,
                     "security-severity": f"{security_severity(f.severity):.1f}",
+                    "verification_status": f.verification_status,
+                    "verification_reason": f.verification_reason,
                 },
             }
         )
