@@ -95,6 +95,8 @@ class VerificationEngine:
             result = confirmer.confirm(candidate)
             if result is None:
                 continue
+            if result.unproven:
+                return _promote(candidate, "unproven", result.reason)
             if result.confirmed:
                 return _promote(candidate, "verified", result.reason)
             return FailedVerification(

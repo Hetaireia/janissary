@@ -179,3 +179,44 @@ def test_verify_uses_first_non_none_confirmer_result():
     result = engine.verify(_sample_candidate())
     assert isinstance(result, VerifiedFinding)
     assert result.verification_reason == "matched_pattern"
+
+class _UnprovenConfirmer:
+    name = "unproven"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        return Confirmation(confirmed=False, reason="baseline_unstable", unproven=True)
+
+
+def test_verify_returns_unproven_when_confirmer_marks_unproven():
+    engine = VerificationEngine(confirmers=[_UnprovenConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_status == "unproven"
+    assert result.verification_reason == "baseline_unstable"
+
+
+def test_unproven_takes_precedence_over_confirmed():
+    class _Both:
+        name = "both"
+
+        def confirm(self, candidate):
+            return Confirmation(confirmed=True, reason="ambiguous", unproven=True)
+
+    engine = VerificationEngine(confirmers=[_Both()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_status == "unproven"
+    assert result.verification_reason == "ambiguous"
+
+
+def test_confirmed_still_produces_verified_status():
+    engine = VerificationEngine(confirmers=[_ConfirmingConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_status == "verified"
+
+
+def test_rejected_still_produces_failed_verification():
+    engine = VerificationEngine(confirmers=[_RejectingConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, FailedVerification)
