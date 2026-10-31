@@ -1198,7 +1198,7 @@ class Scanner:
                 )
                 for f in xo:
                     req_obj = getattr(sqli_quote_resp, "request", None)
-                    finding = ScanFinding(
+                    candidate = CandidateFinding(
                         param=param,
                         payload_name="xpath_error_oracle",
                         payload_value="'",
@@ -1215,6 +1215,10 @@ class Scanner:
                         raw_request=serialize_request(req_obj),
                         raw_response=serialize_response(sqli_quote_resp),
                     )
+                    result = _ENGINE.verify(candidate)
+                    if not isinstance(result, VerifiedFinding):
+                        continue
+                    finding = _to_scan_finding(result)
                     summary.findings.append(finding)
                     summary.finding_count += 1
 
@@ -1226,7 +1230,7 @@ class Scanner:
                 )
                 for f in oracle:
                     req_obj = getattr(ldap_wild_resp, "request", None)
-                    finding = ScanFinding(
+                    candidate = CandidateFinding(
                         param=param,
                         payload_name="ldap_wildcard",
                         payload_value="*",
@@ -1243,6 +1247,10 @@ class Scanner:
                         raw_request=serialize_request(req_obj),
                         raw_response=serialize_response(ldap_wild_resp),
                     )
+                    result = _ENGINE.verify(candidate)
+                    if not isinstance(result, VerifiedFinding):
+                        continue
+                    finding = _to_scan_finding(result)
                     summary.findings.append(finding)
                     summary.finding_count += 1
                     if not quiet:
