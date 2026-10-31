@@ -166,6 +166,54 @@ def fingerprint_adapter(target: str, context: dict) -> list[Finding]:
     return findings
 
 
+def scan_adapter(target: str, context: dict) -> list[Finding]:
+    """Fallback: scan the target URL and map ScanFindings to agent Findings.
+
+    Used when fingerprinting yields no platform-specific plan. agent.py:189
+    already prefers ``["scan"]`` if this adapter is registered.
+    """
+    from urllib.parse import parse_qs, urlparse
+
+    from janissary.engine.scanner import Scanner
+
+    params = list(parse_qs(urlparse(target).query).keys()) or [
+        "id", "name", "q", "search", "query", "user", "username", "email",
+    ]
+    scanner = Scanner(
+        target=target,
+        params=params,
+        timeout=context.get("timeout", 10.0),
+        session=context.get("session"),
+        detect_waf=False,
+    )
+    summary = scanner.scan()
+    if summary.aborted:
+        return []
+    out: list[Finding] = []
+    for f in summary.findings:
+        out.append(
+            Finding(
+                target=target,
+                category=f.category,
+                severity=f.severity,
+                finding_type=f.finding_type,
+                discriminator=f"{f.param}:{f.payload_name}",
+                detail=f.detail,
+                payload=f.payload_value,
+                response_status=f.response_status,
+                extra={
+                    "param": f.param,
+                    "payload_name": f.payload_name,
+                    "reflection_context": f.reflection_context,
+                    "response_length": f.response_length,
+                    "response_content_type": f.response_content_type,
+                    "scanner_fingerprint": f.fingerprint,
+                },
+            )
+        )
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Default registry
 # ---------------------------------------------------------------------------
@@ -178,4 +226,5 @@ def default_adapters() -> dict[str, Any]:
         "xmlrpc": xmlrpc_adapter,
         "graphql": graphql_adapter,
         "fingerprint": fingerprint_adapter,
+        "scan": scan_adapter,
     }
