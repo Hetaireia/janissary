@@ -1,0 +1,9 @@
+{
+  "target": "http://127.0.0.1:5000",
+  "app": "vampi",
+  "agent_exit_code": 0,
+  "date": "2026-10-31T19:22:48.4834410Z",
+  "command": "janissary agent http://127.0.0.1:5000 --attack-confirm --store agent-findings.json --export agent-export.json",
+  "demo": "fn4-fallback-scan-adapter",
+  "expected_exit_code": 0
+}

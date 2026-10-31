@@ -1,0 +1,25 @@
+{
+  "run": {
+    "target": "http://127.0.0.1:5000",
+    "platforms": [],
+    "waf": null,
+    "plan": [
+      "scan"
+    ],
+    "modules_run": [
+      "scan"
+    ],
+    "modules_skipped": [],
+    "new_findings": 0,
+    "total_findings": 0,
+    "aborted": false,
+    "abort_reason": ""
+  },
+  "summary": {
+    "total": 0,
+    "by_severity": {},
+    "by_category": {},
+    "targets": []
+  },
+  "findings": []
+}
