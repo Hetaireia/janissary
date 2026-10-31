@@ -1293,7 +1293,7 @@ class Scanner:
                     )
                     for f in oracle:
                         req_obj = getattr(r2, "request", None)
-                        finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name="traversal_noexist_probe",
                             payload_value=noexist_path,
@@ -1310,6 +1310,10 @@ class Scanner:
                             raw_request=serialize_request(req_obj),
                             raw_response=serialize_response(r2),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        finding = _to_scan_finding(result)
                         summary.findings.append(finding)
                         summary.finding_count += 1
                         if not quiet:
