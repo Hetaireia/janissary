@@ -150,3 +150,6 @@ tools/*.bak-*
 JANISSARY-ASCENSION.md
 tools/ascension.py
 tools/ascension_state.json
+
+# Ascension rendered dashboards (regenerable from local state)
+renders/
