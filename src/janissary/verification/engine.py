@@ -1,23 +1,64 @@
 """VerificationEngine — the sole emitter of VerifiedFinding (Phase 0.1).
 
-Phase 0.1 (part 1 of N): interface only. The implementation — baseline
-comparison, delta computation, normalizer invocation — lands in
-subsequent commits. Until then, `verify()` raises NotImplementedError
-so that no code path can accidentally emit a VerifiedFinding through
-an unimplemented engine.
+Phase 0.1 (part 2 of N): verify() is implemented with a pluggable
+Confirmer list. With no confirmers configured, every well-formed
+candidate is promoted to VerifiedFinding with status='unproven' and
+reason='no_confirmer_matched' — matching the roadmap's Phase 0.2(b)
+"not silently dropped" invariant.
 
-Production code MUST NOT depend on this class until the NotImplementedError
-is removed by a later commit. This commit introduces the interface so
-subsequent commits can wire emission sites against a stable shape.
+Rewiring the 17 emission sites through this engine is a subsequent
+commit. Until then, no production code depends on this class.
 
 See docs/ROADMAP.md Phase 0.1 and 0.2(b).
 """
 from __future__ import annotations
 
-from .types import CandidateFinding, FailedVerification, VerifiedFinding
+from dataclasses import asdict
+
+from .confirmers import Confirmer
+from .types import (
+    CandidateFinding,
+    FailedVerification,
+    VerificationStatus,
+    VerifiedFinding,
+)
 
 
 VerificationResult = VerifiedFinding | FailedVerification
+
+_EVIDENCE_FIELDS = (
+    "param",
+    "payload_name",
+    "payload_value",
+    "category",
+    "severity",
+    "finding_type",
+    "detail",
+    "response_status",
+    "response_length",
+    "response_time",
+    "reflection_context",
+    "response_content_type",
+    "url",
+    "method",
+    "raw_request",
+    "raw_response",
+)
+
+
+def _promote(
+    candidate: CandidateFinding,
+    status: VerificationStatus,
+    reason: str | None,
+) -> VerifiedFinding:
+    """Build a VerifiedFinding from a CandidateFinding's evidence fields."""
+    source = asdict(candidate)
+    evidence = {name: source[name] for name in _EVIDENCE_FIELDS}
+    return VerifiedFinding(
+        **evidence,
+        verification_status=status,
+        verification_reason=reason,
+    )
 
 
 class VerificationEngine:
@@ -31,19 +72,35 @@ class VerificationEngine:
       is a FailedVerification return, not an exception.
 
     A candidate is promoted to VerifiedFinding with status 'verified'
-    only when the engine has evidence (differential delta, oracle
-    match, normalizer pass) that the payload caused the observed
-    behavior. Candidates that pass structural checks but lack a
-    confirmatory signal are promoted with status 'unproven' and a
-    verification_reason — they are emitted, but flagged, so that
-    Phase 0.2(b)'s "not silently dropped" invariant holds.
+    only when a Confirmer confirms it. Candidates that pass structural
+    checks but no confirmer matched are promoted with status 'unproven'
+    and reason='no_confirmer_matched' — they are emitted, but flagged,
+    so that Phase 0.2(b)'s "not silently dropped" invariant holds.
+
+    Confirmers are tried in order. The first non-None result wins.
     """
 
+    def __init__(self, confirmers: list[Confirmer] | None = None) -> None:
+        self._confirmers = list(confirmers or [])
+
     def verify(self, candidate: CandidateFinding) -> VerificationResult:
-        raise NotImplementedError(
-            "VerificationEngine.verify() is not yet implemented. "
-            "Phase 0.1 part 1 introduces the interface; the implementation "
-            "and emission-site rewiring are subsequent commits. Do not wire "
-            "any production emission path through this engine until this "
-            "exception is removed."
-        )
+        if not candidate.param or not candidate.category:
+            return FailedVerification(
+                candidate=candidate,
+                reason="malformed",
+                detail="candidate missing required field (param or category)",
+            )
+
+        for confirmer in self._confirmers:
+            result = confirmer.confirm(candidate)
+            if result is None:
+                continue
+            if result.confirmed:
+                return _promote(candidate, "verified", result.reason)
+            return FailedVerification(
+                candidate=candidate,
+                reason=result.reason,
+                detail=f"rejected by confirmer '{confirmer.name}'",
+            )
+
+        return _promote(candidate, "unproven", "no_confirmer_matched")
