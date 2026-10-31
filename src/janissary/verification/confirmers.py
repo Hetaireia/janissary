@@ -48,3 +48,24 @@ class Confirmer(Protocol):
     name: str
 
     def confirm(self, candidate: CandidateFinding) -> Confirmation | None: ...
+
+class AnalyzerImplicitConfirmer:
+    """Implicit confirmation from the analyzer pipeline.
+
+    The DifferentialAnalyzer runs BEFORE any emission site is reached.
+    It already filtered CORROBORATOR_ONLY_TYPES and payload_reflected
+    candidates. By the time a candidate reaches the emission boundary,
+    the analyzer has effectively verified it.
+
+    Findings verified this way carry reason='analyzer:<finding_type>',
+    distinguishing them from future confirmer additions (Phase 0.2(b)
+    baseline stability check, etc.).
+    """
+
+    name = "analyzer_implicit"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        return Confirmation(
+            confirmed=True,
+            reason=f"analyzer:{candidate.finding_type or 'unknown'}",
+        )
