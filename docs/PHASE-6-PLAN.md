@@ -226,7 +226,6 @@ Observed: 219 templates at rate-limit 10 exceeded 120s; same set at rate-limit
 semantic. One-line help update later; no behavior change.
 
 #
-## FN-6 resolution (2026-11-01)
 ## Environment carry notes for next session
 
 - **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
