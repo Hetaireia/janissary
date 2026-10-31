@@ -23,13 +23,21 @@ from .types import CandidateFinding
 class Confirmation:
     """Result of a Confirmer's examination.
 
+    `unproven=True` takes precedence over `confirmed`: the candidate is
+    promoted to VerifiedFinding with verification_status='unproven' and
+    verification_reason=reason. Used by Phase 0.2(b) corroborator path:
+    the finding is emitted (not silently dropped), but marked as
+    unverified because the baseline did not support a confident match.
+
     `confirmed=True` promotes the candidate to VerifiedFinding with
     verification_status='verified' and verification_reason=reason.
-    `confirmed=False` produces FailedVerification with reason=reason.
+    `confirmed=False` (with unproven=False) produces FailedVerification
+    with reason=reason.
     """
 
     confirmed: bool
     reason: str
+    unproven: bool = False
 
 
 @runtime_checkable
