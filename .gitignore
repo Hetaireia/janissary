@@ -138,3 +138,6 @@ scripts/ascension-png-ocr.txt
 
 # Scan artifacts (ad-hoc, not evidence)
 scan-*.sarif
+
+# Agent output artifact (not committed)
+janissary_findings.json

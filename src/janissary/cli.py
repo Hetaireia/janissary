@@ -1482,7 +1482,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="required: confirm you are authorised to scan this target",
     )
     nuclei.add_argument("--timeout", type=float, default=300.0)
-    nuclei.add_argument("--rate-limit", type=int, default=50)
+    nuclei.add_argument(
+        "--rate-limit", type=int, default=50,
+        help="total requests/second across all templates (not per-template)",
+    )
     nuclei.add_argument("--export", default=None, help="write results to a .json file")
     nuclei.add_argument("--quiet", action="store_true")
     add_scope_flags(nuclei)
