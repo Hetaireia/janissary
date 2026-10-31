@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Janissary Ascension — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #030810;
+    --panel: #0a1726;
+    --panel-border: #1a3a5c;
+    --row-divider: #12263c;
+    --phase-rule: #6e5a1e;
+    --cyan: #4fc8f7;
+    --cyan-bright: #66d4ff;
+    --yellow: #e6b23a;
+    --muted-yellow: #8a7040;
+    --teal: #1fc8a8;
+    --green: #2ecc71;
+    --red: #e74c3c;
+    --blue-fill: #4a6b8c;
+    --track: #0d1f33;
+    --text: #b8c8d8;
+    --muted: #5c7291;
+    --muted-2: #2a4b6e;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    padding: 30px 20px 40px;
+    min-height: 100vh;
+    zoom: 1.1;
+    display: flex;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { width: 100%; max-width: 912px; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding: 0 2px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 15.4px;
+    font-weight: 800;
+    color: var(--cyan-bright);
+    letter-spacing: 2.2px;
+    line-height: 1;
+  }
+  .subtitle {
+    margin-top: 5px;
+    font-size: 7.7px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .timestamp {
+    font-size: 9.9px;
+    font-weight: 600;
+    color: var(--yellow);
+    letter-spacing: 1.2px;
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 16px 20px 6px;
+  }
+  .summary { padding-bottom: 14px; }
+  .summary-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .counters { display: flex; gap: 32px; }
+  .counter { display: flex; flex-direction: column; }
+  .counter-num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--cyan-bright);
+    line-height: 1;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter-lbl {
+    margin-top: 5px;
+    font-size: 7px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .target { text-align: right; padding-top: 4px; }
+  .target-lbl {
+    font-size: 7px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .target-date {
+    margin-top: 2px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan-bright);
+    letter-spacing: 0.8px;
+  }
+  .bars { display: flex; flex-direction: column; gap: 6px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-lbl {
+    width: 76px;
+    font-size: 7.7px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  .bar-track {
+    flex: 1;
+    height: 4px;
+    background: var(--track);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .bar-fill-time {
+    height: 100%;
+    width: 3.28%;
+    background: var(--blue-fill);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .bar-fill-work {
+    height: 100%;
+    width: 23.3%;
+    background: var(--teal);
+    border-radius: 2px;
+  }
+  .bar-val {
+    width: 40px;
+    font-size: 9.9px;
+    color: var(--text);
+    text-align: right;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Days-ahead banner */
+  .ahead-banner {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 7px;
+    padding: 10px 0 12px;
+    border-top: 1px solid var(--row-divider);
+    margin-top: 4px;
+  }
+  .ahead-num {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+  }
+  .ahead-lbl {
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+  }
+  /* Table */
+  .table { padding-bottom: 4px; }
+  .row {
+    display: grid;
+    grid-template-columns: 66px 1fr 84px 84px;
+    gap: 12px;
+    align-items: center;
+  }
+  .row.head {
+    padding: 8px 0 6px;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 7.7px;
+    font-weight: 700;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .row.head .right { text-align: right; }
+  .phase {
+    padding: 12px 0 5px;
+    color: var(--muted-yellow);
+    font-size: 8.8px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--phase-rule);
+    margin-bottom: 2px;
+  }
+  .row.data {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--row-divider);
+  }
+  .row.data:last-of-type { border-bottom: none; }
+  .cell-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6.6px;
+  }
+  .tick {
+    display: inline-flex;
+    width: 12.1px;
+    height: 12.1px;
+    border-radius: 50%;
+    border: 1px solid var(--muted-2);
+    align-items: center;
+    justify-content: center;
+    font-size: 8.8px;
+    font-weight: 900;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .tick.on {
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .m-id {
+    color: var(--cyan-bright);
+    font-size: 9.9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .m-name {
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.15px;
+  }
+  .m-date {
+    font-size: 9.9px;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 0.2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .m-date.done {
+    color: var(--green);
+    font-weight: 500;
+  }
+  footer {
+    margin-top: 10px;
+    font-size: 7px;
+    color: var(--muted-2);
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+    padding: 0 2px;
+  }
+  @media (max-width: 680px) {
+    .row { grid-template-columns: 58px 1fr 68px 68px; gap: 8px; }
+    .counter-num { font-size: 22px; }
+    .counters { gap: 20px; }
+    .panel { padding: 14px 14px 4px; }
+    .m-name { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <div>
+      <h1>JANISSARY ASCENSION</h1>
+      <div class="subtitle">Road to top 20 · Differential DAST for teams who need results they can trust</div>
+    </div>
+    <div class="timestamp">14-OCT-2026 11:53:28</div>
+  </header>
+
+  <main class="panel">
+
+    <section class="summary">
+      <div class="summary-top">
+        <div class="counters">
+          <div class="counter"><div class="counter-num" id="cd-days">530</div><div class="counter-lbl">Days</div></div>
+          <div class="counter"><div class="counter-num" id="cd-hours">00</div><div class="counter-lbl">Hours</div></div>
+          <div class="counter"><div class="counter-num" id="cd-minutes">00</div><div class="counter-lbl">Minutes</div></div>
+          <div class="counter"><div class="counter-num" id="cd-seconds">00</div><div class="counter-lbl">Seconds</div></div>
+        </div>
+        <div class="target">
+          <div class="target-lbl">Target</div>
+          <div class="target-date">14-APR-2028</div>
+        </div>
+      </div>
+
+      <div class="bars">
+        <div class="bar-row">
+          <div class="bar-lbl">Time elapsed</div>
+          <div class="bar-track"><div class="bar-fill-time" id="bar-time"></div></div>
+          <div class="bar-val" id="pct-time">3.28%</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-lbl">Work complete</div>
+          <div class="bar-track"><div class="bar-fill-work"></div></div>
+          <div class="bar-val">33.3%</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ahead-banner">
+      <span class="ahead-num" id="ahead-days">+110</span>
+      <span class="ahead-lbl" id="ahead-lbl">Days ahead of schedule</span>
+    </div>
+
+    <section class="table">
+      <div class="row head">
+        <div>ID</div>
+        <div>Milestone</div>
+        <div class="right">Proposed</div>
+        <div class="right">Delivered</div>
+      </div>
+
+            <div class="phase">Phase 3</div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M1</span></div><div class="m-name">P1.1 SQLI UNION extractor</div><div class="m-date">02-OCT-2026</div><div class="m-date done">26-SEP-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M2</span></div><div class="m-name">P3.2 Nuclei runner</div><div class="m-date">05-OCT-2026</div><div class="m-date done">26-SEP-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M3</span></div><div class="m-name">P3.3 Agent / FindingStore</div><div class="m-date">09-OCT-2026</div><div class="m-date done">26-SEP-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M4</span></div><div class="m-name">Technical blog post + demo video</div><div class="m-date">09-OCT-2026</div><div class="m-date done">26-SEP-2026</div></div>
+      <div class="phase">Phase 3.5</div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M5</span></div><div class="m-name">README polish</div><div class="m-date">11-OCT-2026</div><div class="m-date done">26-SEP-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M6</span></div><div class="m-name">README scrub: verify or delete every promise</div><div class="m-date">12-OCT-2026</div><div class="m-date done">13-OCT-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M7</span></div><div class="m-name">demo.gif regenerated from a live scan</div><div class="m-date">13-OCT-2026</div><div class="m-date done">30-OCT-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M8</span></div><div class="m-name">PyPI + Docker + fresh-venv install verify</div><div class="m-date">16-OCT-2026</div><div class="m-date done">27-OCT-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M9</span></div><div class="m-name">Comparative benchmark (vs ZAP, nuclei)</div><div class="m-date">18-OCT-2026</div><div class="m-date done">13-OCT-2026</div></div>
+      <div class="phase">Phase 4</div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M10</span></div><div class="m-name">HN + Reddit + OWASP launch posts</div><div class="m-date">25-OCT-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M11</span></div><div class="m-name">G2/Capterra/PeerSpot listings claimed</div><div class="m-date">01-NOV-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M12</span></div><div class="m-name">First external user completes a scan</div><div class="m-date">08-NOV-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="phase">Phase 4.5</div>
+      <div class="row data"><div class="cell-status"><span class="tick on">&check;</span><span class="m-id">M13</span></div><div class="m-name">WAF pacing e2e + published evasion result</div><div class="m-date">15-NOV-2026</div><div class="m-date done">30-OCT-2026</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M14</span></div><div class="m-name">OOB channel (interactsh) integration</div><div class="m-date">22-NOV-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M15</span></div><div class="m-name">Finding replay / Janissary explain</div><div class="m-date">29-NOV-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M16</span></div><div class="m-name">Authenticated / stateful scanning</div><div class="m-date">06-DEC-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M17</span></div><div class="m-name">Real-target corpus (DVWA, Juice Shop, WebGoat)</div><div class="m-date">20-DEC-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M18</span></div><div class="m-name">Negative-results reporting</div><div class="m-date">03-JAN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M19</span></div><div class="m-name">Report output: SARIF, HTML, PDF</div><div class="m-date">18-JAN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M20</span></div><div class="m-name">GitHub Action for CI integration</div><div class="m-date">28-JAN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="phase">Phase 5</div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M21</span></div><div class="m-name">10 G2 reviews</div><div class="m-date">24-NOV-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M22</span></div><div class="m-name">100 GitHub stars</div><div class="m-date">24-DEC-2026</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M23</span></div><div class="m-name">50 G2 reviews</div><div class="m-date">23-JAN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M24</span></div><div class="m-name">Hosted demo live</div><div class="m-date">23-JAN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M25</span></div><div class="m-name">First consulting licence sale</div><div class="m-date">22-FEB-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="phase">Phase 6</div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M26</span></div><div class="m-name">Enterprise tier built</div><div class="m-date">13-APR-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M27</span></div><div class="m-name">First enterprise customer</div><div class="m-date">23-MAY-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M28</span></div><div class="m-name">Managed SaaS live</div><div class="m-date">22-JUN-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M29</span></div><div class="m-name">$50k ARR</div><div class="m-date">21-AUG-2027</div><div class="m-date">&mdash;</div></div>
+      <div class="row data"><div class="cell-status"><span class="tick"></span><span class="m-id">M30</span></div><div class="m-name">Top 20 G2 ranking</div><div class="m-date">25-SEP-2027</div><div class="m-date">&mdash;</div></div>
+    </section>
+
+  </main>
+
+  <footer>
+    Live view regenerated from JANISSARY-ASCENSION.md, tools/ascension.py and tools/ascension_state.json. Update the roadmap weekly and after every completed milestone. Delivered dates are taken from git history.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var CREATION = Date.parse('2026-10-14T11:53:28Z');
+  var TARGET = Date.parse('2028-04-14T11:53:28Z');
+  var TOTAL_MS = TARGET - CREATION;
+  var TOTAL_DAYS = TOTAL_MS / 86400000;
+  var WORK_PCT = 33.3;
+
+  var els = {
+    days:    document.getElementById('cd-days'),
+    hours:   document.getElementById('cd-hours'),
+    minutes: document.getElementById('cd-minutes'),
+    seconds: document.getElementById('cd-seconds'),
+    timeBar: document.getElementById('bar-time'),
+    timePct: document.getElementById('pct-time'),
+    aheadNum:document.getElementById('ahead-days'),
+    aheadLbl:document.getElementById('ahead-lbl')
+  };
+
+  function pad(n, w) {
+    var s = String(n);
+    while (s.length < w) s = '0' + s;
+    return s;
+  }
+
+  function tick() {
+    var now = Date.now();
+    var remaining = Math.max(0, TARGET - now);
+    var elapsedMs = Math.min(TOTAL_MS, Math.max(0, now - CREATION));
+    var elapsedPct = (elapsedMs / TOTAL_MS) * 100;
+
+    els.days.textContent    = pad(Math.floor(remaining / 86400000), 3);
+    els.hours.textContent   = pad(Math.floor((remaining % 86400000) / 3600000), 2);
+    els.minutes.textContent = pad(Math.floor((remaining % 3600000) / 60000), 2);
+    els.seconds.textContent = pad(Math.floor((remaining % 60000) / 1000), 2);
+
+    els.timeBar.style.width = elapsedPct.toFixed(2) + '%';
+    els.timePct.textContent = elapsedPct.toFixed(2) + '%';
+
+    var ahead = (WORK_PCT - elapsedPct) / 100 * TOTAL_DAYS;
+    var rounded = Math.round(Math.abs(ahead));
+    if (ahead >= 0) {
+      els.aheadNum.textContent = '+' + rounded;
+      els.aheadNum.style.color = 'var(--green)';
+      els.aheadLbl.textContent = 'Days ahead of schedule';
+    } else {
+      els.aheadNum.textContent = '\u2212' + rounded;
+      els.aheadNum.style.color = 'var(--red)';
+      els.aheadLbl.textContent = 'Days behind schedule';
+    }
+  }
+
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+
+</body>
+</html>
