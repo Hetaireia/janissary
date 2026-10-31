@@ -951,7 +951,7 @@ class Scanner:
                     tb_findings = check_trustbound_oracle(baseline, snapshot, value)
                     for f in tb_findings:
                         tb_req = getattr(r, "request", None)
-                        tb_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name="trustbound_marker",
                             payload_value=value,
@@ -968,6 +968,10 @@ class Scanner:
                             raw_request=serialize_request(tb_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        tb_finding = _to_scan_finding(result)
                         summary.findings.append(tb_finding)
                         summary.finding_count += 1
                         if not quiet:
@@ -985,7 +989,7 @@ class Scanner:
                     sc_findings = check_securecookie_oracle(baseline, r, value)
                     for f in sc_findings:
                         sc_req = getattr(r, "request", None)
-                        sc_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name="securecookie_flag_oracle",
                             payload_value=value,
@@ -1002,6 +1006,10 @@ class Scanner:
                             raw_request=serialize_request(sc_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        sc_finding = _to_scan_finding(result)
                         summary.findings.append(sc_finding)
                         summary.finding_count += 1
                         if not quiet:
@@ -1019,7 +1027,7 @@ class Scanner:
                     wr_findings = check_weakrand_oracle(baseline, snapshot)
                     for f in wr_findings:
                         wr_req = getattr(r, "request", None)
-                        wr_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name="weakrand_rng_oracle",
                             payload_value=value,
@@ -1036,6 +1044,10 @@ class Scanner:
                             raw_request=serialize_request(wr_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        wr_finding = _to_scan_finding(result)
                         summary.findings.append(wr_finding)
                         summary.finding_count += 1
                         if not quiet:
