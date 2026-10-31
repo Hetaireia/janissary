@@ -46,6 +46,7 @@ from janissary.recon import (
 )
 
 from janissary.verification import (
+    CorroboratorConfirmer,
     AnalyzerImplicitConfirmer,
     CandidateFinding,
     VerificationEngine,
@@ -131,7 +132,6 @@ def _say(*args, **kwargs) -> None:
 # WORKFLOW.md, "Structural misattribution".
 CORROBORATOR_ONLY_TYPES = frozenset(
     {
-        "status_change",
         "length_anomaly",
         "length_shrink",
     }
@@ -242,7 +242,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     return finding
 
 
-_ENGINE = VerificationEngine(confirmers=[AnalyzerImplicitConfirmer()])
+_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), AnalyzerImplicitConfirmer()])
 
 
 class _VerifiedFindingsList(list):
@@ -1160,16 +1160,21 @@ class Scanner:
                         category = "sqli"
                     if f.get("type") == "xpath_result_rows":
                         category = "xpathi"
-                    if f.get("type") in CORROBORATOR_ONLY_TYPES:
-                        # Corroborators are dropped unconditionally.
-                        # A length delta or status change on a target
-                        # that reflects input is not diagnostic of any
-                        # category; labeling it with the payload's
-                        # category is the structural misattribution
-                        # described above. Real detection for these
-                        # categories needs content-signature gates
-                        # (db_error, response contains passwd-like
-                        # content), not length/status proxies.
+                    if f.get("type") == "status_change":
+                        # Phase 0.2(b): 4xx-baseline -> 5xx-payload IS a
+                        # signal (the payload changed the code path). Emit
+                        # it; CorroboratorConfirmer marks it unproven at the
+                        # engine boundary. On a 2xx/3xx baseline the same
+                        # observation is the /traversal misattribution shape
+                        # (any unknown input 500s); suppress it.
+                        baseline_status = baseline.modal_status
+                        if not (400 <= baseline_status < 500):
+                            continue
+                    elif f.get("type") in CORROBORATOR_ONLY_TYPES:
+                        # length_anomaly / length_shrink: still dropped
+                        # unconditionally. A length delta does not
+                        # distinguish a real bug from a reflection on any
+                        # baseline shape; content-signature gates are needed.
                         continue
                     if f.get("type") == "payload_reflected" and category != "xss":
                         # Reflection on a non-xss probe is not evidence

@@ -77,3 +77,30 @@ class AnalyzerImplicitConfirmer:
             confirmed=True,
             reason=f"analyzer:{candidate.finding_type or 'unknown'}",
         )
+
+class CorroboratorConfirmer:
+    """Marks structural-signal findings as unproven.
+
+    Corroborators (status_change, length_anomaly, length_shrink) are not
+    detectors: a 500 or a length delta does not by itself prove a
+    vulnerability class. Per Phase 0.2(b), they are emitted as
+    verification_status='unproven' rather than silently dropped, so the
+    operator can see the structural signal without claiming it verifies
+    a specific category. Reason='corroborator_structural' is stable and
+    machine-readable.
+    """
+
+    name = "corroborator"
+
+    _CORROBORATOR_TYPES = frozenset(
+        {"status_change", "length_anomaly", "length_shrink"}
+    )
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        if candidate.finding_type in self._CORROBORATOR_TYPES:
+            return Confirmation(
+                confirmed=True,
+                reason="corroborator_structural",
+                unproven=True,
+            )
+        return None
