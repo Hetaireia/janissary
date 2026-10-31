@@ -787,7 +787,7 @@ class Scanner:
                     )
                     for cf in collapse_raw:
                         col_req = getattr(r, "request", None)
-                        col_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name=name,
                             payload_value=value,
@@ -804,6 +804,10 @@ class Scanner:
                             raw_request=serialize_request(col_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        col_finding = _to_scan_finding(result)
                         summary.findings.append(col_finding)
                         summary.finding_count += 1
                         tag = cf["reason"] or "collapse_unknown"
