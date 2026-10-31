@@ -1,0 +1,24 @@
+  [id] baseline is static - timing gates disabled
+  [name] baseline is static - timing gates disabled
+  [q] baseline is static - timing gates disabled
+  [search] baseline is static - timing gates disabled
+  [query] baseline is static - timing gates disabled
+  [user] baseline is static - timing gates disabled
+  [email] baseline is static - timing gates disabled
+JANISSARY ΓÇö agent
+============================================================
+[*] Target: http://127.0.0.1:5000
+
+[!] Active reconnaissance. Only run against systems you
+    are authorised to test.
+
+[*] Platforms:       -
+[*] WAF:             -
+[*] Plan:            scan
+[*] Modules run:     scan
+[*] New findings:    0
+[*] Total findings:  0
+[*] Findings written to benchmark\track_c\runs\20261031T192241Z-fn4-demo\agent-findings.json
+[*] Results exported to benchmark\track_c\runs\20261031T192241Z-fn4-demo\agent-export.json
+
+exit_code: 0
