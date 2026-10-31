@@ -53,8 +53,6 @@ demo.cast
 
 # local-only ascension roadmap and tracker (see commit 471f2b60)
 JANISSARY_ASCENSION.md
-tools/ascension.py
-tools/ascension_state.json
 
 # local scratch
 vulnapp.py
@@ -141,3 +139,6 @@ scan-*.sarif
 
 # Agent output artifact (not committed)
 janissary_findings.json
+
+# Ascension backups (transient)
+tools/*.bak-*
