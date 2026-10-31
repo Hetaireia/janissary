@@ -642,7 +642,7 @@ class Scanner:
                         continue
 
                     req_obj = getattr(r, "request", None) if r is not None else None
-                    finding = ScanFinding(
+                    candidate = CandidateFinding(
                         param=param,
                         payload_name=payload_name,
                         payload_value=url,
@@ -664,6 +664,10 @@ class Scanner:
                         ),
                         raw_response=(serialize_response(r) if r is not None else None),
                     )
+                    result = _ENGINE.verify(candidate)
+                    if not isinstance(result, VerifiedFinding):
+                        continue
+                    finding = _to_scan_finding(result)
                     summary.findings.append(finding)
                     summary.finding_count += 1
                     if not quiet:
