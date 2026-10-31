@@ -31,27 +31,52 @@ Per-class breakdown for crAPI and Juice Shop is pending Phase 1.1.
 
 ## Known gaps (false negatives)
 
-### FN-12 — SQLi on non-2xx baseline
+### FN-12 — SQLi on non-2xx baseline (FIXED 2026-11-01)
 
-**Status:** Open. Reclassified to Phase 0.2(b); blocked on Phase 0.1's
-data model.
+**Status:** Fixed. Was Phase 0.2(b); unblocked by Phase 0.1 and fixed
+in commits `faade6c`, `2707a32`, `ef79e31`.
 
-**What it is:** a 401-baseline endpoint with SQL injection in the payload
-is not detected. Two layers block it: `_check_status` at
-`analyzer.py:688` returns `[]` for 4xx baselines, and even when it
-doesn't, `status_change` is dropped at `scanner.py:1048` as a
-corroborator unless a detector (`db_error`, `reflection`, `timing`)
-also fires.
+**What it was:** a 401-baseline endpoint with SQL injection in the
+payload was not detected. Live investigation (session 13) found
+**three** layers, not the two originally diagnosed:
 
-**What to expect:** scans against endpoints that 4xx on baseline report
-zero SQLi findings even when the endpoint is vulnerable. This is a
-**known and documented** blind spot, not a silent failure.
+1. `_check_status` at `analyzer.py:688` returned `[]` for 4xx baselines
+2. `status_change` was dropped at `scanner.py` as a corroborator unless
+   a detector also fired
+3. `benchmark/track_c/templates/juice_login.json` did not opt into sqli
+   payloads — json-body injection filters payloads to `["ssrf"]` unless
+   the template declares `_categories`. **The reproducer never sent the
+   `'` payload.** All three layers had to be fixed together; fixing the
+   first two still produced 0 findings.
 
-**Unblock:** Phase 0.1 (`CandidateFinding` / `VerifiedFinding`) then
-Phase 0.2(b) (candidate emission with `verification_reason`).
+**How it is fixed:**
 
-**Reproducer:** `benchmark/track_c/templates/juice_login.json`. See
-session-3 handover for the full diagnosis.
+- 4xx baselines now reach `_check_status` (only modal_status=0 stays
+  blocked)
+- A new `CorroboratorConfirmer` marks `status_change` findings
+  `unproven` with `verification_reason='corroborator_structural'`
+- The scanner suppresses `status_change` only on 2xx/3xx baselines —
+  the original `/traversal` misattribution shape is preserved
+- The CLI marks unproven findings `[unproven]` at the finding line and
+  group header
+
+**What to expect now:** scans against 4xx-baseline endpoints with
+injection payloads produce findings with `verification_status='unproven'`
+visible in human output. On a live juice-shop `v17.1.1`, the fixed
+reproducer emits 8 findings where it previously emitted 0.
+
+**What remains unfixed (by design):** `status_change` on a **2xx/3xx**
+baseline is still suppressed. A 200→500 transition on a target that
+500s for any unknown input is the `/traversal` misattribution shape;
+detecting real bugs there needs content-signature gates (Phase 2).
+
+**JSON / SARIF gap:** `verification_status` is not yet emitted in
+`--format json` or `--format sarif` output. A CI consumer reading
+machine-readable output sees the finding but not its unproven
+qualifier. Tracked for session 16.
+
+**Reproducer:** `benchmark/track_c/templates/juice_login.json` (with
+`_categories: ["sqli"]`).
 
 ### Path traversal
 
