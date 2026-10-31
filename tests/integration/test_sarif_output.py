@@ -28,7 +28,7 @@ def _finding(
     url: str = "http://x/a?q='",
     detail: str = "SQL error observed",
 ) -> ScanFinding:
-    return ScanFinding(
+    f = ScanFinding(
         param=param,
         payload_name="sql_single_quote",
         payload_value="'",
@@ -38,6 +38,8 @@ def _finding(
         detail=detail,
         url=url,
     )
+    f._engine_emitted = True  # test fixture: stand-in for engine output
+    return f
 
 
 def _read_sarif(tmp_path: Path, summary: ScanSummary) -> dict:
