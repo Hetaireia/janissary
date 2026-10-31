@@ -837,7 +837,7 @@ class Scanner:
                     )
                     for lf in lfi_raw:
                         lfi_req = getattr(r, "request", None)
-                        lfi_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name=name,
                             payload_value=value,
@@ -854,6 +854,10 @@ class Scanner:
                             raw_request=serialize_request(lfi_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        lfi_finding = _to_scan_finding(result)
                         summary.findings.append(lfi_finding)
                         summary.finding_count += 1
                         if not quiet:
@@ -876,7 +880,7 @@ class Scanner:
                         )
                         for sf in ssrf_raw:
                             ssrf_req = getattr(r, "request", None)
-                            ssrf_finding = ScanFinding(
+                            candidate = CandidateFinding(
                                 param=param,
                                 payload_name=name,
                                 payload_value=value,
@@ -893,6 +897,10 @@ class Scanner:
                                 raw_request=serialize_request(ssrf_req),
                                 raw_response=serialize_response(r),
                             )
+                            result = _ENGINE.verify(candidate)
+                            if not isinstance(result, VerifiedFinding):
+                                continue
+                            ssrf_finding = _to_scan_finding(result)
                             summary.findings.append(ssrf_finding)
                             summary.finding_count += 1
                             if not quiet:
