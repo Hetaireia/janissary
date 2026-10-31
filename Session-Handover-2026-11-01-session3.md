@@ -163,6 +163,29 @@ Pickup commands:
   already-correct working-tree edits because the "dirty" state was the
   desired state, not the pre-edit state.
 
+
+- `.gitignore:102:_*.py` matches `__init__.py`, silently excluding every
+  new subpackage's `__init__.py` from `git add -A`. First bite:
+  95fb02f's package `src/janissary/verification/` was staged with three
+  files, not four; required `git add -f src/janissary/verification/__init__.py`.
+  This will recur for every new subpackage. Fix: change `_*.py` to
+  `_*.py` with an exception `!__init__.py`, or narrow the pattern to
+  `_*_*.py`-style if that's the actual intent. Separate commit; not
+  fixed yet.
+- `.pre-commit-config.yaml` exists but `pre-commit install` was never
+  run for either `pre-commit` or `pre-push`. No hooks fire. The config
+  documents intent (ruff + pytest gates), not enforcement. If hooks are
+  intended, run `pre-commit install && pre-commit install --hook-type pre-push`
+  — but that will force `pytest` on PATH, which requires the venv
+  activated before `git commit`/`git push`. Skipped this session; the
+  commit and push must both run from an activated venv if hooks are
+  enabled.
+- `git commit` output truncation is a paste-context artifact, not a git
+  failure. Recurrences: 2b2bafd (session 4), 95fb02f (session 5). Both
+  were assumed failures and both had actually succeeded. Verification:
+  `git log --oneline -1` immediately after any commit where output looks
+  empty or truncated. Do not re-run the commit.
+
 ## Session failures (honest)
 
 Session 3 produced no shipped code — deliberately. The value is the
