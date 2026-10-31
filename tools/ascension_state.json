@@ -1,0 +1,246 @@
+{
+  "created": "2026-10-14T11:53:28",
+  "target": "2028-04-14T11:53:28",
+  "phases": [
+    {
+      "name": "Phase 3",
+      "milestones": [
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ]
+    },
+    {
+      "name": "Phase 3.5",
+      "milestones": [
+        "M5",
+        "M6",
+        "M7",
+        "M8",
+        "M9"
+      ]
+    },
+    {
+      "name": "Phase 4",
+      "milestones": [
+        "M10",
+        "M11",
+        "M12"
+      ]
+    },
+    {
+      "name": "Phase 4.5",
+      "milestones": [
+        "M13",
+        "M14",
+        "M15",
+        "M16",
+        "M17",
+        "M18",
+        "M19",
+        "M20"
+      ]
+    },
+    {
+      "name": "Phase 5",
+      "milestones": [
+        "M21",
+        "M22",
+        "M23",
+        "M24",
+        "M25"
+      ]
+    },
+    {
+      "name": "Phase 6",
+      "milestones": [
+        "M26",
+        "M27",
+        "M28",
+        "M29",
+        "M30"
+      ]
+    }
+  ],
+  "milestones": {
+    "M1": {
+      "label": "P1.1 SQLI UNION extractor",
+      "proposed": "02-OCT-2026",
+      "delivered": "2026-09-26"
+    },
+    "M2": {
+      "label": "P3.2 Nuclei runner",
+      "proposed": "05-OCT-2026",
+      "delivered": "2026-09-26"
+    },
+    "M3": {
+      "label": "P3.3 Agent / FindingStore",
+      "proposed": "09-OCT-2026",
+      "delivered": "2026-09-26"
+    },
+    "M4": {
+      "label": "Technical blog post + demo video",
+      "proposed": "09-OCT-2026",
+      "delivered": "2026-09-26"
+    },
+    "M5": {
+      "label": "README polish",
+      "proposed": "11-OCT-2026",
+      "delivered": "2026-09-26"
+    },
+    "M6": {
+      "label": "README scrub: verify or delete every promise",
+      "proposed": "12-OCT-2026",
+      "delivered": "2026-10-13"
+    },
+    "M7": {
+      "label": "demo.gif regenerated from a live scan",
+      "proposed": "13-OCT-2026",
+      "probe": {
+        "kind": "git_commits_touching",
+        "pattern": "**/demo*.gif",
+        "since": "2026-10-13"
+      }
+    },
+    "M8": {
+      "label": "PyPI + Docker + fresh-venv install verify",
+      "proposed": "16-OCT-2026",
+      "delivered": "2026-10-27"
+    },
+    "M9": {
+      "label": "Comparative benchmark (vs ZAP, nuclei)",
+      "proposed": "18-OCT-2026",
+      "delivered": "2026-10-13"
+    },
+    "M10": {
+      "label": "HN + Reddit + OWASP launch posts",
+      "proposed": "25-OCT-2026"
+    },
+    "M11": {
+      "label": "G2/Capterra/PeerSpot listings claimed",
+      "proposed": "01-NOV-2026"
+    },
+    "M12": {
+      "label": "First external user completes a scan",
+      "proposed": "08-NOV-2026"
+    },
+    "M13": {
+      "label": "WAF pacing e2e + published evasion result",
+      "proposed": "15-NOV-2026",
+      "probe": {
+        "kind": "glob_exists",
+        "pattern": "tests/**/test_*waf*.py,tests/**/*pacing*.py"
+      }
+    },
+    "M14": {
+      "label": "OOB channel (interactsh) integration",
+      "proposed": "22-NOV-2026",
+      "probe": {
+        "kind": "glob_exists",
+        "pattern": "src/**/oob*.py,src/**/interactsh*.py,tests/**/*oob*.py"
+      }
+    },
+    "M15": {
+      "label": "Finding replay / Janissary explain",
+      "proposed": "29-NOV-2026",
+      "probe": {
+        "kind": "grep_any",
+        "patterns": [
+          "replay"
+        ],
+        "paths": [
+          "src/janissary/cli.py",
+          "cli.py"
+        ]
+      }
+    },
+    "M17": {
+      "label": "Real-target corpus (DVWA, Juice Shop, WebGoat)",
+      "proposed": "20-DEC-2026",
+      "probe": {
+        "kind": "dir_has_children",
+        "path": "benchmark/track_c/apps",
+        "min": 3
+      }
+    },
+    "M18": {
+      "label": "Negative-results reporting",
+      "proposed": "03-JAN-2027",
+      "probe": {
+        "kind": "grep_any",
+        "patterns": [
+          "negative"
+        ],
+        "paths": [
+          "src/janissary/cli.py",
+          "cli.py"
+        ]
+      }
+    },
+    "M19": {
+      "label": "Report output: SARIF, HTML, PDF",
+      "proposed": "18-JAN-2027",
+      "probe": {
+        "kind": "grep_all",
+        "patterns": [
+          "sarif",
+          "html",
+          "pdf"
+        ],
+        "paths": [
+          "src/janissary/cli.py",
+          "cli.py"
+        ]
+      }
+    },
+    "M20": {
+      "label": "GitHub Action for CI integration",
+      "proposed": "28-JAN-2027",
+      "probe": {
+        "kind": "glob_exists",
+        "pattern": ".github/workflows/*janissary*.yml,.github/workflows/*scan*.yml"
+      }
+    },
+    "M21": {
+      "label": "10 G2 reviews",
+      "proposed": "24-NOV-2026"
+    },
+    "M22": {
+      "label": "100 GitHub stars",
+      "proposed": "24-DEC-2026"
+    },
+    "M23": {
+      "label": "50 G2 reviews",
+      "proposed": "23-JAN-2027"
+    },
+    "M24": {
+      "label": "Hosted demo live",
+      "proposed": "23-JAN-2027"
+    },
+    "M25": {
+      "label": "First consulting licence sale",
+      "proposed": "22-FEB-2027"
+    },
+    "M26": {
+      "label": "Enterprise tier built",
+      "proposed": "13-APR-2027"
+    },
+    "M27": {
+      "label": "First enterprise customer",
+      "proposed": "23-MAY-2027"
+    },
+    "M28": {
+      "label": "Managed SaaS live",
+      "proposed": "22-JUN-2027"
+    },
+    "M29": {
+      "label": "$50k ARR",
+      "proposed": "21-AUG-2027"
+    },
+    "M30": {
+      "label": "Top 20 G2 ranking",
+      "proposed": "25-SEP-2027"
+    }
+  }
+}
