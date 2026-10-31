@@ -11,7 +11,9 @@ scanner-level bypass would patch a boundary the project intends to move.
 ## State at handover
 
 - `origin/main`: `c24ba22` + this handover commit
-- Tests: 671 total; 0 failures; 0-1 skipped depending on environment
+- Tests: 671 passed, 0 failed, 0 skipped. First run after revert hit a
+  transient git crash (`git tag --list` STATUS_ACCESS_VIOLATION, 0xC0000005)
+  in test_version_tag_consistency; clean re-run confirmed 671/671.
 - Corpus: tp=11 fp=0 fn=0 tn=24 f1=1.0
 - Working tree: CLEAN
 
@@ -40,9 +42,9 @@ precision gate — see "Roadmap alignment" below.
    rationale: prevent F-002 through F-007 misattribution on `/traversal`
    (target that 500s for any unknown input).
 
-Test counts with the dirty tree: 1 failed, 669 passed, 1 skipped (671 total).
-Test counts after revert: 0 failed, 670 passed, 1 skipped (671 total) —
-matching the session-2 figure of 671.
+Test counts with the dirty tree: 1 failed, 670 passed (671 total).
+Test counts after revert, run 1: 1 failed (transient git crash),
+670 passed. Run 2: 671 passed, 0 failed — matching session-2.
 
 The narrow bypass (`payload_status >= 500 AND baseline in 4xx`) does **not**
 distinguish a payload-specific 500 from an any-unknown-input 500. It would
@@ -118,6 +120,9 @@ Pickup commands:
 - vampi `/createdb` non-idempotent; retry on 500 (BOOTSTRAP.md)
 - gh CLI not authenticated; use web UI or `gh auth login`
 - PowerShell here-string `@'...'@` preserves content; use for all file writes
+- Transient git crash on 2026-11-01: `git tag --list` via pytest
+  subprocess returned STATUS_ACCESS_VIOLATION (0xC0000005). Interactive
+  `git tag` works; clean re-run passes. Suspected AV/PATH/transient.
 
 ## Session failures (honest)
 
