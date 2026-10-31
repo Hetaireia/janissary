@@ -135,3 +135,6 @@ scripts/
 volumes-backup/
 # Ascension roadmap tracker — local-only, never commit
 scripts/ascension-png-ocr.txt
+
+# Scan artifacts (ad-hoc, not evidence)
+scan-*.sarif
