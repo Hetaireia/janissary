@@ -204,7 +204,7 @@ reality was Small, and Small is now zero remaining work.
 
 ### Deferred work items (fully specified, not started)
 
-**FN-4 - Agent orchestrator gap.** `janissary agent` against vampi exits 2
+**FN-4 - SHIPPED (`f02d72d`) - agent orchestrator gap.** `janissary agent` against vampi exits 2
 with "no platforms detected and no fallback scan adapter registered".
 `agent.py:189` already has the fallback hook (`plan = ["scan"] if "scan" in
 self.adapters else []`), but no `"scan"` adapter is registered by `cli.py:904`.
@@ -227,6 +227,7 @@ semantic. One-line help update later; no behavior change.
 
 ### Environment carry notes for next session
 
+- **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
 - Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
   needs manual PATH prepend, or use the shipped `--nuclei-path` flag (FN-5, `ebb449b`). `go install` would
   put it on PATH but fails on Go 1.27 (dependency graph mismatch); winget is
