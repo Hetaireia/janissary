@@ -1,8 +1,9 @@
 """Tests for the verification boundary types and interface (Phase 0.1).
 
-Phase 0.1 part 1: the types exist and the engine's contract is documented.
-The implementation of verify() is a later commit; these tests pin the
-contract so that when the implementation lands, it fills a known shape.
+Phase 0.1 part 2: verify() is implemented with a pluggable Confirmer
+list. These tests pin the promotion and rejection contract so that
+subsequent emission-site rewires and confirmer additions have a stable
+target.
 """
 from dataclasses import FrozenInstanceError
 
@@ -10,6 +11,7 @@ import pytest
 
 from janissary.verification import (
     CandidateFinding,
+    Confirmation,
     FailedVerification,
     VerificationEngine,
     VerifiedFinding,
@@ -33,6 +35,30 @@ def _sample_candidate(**overrides) -> CandidateFinding:
     )
     base.update(overrides)
     return CandidateFinding(**base)
+
+
+class _ConfirmingConfirmer:
+    name = "confirming"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        return Confirmation(confirmed=True, reason="matched_pattern")
+
+
+class _RejectingConfirmer:
+    name = "rejecting"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        return Confirmation(confirmed=False, reason="not_evidence")
+
+
+class _AbstainingConfirmer:
+    name = "abstaining"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        return None
+
+
+# --- Type-level tests (unchanged from part 1) ---
 
 
 def test_candidate_finding_constructs_with_required_fields():
@@ -92,15 +118,64 @@ def test_failed_verification_captures_candidate_and_reason():
     assert "37%" in f.detail
 
 
-def test_engine_raises_not_implemented_on_verify():
-    """Phase 0.1 part 1: engine is interface only. This test exists so
-    that a future commit which implements verify() must also update this
-    test — making the implementation commit self-announcing."""
-    engine = VerificationEngine()
-    with pytest.raises(NotImplementedError, match="Phase 0.1 part 1"):
-        engine.verify(_sample_candidate())
-
-
 def test_verification_status_is_literal_verified_or_unproven():
     """Guard against typos in status strings at type-check time and test time."""
     assert VerificationStatus is not None
+
+
+# --- Engine behaviour tests (new in part 2) ---
+
+
+def test_verify_returns_malformed_when_param_missing():
+    engine = VerificationEngine()
+    result = engine.verify(_sample_candidate(param=""))
+    assert isinstance(result, FailedVerification)
+    assert result.reason == "malformed"
+
+
+def test_verify_returns_malformed_when_category_missing():
+    engine = VerificationEngine()
+    result = engine.verify(_sample_candidate(category=""))
+    assert isinstance(result, FailedVerification)
+    assert result.reason == "malformed"
+
+
+def test_verify_returns_unproven_when_no_confirmers():
+    engine = VerificationEngine()
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_status == "unproven"
+    assert result.verification_reason == "no_confirmer_matched"
+    # Evidence fields carried through
+    assert result.param == "id"
+    assert result.category == "sqli"
+    assert result.response_status == 200
+
+
+def test_verify_returns_verified_when_confirmer_confirms():
+    engine = VerificationEngine(confirmers=[_ConfirmingConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_status == "verified"
+    assert result.verification_reason == "matched_pattern"
+
+
+def test_verify_returns_failed_when_confirmer_rejects():
+    engine = VerificationEngine(confirmers=[_RejectingConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, FailedVerification)
+    assert result.reason == "not_evidence"
+    assert "rejecting" in result.detail
+
+
+def test_verify_uses_first_non_none_confirmer_result():
+    engine = VerificationEngine(
+        confirmers=[
+            _AbstainingConfirmer(),
+            _ConfirmingConfirmer(),
+            _RejectingConfirmer(),
+        ]
+    )
+    result = engine.verify(_sample_candidate())
+    assert isinstance(result, VerifiedFinding)
+    assert result.verification_reason == "matched_pattern"
