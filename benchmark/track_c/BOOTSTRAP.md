@@ -43,3 +43,29 @@ detector results. `apps.json` is authoritative for digests;
 
 vampi is self-contained: erev0s/vampi:latest bundles SQLite by default.
 Verified: docker start janissary-trackc-vampi alone brings /users/v1/_debug to 200.
+
+## Vampi reseed: `/createdb` is non-idempotent (FN-11)
+
+If a fresh `erev0s/vampi:latest` container returns 500 on `/users/v1/*` with
+`no such table: users`, the SQLite DB exists but was never populated. Seed it:
+
+    curl.exe http://127.0.0.1:5000/createdb
+
+**If `/createdb` returns 500** with `UNIQUE constraint failed: books.book_title`,
+retry once. Vampi's `populate_db()` does `drop_all()` + `create_all()` + row
+inserts; the random `bookTitle<N>` suffix can collide mid-insert, leaving the
+DB half-seeded with one or two users present and `admin` missing. A second
+`/createdb` call usually lands clean.
+
+**Detect half-seed:** after `/createdb` returns 200, verify:
+
+    curl.exe -s -o NUL -w "%{http_code}`n" http://127.0.0.1:5000/users/v1/admin
+    curl.exe -s -o NUL -w "%{http_code}`n" http://127.0.0.1:5000/users/v1/_debug
+
+Both must be 200. If either is 404, the seed is partial — run `/createdb`
+again.
+
+**Do not `docker rm` a working container.** `docker stop` / `start` / `restart`
+preserve the seeded SQLite. `docker rm` destroys it and reseeding is the only
+recovery path. This container was destroyed twice in the 2026-11-01 session,
+costing ~90 minutes of FN-6 investigation time.
