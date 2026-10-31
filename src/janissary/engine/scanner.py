@@ -45,6 +45,14 @@ from janissary.recon import (
     WAFProfile,
 )
 
+from janissary.verification import (
+    AnalyzerImplicitConfirmer,
+    CandidateFinding,
+    VerificationEngine,
+    VerifiedFinding,
+)
+
+
 # -------------------------------------------------------------------
 # PAYLOAD LIBRARY
 # -------------------------------------------------------------------
@@ -202,6 +210,37 @@ class ScanFinding:
                 category=self.category or "",
                 finding_type=self.finding_type or "",
             )
+
+
+def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
+    """Convert a VerifiedFinding to ScanFinding for emission.
+
+    Fingerprint is computed by ScanFinding.__post_init__ from the same
+    fields, so we do not pass it explicitly.
+    """
+    return ScanFinding(
+        param=verified.param,
+        payload_name=verified.payload_name,
+        payload_value=verified.payload_value,
+        category=verified.category,
+        severity=verified.severity,
+        finding_type=verified.finding_type,
+        detail=verified.detail,
+        response_status=verified.response_status,
+        response_length=verified.response_length,
+        response_time=verified.response_time,
+        reflection_context=verified.reflection_context,
+        response_content_type=verified.response_content_type,
+        url=verified.url,
+        method=verified.method,
+        raw_request=verified.raw_request,
+        raw_response=verified.raw_response,
+        verification_status=verified.verification_status,
+        verification_reason=verified.verification_reason,
+    )
+
+
+_ENGINE = VerificationEngine(confirmers=[AnalyzerImplicitConfirmer()])
 
 
 @dataclass
@@ -1076,7 +1115,7 @@ class Scanner:
                         # gate never suppresses it.
                         continue
                     request_obj = getattr(r, "request", None)
-                    finding = ScanFinding(
+                    candidate = CandidateFinding(
                         param=param,
                         payload_name=name,
                         payload_value=value,
@@ -1094,6 +1133,13 @@ class Scanner:
                         raw_request=serialize_request(request_obj),
                         raw_response=serialize_response(r),
                     )
+                    result = _ENGINE.verify(candidate)
+                    if not isinstance(result, VerifiedFinding):
+                        # AnalyzerImplicitConfirmer always confirms well-formed
+                        # candidates; reach here only if the candidate is
+                        # malformed, which the analyzer precludes. Defensive.
+                        continue
+                    finding = _to_scan_finding(result)
                     summary.findings.append(finding)
                     summary.finding_count += 1
                     if not quiet:
