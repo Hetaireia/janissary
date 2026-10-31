@@ -919,7 +919,7 @@ class Scanner:
                     )
                     for bl in blind_raw:
                         blind_req = getattr(r, "request", None)
-                        blind_finding = ScanFinding(
+                        candidate = CandidateFinding(
                             param=param,
                             payload_name=name,
                             payload_value=value,
@@ -936,6 +936,10 @@ class Scanner:
                             raw_request=serialize_request(blind_req),
                             raw_response=serialize_response(r),
                         )
+                        result = _ENGINE.verify(candidate)
+                        if not isinstance(result, VerifiedFinding):
+                            continue
+                        blind_finding = _to_scan_finding(result)
                         summary.findings.append(blind_finding)
                         summary.finding_count += 1
                         if not quiet:
