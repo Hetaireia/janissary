@@ -1244,7 +1244,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="JSON body template for --inject-in json-body. Must contain a {{PAYLOAD}} placeholder.",
     )
-    scan.add_argument("--baseline-value", default="", metavar="VAL", help="Known-good value for --inject-in path baseline.")
+    scan.add_argument("--baseline-value", default="", metavar="VAL", help="Known-good value for --inject-in path baseline. URL templates like /users/v1/{username} substitute this value as the baseline request, then fuzz the segment.")
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)
     scan.add_argument("--baseline-count", type=int, default=10)
