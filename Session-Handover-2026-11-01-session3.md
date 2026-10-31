@@ -42,7 +42,7 @@ precision gate — see "Roadmap alignment" below.
    rationale: prevent F-002 through F-007 misattribution on `/traversal`
    (target that 500s for any unknown input).
 
-Test counts with the dirty tree: 1 failed, 670 passed (671 total).
+Test counts with the dirty tree: 1 failed, 669 passed, 1 skipped (671 total).
 Test counts after revert, run 1: 1 failed (transient git crash),
 670 passed. Run 2: 671 passed, 0 failed — matching session-2.
 
