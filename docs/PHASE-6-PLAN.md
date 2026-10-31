@@ -306,3 +306,87 @@ exist and work; the measurement just didn't use them.
 invocation per injectable-endpoint shape (query vs body vs path). This
 session spent ~90 minutes on FN-6 because the invocation pattern wasn't
 documented anywhere.
+
+---
+
+## FN-12 — SQLi on non-2xx baseline endpoints is a detection blind spot
+
+**Status: FILED 2026-11-01. Root cause identified. Fix not started.**
+
+### Symptom
+
+`janissary scan -u "http://127.0.0.1:3000/rest/user/login" -p email
+--method POST --inject-in json-body --json-template tmp-juice-login.json`
+produces 0 findings against a demonstrably vulnerable endpoint.
+
+### Manual proof of vulnerability
+
+| Request | Response |
+|---|---|
+| `{"email":"admin@juice-sh.op","password":"wrongpassword"}` (baseline) | 401 |
+| `{"email":"admin@juice-sh.op'","password":"x"}` | **500** |
+| `{"email":"' UNION SELECT 1,2,3--","password":"x"}` | **500** |
+| `{"email":"admin'","password":"x"}` | **500** |
+
+Error-based SQLi confirmed. Every error-inducing payload returns 500, distinct
+from the 401 baseline. The scanner sends all 8 payloads but produces 0 findings.
+
+### Root cause (two compounding)
+
+1. **Status gate disabled when baseline isn't 2xx.** Scan output warns:
+   `[email] warning: baseline modal status is 401 - status gate disabled`
+   The "different status = potential finding" logic shuts off when baseline is
+   4xx/5xx. Heuristic is reasonable for GET endpoints (400 response to malformed
+   input is noise), but wrong here — 5xx vs 4xx is categorically different.
+
+2. **No SQL error text in juice-shop's 500 body.** Express default 500 page has
+   no `SQL syntax error near` signature. Error-signature matcher also doesn't
+   fire. Two safety nets, both ineffective for this endpoint class.
+
+### Why the corpus didn't catch it
+
+Prior cases exercised query params and path params, but the only error-based
+SQLi case with a non-2xx baseline is crapi's `/workshop/api/shop/apply_coupon`
+(`json_body:templates/crapi_coupon.json`). That case's `expected_finding_class`
+is `sqli_blind` — meaning the corpus already expects only blind detection on
+that endpoint, not error-signature detection. Whether the current scanner
+actually detects that case has not been re-verified this session.
+
+### Proposed fix (30-60 min)
+
+The status gate should fire on **5xx-vs-non-5xx deltas** regardless of baseline
+status. Concrete: in the status-gate logic, allow findings when
+`payload_status >= 500 and baseline_status < 500`. That catches server-side
+errors as injection signals without turning every 400 into a finding.
+
+Files likely to change: `src/janissary/engine/scanner.py` (status gate logic),
+possibly `src/janissary/engine/analyzer.py` or whatever module handles finding
+emission. Tests: add a test that a 500 response to a payload is a finding when
+baseline is 401 and a test that 400-vs-401 is not (to avoid FP regression).
+
+### Reproducer for next session
+
+    # 1. Confirm vulnerability
+    curl.exe -s -o NUL -w "%{http_code}`n" -X POST http://127.0.0.1:3000/rest/user/login -H "Content-Type: application/json" -d '{"email":"admin'"'"'","password":"x"}'
+    # -> 500
+
+    # 2. Confirm scanner miss
+    @'
+    {"email":"{{PAYLOAD}}","password":"x"}
+    '@ | Set-Content -LiteralPath tmp-juice-login.json -Encoding utf8 -NoNewline
+
+    & ".\.venv\Scripts\python.exe" -m janissary scan -u "http://127.0.0.1:3000/rest/user/login" -p email --method POST --inject-in json-body --json-template tmp-juice-login.json --baseline-count 5
+    # -> 0 findings (bug)
+
+### Candidate corpus case (deliberately NOT committed)
+
+    juice-shop,/rest/user/login,POST,email,sqli,false,sqli,json_body:templates/juice_login.json,,
+
+Template committed at `benchmark/track_c/templates/juice_login.json`.
+Do not add the cases.csv row until FN-12's fix makes it detect. Adding it now
+would put a permanent FN in the corpus (`tp` unchanged, `fn` +1) that masks the
+underlying scanner bug by attributing it to case coverage.
+
+### Filed-by evidence
+
+Session 2026-11-01, second handover. Diagnostic scripts in transcript.
