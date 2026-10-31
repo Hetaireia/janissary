@@ -137,14 +137,24 @@ def _print_summary(summary: ScanSummary) -> None:
         print()
         print("  Findings:")
         for i, g in enumerate(summary.groups, start=1):
+            _all_unproven = bool(g.evidence) and all(
+                getattr(e, "verification_status", "verified") == "unproven"
+                for e in g.evidence
+            )
+            _group_marker = "  [unproven]" if _all_unproven else ""
             print(
                 f"    F-{i:03d}  {g.severity.upper():8} "
                 f"{g.category + ':' if g.category else ''}{g.root_cause}"
-                f"  (param={g.param})"
+                f"  (param={g.param}){_group_marker}"
             )
             for e in g.evidence:
+                _marker = (
+                    "  [unproven]"
+                    if getattr(e, "verification_status", "verified") == "unproven"
+                    else ""
+                )
                 print(
-                    f"           - [{e.payload_name}] {e.finding_type}: {e.detail[:80]}"
+                    f"           - [{e.payload_name}] {e.finding_type}: {e.detail[:80]}{_marker}"
                 )
 
     if summary.findings:
