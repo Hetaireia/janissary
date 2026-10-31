@@ -218,7 +218,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     Fingerprint is computed by ScanFinding.__post_init__ from the same
     fields, so we do not pass it explicitly.
     """
-    return ScanFinding(
+    finding = ScanFinding(
         param=verified.param,
         payload_name=verified.payload_name,
         payload_value=verified.payload_value,
@@ -238,9 +238,47 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
         verification_status=verified.verification_status,
         verification_reason=verified.verification_reason,
     )
+    finding._engine_emitted = True
+    return finding
 
 
 _ENGINE = VerificationEngine(confirmers=[AnalyzerImplicitConfirmer()])
+
+
+class _VerifiedFindingsList(list):
+    """A list that asserts every appended item carries _engine_emitted=True.
+
+    Phase 0.1 invariant: ScanSummary.findings contains only findings produced
+    by VerificationEngine.verify() -> _to_scan_finding(). Any direct
+    ScanFinding(...) construction that bypasses the engine and tries to
+    append here raises AssertionError.
+
+    The marker is a non-dataclass attribute set only by _to_scan_finding().
+    It is not visible to dataclasses.asdict() (which only walks fields) and
+    invisible to consumers that filter underscore-prefixed keys from vars().
+    """
+
+    def append(self, item):
+        if not getattr(item, "_engine_emitted", False):
+            raise AssertionError(
+                f"Phase 0.1 invariant violation: ScanSummary.findings.append "
+                f"received a finding that did not come from "
+                f"VerificationEngine.verify() -> _to_scan_finding(). "
+                f"Offender: {item!r}"
+            )
+        super().append(item)
+
+    def extend(self, items):
+        for item in items:
+            if not getattr(item, "_engine_emitted", False):
+                raise AssertionError(
+                    f"Phase 0.1 invariant violation: ScanSummary.findings.extend "
+                    f"received a finding that did not come from "
+                    f"VerificationEngine.verify() -> _to_scan_finding(). "
+                    f"Offender: {item!r}"
+                )
+        super().extend(items)
+
 
 
 @dataclass
@@ -253,7 +291,7 @@ class ScanSummary:
     aborted: bool = False
     abort_reason: str | None = None
     baselines: dict = field(default_factory=dict)
-    findings: list[ScanFinding] = field(default_factory=list)
+    findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)
     groups: list = field(default_factory=list)
     waf: dict | None = None
     pacer: dict | None = None

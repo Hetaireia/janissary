@@ -50,7 +50,9 @@ def _finding(**kw) -> ScanFinding:
         "url": "https://example.test/search?q=1",
     }
     base.update(kw)
-    return ScanFinding(**base)
+    f = ScanFinding(**base)
+    f._engine_emitted = True  # test fixture: stand-in for engine output
+    return f
 
 
 def _summary(

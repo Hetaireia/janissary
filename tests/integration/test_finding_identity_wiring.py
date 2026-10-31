@@ -176,6 +176,7 @@ def test_write_sarif_includes_partial_fingerprints(tmp_path: Path):
         url="http://x/a?q='",
     )
     summary = ScanSummary(target="http://x/a", params=["q"], method="GET")
+    f._engine_emitted = True  # test fixture: stand-in for engine output
     summary.findings.append(f)
 
     path = tmp_path / "out.sarif"
