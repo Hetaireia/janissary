@@ -311,7 +311,14 @@ documented anywhere.
 
 ## FN-12 — SQLi on non-2xx baseline endpoints is a detection blind spot
 
-**Status: FILED 2026-11-01. Root cause identified. Fix not started.**
+**Status: FILED 2026-11-01. Reclassified 2026-11-01 to Phase 0.2(b).**
+**Root cause identified. Fix blocked on Phase 0.1 data model:**
+**`CandidateFinding`/`VerifiedFinding`/`verification_status` do not exist**
+**in the codebase as of `8c6af05`. See `docs/ROADMAP.md` Phase 0.**
+
+> **Session-4 correction to `f28b10e`:** that commit's message claimed to
+> reclassify this entry but the file was not modified. This commit
+> performs the reclassification that `f28b10e` claimed.
 
 ### Symptom
 
