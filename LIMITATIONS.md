@@ -70,10 +70,14 @@ baseline is still suppressed. A 200→500 transition on a target that
 500s for any unknown input is the `/traversal` misattribution shape;
 detecting real bugs there needs content-signature gates (Phase 2).
 
-**JSON / SARIF gap:** `verification_status` is not yet emitted in
-`--format json` or `--format sarif` output. A CI consumer reading
-machine-readable output sees the finding but not its unproven
-qualifier. Tracked for session 16.
+**JSON / SARIF output (FIXED 2026-11-01, commit `96e0e49`):**
+`verification_status` and `verification_reason` are emitted in
+`--json`, `--jsonl`, `--export *.json`, and `--export *.sarif`
+output. A CI consumer reading machine-readable output sees the
+unproven qualifier alongside the finding. Verified against live
+juice-shop: JSON emits `"verification_status": "unproven"` and
+`"verification_reason": "corroborator_structural"` on all 8
+findings; SARIF `properties` block carries the same two fields.
 
 **Reproducer:** `benchmark/track_c/templates/juice_login.json` (with
 `_categories: ["sqli"]`).
