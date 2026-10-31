@@ -215,6 +215,10 @@ python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/<run-dir>
 > [!NOTE]
 > **Two-minute install.** `pip`, Docker, or from source. The core scanner runs without external services.
 
+See [LIMITATIONS.md](LIMITATIONS.md) for what Janissary can and cannot prove.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the architectural plan.
+
+
 ## Install
 
 ```bash
