@@ -133,3 +133,5 @@ scripts/
 
 # Local volume snapshots for reproducing locked corpus numbers
 volumes-backup/
+# Ascension roadmap tracker — local-only, never commit
+scripts/ascension-png-ocr.txt
