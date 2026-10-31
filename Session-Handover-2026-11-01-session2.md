@@ -368,3 +368,25 @@ live scan) — the only unfixed item from the 2026-11-01 handover's original
 list that isn't filed-for-later. Or the --inject-in path + --baseline-value
 discoverability line if it feels worth 5 minutes. Everything else is a
 decision, not a task.
+
+## M7 status update (2026-11-01)
+
+**Filed as deferred.** `docs/demo.gif` is stale (2026-09-26, pre-FN-4/5 and
+pre-path-injection). Regenerating it requires a recording workflow:
+
+- asciinema — NOT installed (not in winget; scoop install or pip install)
+- agg (asciinema-to-gif) — NOT installed (manual .exe from github releases)
+- Alternative tools (OBS, ShareX, ScreenToGif) — none found
+
+`DEMO_VIDEO.md` is a 75-second launch-video production script (OBS + voice-over
++ DaVinci Resolve), not a demo.gif regenerator. It does not describe a scriptable
+workflow.
+
+**To unblock M7:** install asciinema + agg (or use a screen recorder), then:
+
+    asciinema rec demo.cast -c "janissary scan -u 'http://127.0.0.1:5000/users/v1/{username}' -p username --inject-in path --baseline-value name1"
+    agg demo.cast docs/demo.gif
+
+**Why deferred, not fixed:** M7 is a content/creative milestone requiring an
+interactive recording session. Not a filesystem command. Deferred to a session
+where the recording workflow is set up.
