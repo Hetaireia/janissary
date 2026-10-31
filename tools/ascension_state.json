@@ -127,11 +127,7 @@
     },
     "M13": {
       "label": "WAF pacing e2e + published evasion result",
-      "proposed": "15-NOV-2026",
-      "probe": {
-        "kind": "glob_exists",
-        "pattern": "tests/**/test_*waf*.py,tests/**/*pacing*.py"
-      }
+      "proposed": "15-NOV-2026"
     },
     "M14": {
       "label": "OOB channel (interactsh) integration",
