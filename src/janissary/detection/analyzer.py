@@ -685,7 +685,12 @@ class DifferentialAnalyzer:
 
     def _check_status(self, snapshot: ResponseSnapshot) -> list[dict]:
         base = self.baseline.modal_status
-        if base == 0 or base >= 400:
+        # Phase 0.2(b): allow 4xx baselines to reach the emit. A 4xx->5xx
+        # transition IS a signal (the payload changed the code path), even
+        # though it does not confirm a category. CorroboratorConfirmer marks
+        # such findings unproven at the engine boundary. Only truly unknown
+        # baselines (modal_status == 0) stay blocked.
+        if base == 0:
             return []
         if snapshot.status < 500:
             return []

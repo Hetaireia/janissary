@@ -2,7 +2,12 @@
 
 See docs/ROADMAP.md Phase 0.1.
 """
-from .confirmers import AnalyzerImplicitConfirmer, Confirmation, Confirmer
+from .confirmers import (
+    AnalyzerImplicitConfirmer,
+    Confirmation,
+    Confirmer,
+    CorroboratorConfirmer,
+)
 from .engine import VerificationEngine, VerificationResult
 from .types import (
     CandidateFinding,
@@ -16,6 +21,7 @@ __all__ = [
     "CandidateFinding",
     "Confirmation",
     "Confirmer",
+    "CorroboratorConfirmer",
     "FailedVerification",
     "VerificationEngine",
     "VerificationResult",

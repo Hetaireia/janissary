@@ -283,9 +283,12 @@ def test_timing_does_not_fire_for_non_sleep_payload():
 # ===================================================================
 
 
-def test_status_does_not_fire_on_404_baseline():
-    """A 404 baseline is not an oracle. A 500 from a 404 baseline is not
-    a finding."""
+def test_status_change_fires_on_4xx_baseline():
+    """Phase 0.2(b): a 4xx baseline + 5xx payload IS a signal. The
+    analyzer fires; the engine's CorroboratorConfirmer marks the
+    resulting finding unproven at the emission boundary. Prior to
+    Phase 0.2(b) this test asserted the opposite contract -- that was
+    FN-12's silent-drop shape."""
     baseline = Baseline()
     for _ in range(5):
         baseline.add(
@@ -303,7 +306,7 @@ def test_status_does_not_fire_on_404_baseline():
     a = DifferentialAnalyzer(baseline, "sql_single_quote", "'", "sqli")
     resp = snap(status=500, text="Server error")
     findings = a.analyze(resp)
-    assert not any(f["type"] == "status_change" for f in findings)
+    assert any(f["type"] == "status_change" for f in findings)
 
 
 def test_status_fires_on_500_from_200_baseline():
