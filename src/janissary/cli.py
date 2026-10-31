@@ -51,6 +51,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "group_count": len(summary.groups),
         "aborted": summary.aborted,
         "abort_reason": summary.abort_reason,
+        "scan_incomplete": summary.scan_incomplete,
         "baselines": summary.baselines,
         "waf": summary.waf,
         "pacer": summary.pacer,
@@ -104,6 +105,8 @@ def _print_summary(summary: ScanSummary) -> None:
 
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
+    if summary.scan_incomplete:
+        print("  INCOMPLETE:      partial results — scan did not complete all parameters/payloads")
         return
 
     if summary.waf is not None:

@@ -290,6 +290,7 @@ class ScanSummary:
     finding_count: int = 0
     aborted: bool = False
     abort_reason: str | None = None
+    scan_incomplete: bool = False  # True if aborted mid-scan (partial results present)
     baselines: dict = field(default_factory=dict)
     findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)
     groups: list = field(default_factory=list)
@@ -805,6 +806,7 @@ class Scanner:
                     self._consecutive_401s = 0
                 if self.auth_configured and self._consecutive_401s >= 2:
                     summary.aborted = True
+                    summary.scan_incomplete = True
                     summary.abort_reason = (
                         f"auth expired: {self._consecutive_401s} "
                         f"consecutive HTTP 401 responses "
