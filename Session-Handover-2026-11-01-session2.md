@@ -390,3 +390,22 @@ workflow.
 **Why deferred, not fixed:** M7 is a content/creative milestone requiring an
 interactive recording session. Not a filesystem command. Deferred to a session
 where the recording workflow is set up.
+
+## FN-12 filed (post-handover)
+
+FN-12 — SQLi on non-2xx baseline endpoints is a detection blind spot.
+Root cause: status gate disables when baseline isn't 2xx, so 500 responses to
+injection payloads aren't flagged as findings. Combined with generic 500 bodies
+(Express default), error-signature matcher also can't fire.
+
+Proven against juice-shop `POST /rest/user/login` — 401 baseline, 500 payloads,
+0 findings from scan.
+
+Full diagnosis: docs/PHASE-6-PLAN.md (top of file, after FN-6 resolution).
+Candidate corpus case: NOT added (would flip fn from 0 to 1, masking the scanner
+bug as case coverage). Template committed at
+benchmark/track_c/templates/juice_login.json.
+
+Fix scope: 30-60 min. Status gate should fire on 5xx-vs-non-5xx delta regardless
+of baseline status. Add two tests: 500-vs-401 = finding, 400-vs-401 = not.
+Then re-score and flip fn.
