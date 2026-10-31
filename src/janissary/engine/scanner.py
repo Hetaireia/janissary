@@ -188,6 +188,12 @@ class ScanFinding:
     # Stable cross-scan identity (ADR-007). Populated in __post_init__.
     fingerprint: str = ""
 
+    # Phase 0.1: verification metadata. Defaults preserve backwards
+    # compatibility - pre-Phase-0.1 emission sites remain 'verified'
+    # with no reason. Rewired sites populate both from VerifiedFinding.
+    verification_status: str = "verified"
+    verification_reason: str | None = None
+
     def __post_init__(self) -> None:
         if not self.fingerprint:
             self.fingerprint = compute_fingerprint(
