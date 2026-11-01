@@ -34,3 +34,5 @@ crapi,/identity/api/v2/user/dashboard,GET,x,safe,true,,user_profile_api,,
 crapi,/workshop/api/merchant/contact_mechanic,POST,mechanic_api,ssrf,false,ssrf,json_body:templates/crapi_mechanic.json,,
 crapi,/workshop/api/shop/apply_coupon,POST,coupon_code,sqli,false,sqli_blind,json_body:templates/crapi_coupon.json,,
 vampi,/users/v1/{username},GET,username,sqli,false,sqli,path_param_sqli,path,name1
+juice-shop,/rest/user/login,POST,email,sqli,false,sqli,json_body:templates/juice_login.json,,
+juice-shop,/rest/products/search?q=test,GET,q,xss,false,xss,anonymous,,
