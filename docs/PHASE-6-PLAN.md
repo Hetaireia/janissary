@@ -916,7 +916,20 @@ Phase 2.3 and undersells Phases 2.1 and 2.2.**
 
 ## FN-18 — GraphQL depth_probe returns 1 (no depth testing) against every real server
 
-**Status: FILED 2026-11-01. Real bug, not a fixture gap. Silent false negative.**
+**Status: FIXED 2026-11-01 (commit `1f4cca5`, live-verified).**
+
+> **Session-37 status update:** fixed and live-verified against the
+> GraphQL fixture server (`scripts/graphql_fixture_server.py`). All 5
+> detection paths now fire against a real graphql-core server
+> (introspection, batching, suggestions, depth, alias).
+>
+> **Also uncovered while fixing FN-18:** `build_wrapped_nested_query`
+> had a *separate* bug — it did not terminate the innermost selection
+> with `__typename`, so every depth produced a GraphQL validation error
+> instead of a valid nested query. Fixed in the same commit with a
+> regression test (`test_build_wrapped_nested_query_ends_with_typename_leaf`).
+> This is exactly the class of bug FN-18's fix was supposed to expose:
+> a fix that only *looks* correct until it hits a real server.
 
 ### Symptom
 
@@ -984,7 +997,20 @@ identified the cause.
 
 ## FN-19 — GraphQL suggestions_enabled can never fire on a real server
 
-**Status: FILED 2026-11-01. Real bug, not a fixture gap. Silent false negative.**
+**Status: FIXED 2026-11-01 (commit `1f4cca5`, live-verified).**
+
+> **Session-37 status update:** fixed and live-verified against the
+> GraphQL fixture server (`scripts/graphql_fixture_server.py`). All 5
+> detection paths now fire against a real graphql-core server
+> (introspection, batching, suggestions, depth, alias).
+>
+> **Also uncovered while fixing FN-18:** `build_wrapped_nested_query`
+> had a *separate* bug — it did not terminate the innermost selection
+> with `__typename`, so every depth produced a GraphQL validation error
+> instead of a valid nested query. Fixed in the same commit with a
+> regression test (`test_build_wrapped_nested_query_ends_with_typename_leaf`).
+> This is exactly the class of bug FN-18's fix was supposed to expose:
+> a fix that only *looks* correct until it hits a real server.
 
 ### Symptom
 
