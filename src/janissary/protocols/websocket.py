@@ -189,3 +189,47 @@ class LearnedModel:
     baseline_sequence: MessageSequence
     injectable_fields: list[InjectableField] = field(default_factory=list)
     notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class ProbeResult:
+    """Outcome of one (field, payload) probe.
+
+    ``field_path`` and ``message_index`` identify which injectable
+    field was mutated (matching InjectableField fields).
+
+    ``original_payload`` is the pre-mutation c2s payload; ``mutated_payload``
+    is what was actually sent after set_field_value() applied the injection.
+
+    ``response_frames`` is what the server sent after the mutated payload
+    (decoded strings). Empty tuple when server was silent.
+
+    ``sent_ok=False`` means the send or connection failed; ``error_note``
+    then describes why. Probe results with sent_ok=False carry no signal
+    and should be ignored by verify().
+    """
+
+    field_path: str
+    message_index: int
+    payload_name: str
+    payload_value: str
+    category: str
+    original_payload: str
+    mutated_payload: str
+    response_frames: tuple[str, ...]
+    sent_ok: bool
+    error_note: str | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "field_path": self.field_path,
+            "message_index": self.message_index,
+            "payload_name": self.payload_name,
+            "payload_value": self.payload_value,
+            "category": self.category,
+            "original_payload": self.original_payload,
+            "mutated_payload": self.mutated_payload,
+            "response_frames": list(self.response_frames),
+            "sent_ok": self.sent_ok,
+            "error_note": self.error_note,
+        }

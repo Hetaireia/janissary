@@ -28,6 +28,7 @@ from janissary.protocols.websocket import (
     InjectableField,
     LearnedModel,
     MessageSequence,
+    ProbeResult,
     WebSocketMessage,
     WireFormat,
 )
@@ -331,3 +332,172 @@ async def learn(
         injectable_fields=fields,
         notes=tuple(notes_list),
     )
+
+
+# ===========================================================================
+# Part 4: probe orchestration
+# ===========================================================================
+
+
+WS_PROBE_PAYLOADS: list[tuple[str, str, str]] = [
+    # (name, value, category)
+    ("sqli_quote", "'", "sqli"),
+    ("sqli_or_1eq1", "' OR '1'='1", "sqli"),
+    ("sqli_union_null", "' UNION SELECT NULL--", "sqli"),
+    ("sqli_sleep", "' OR SLEEP(5)--", "sqli"),
+    ("xss_script", "<script>alert(1)</script>", "xss"),
+    ("xss_img", "<img src=x onerror=alert(1)>", "xss"),
+    ("traversal_passwd", "../../../etc/passwd", "traversal"),
+    ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal"),
+    ("cmdi_semicolon", "; id", "cmdi"),
+    ("cmdi_pipe", "| whoami", "cmdi"),
+    ("generic_null_byte", "\x00", "injection"),
+]
+
+
+async def _replay_prefix(
+    ws,
+    messages: list[WebSocketMessage],
+    upto_exclusive: int,
+    drain_quiet_s: float,
+) -> None:
+    """Send every c2s message before upto_exclusive, draining s2c between."""
+    for msg in messages[:upto_exclusive]:
+        if msg.direction != "c2s":
+            continue
+        try:
+            await ws.send(msg.payload)
+        except Exception:
+            return
+        # Drain any s2c responses the replay triggered, with a short
+        # quiet window, so the mutated probe's response is not mixed
+        # with replay-response frames.
+        await _collect_s2c(ws, quiet_s=drain_quiet_s, total_budget_s=drain_quiet_s * 4)
+
+
+async def probe(
+    url: str,
+    model: LearnedModel,
+    payloads: list[tuple[str, str, str]] | None = None,
+    timeout: float = 10.0,
+    origin: str | None = None,
+    headers: dict | None = None,
+    response_quiet_s: float = 1.0,
+    max_probes: int | None = 50,
+) -> list[ProbeResult]:
+    """Mutate each injectable field with each payload and record responses.
+
+    Fresh connection per probe. For multi-message models, all c2s
+    messages before the mutated one are replayed first (s2c drained
+    between), so the mutated message lands in the expected session state.
+
+    ``max_probes`` caps total probes across (field, payload) pairs.
+    Default 50 keeps runtime bounded for models with many fields.
+    Set to None to disable (careful: N_fields * N_payloads probes).
+
+    Probe results with ``sent_ok=False`` carry no signal; verify()
+    must ignore them.
+    """
+    if not model.injectable_fields:
+        return []
+
+    payload_lib = payloads if payloads is not None else WS_PROBE_PAYLOADS
+    if not payload_lib:
+        return []
+
+    results: list[ProbeResult] = []
+    count = 0
+    drain_quiet_s = min(0.2, response_quiet_s)
+
+    for field in model.injectable_fields:
+        # Original payload is the c2s frame at field.message_index.
+        if not (0 <= field.message_index < len(model.baseline_sequence.messages)):
+            continue
+        orig_msg = model.baseline_sequence.messages[field.message_index]
+        if orig_msg.direction != "c2s":
+            continue
+        original_payload = orig_msg.payload
+
+        for payload_name, payload_value, category in payload_lib:
+            if max_probes is not None and count >= max_probes:
+                return results
+            count += 1
+
+            try:
+                mutated = set_field_value(original_payload, field.path, payload_value)
+            except ValueError as exc:
+                results.append(ProbeResult(
+                    field_path=field.path,
+                    message_index=field.message_index,
+                    payload_name=payload_name,
+                    payload_value=payload_value,
+                    category=category,
+                    original_payload=original_payload,
+                    mutated_payload="",
+                    response_frames=(),
+                    sent_ok=False,
+                    error_note=f"mutation_failed: {exc}",
+                ))
+                continue
+
+            try:
+                ws = await _connect(
+                    url, timeout=timeout, origin=origin, headers=headers
+                )
+            except Exception as exc:
+                results.append(ProbeResult(
+                    field_path=field.path,
+                    message_index=field.message_index,
+                    payload_name=payload_name,
+                    payload_value=payload_value,
+                    category=category,
+                    original_payload=original_payload,
+                    mutated_payload=mutated,
+                    response_frames=(),
+                    sent_ok=False,
+                    error_note=f"connect_failed: {type(exc).__name__}",
+                ))
+                continue
+
+            try:
+                await _replay_prefix(
+                    ws,
+                    model.baseline_sequence.messages,
+                    field.message_index,
+                    drain_quiet_s=drain_quiet_s,
+                )
+                try:
+                    await ws.send(mutated)
+                except Exception as exc:
+                    results.append(ProbeResult(
+                        field_path=field.path,
+                        message_index=field.message_index,
+                        payload_name=payload_name,
+                        payload_value=payload_value,
+                        category=category,
+                        original_payload=original_payload,
+                        mutated_payload=mutated,
+                        response_frames=(),
+                        sent_ok=False,
+                        error_note=f"send_failed: {type(exc).__name__}",
+                    ))
+                    continue
+                s2c_frames = await _collect_s2c(
+                    ws, quiet_s=response_quiet_s, total_budget_s=timeout
+                )
+                results.append(ProbeResult(
+                    field_path=field.path,
+                    message_index=field.message_index,
+                    payload_name=payload_name,
+                    payload_value=payload_value,
+                    category=category,
+                    original_payload=original_payload,
+                    mutated_payload=mutated,
+                    response_frames=tuple(s2c_frames),
+                    sent_ok=True,
+                ))
+            finally:
+                with contextlib.suppress(Exception):
+                    await ws.close()
+
+    return results
