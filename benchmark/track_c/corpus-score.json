@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-11-01T06:27:13Z",
+  "timestamp": "2026-11-01T06:50:46Z",
   "apps": {
     "dvwa": {
       "app": "dvwa",
@@ -79,20 +79,20 @@
     },
     "juice-shop": {
       "app": "juice-shop",
-      "run": "20261101T062713Z-juice-shop",
-      "cases": 5,
-      "vuln_cases": 3,
+      "run": "20261101T065046Z-juice-shop",
+      "cases": 4,
+      "vuln_cases": 2,
       "safe_cases": 2,
       "findings": 2,
       "unmatched_findings": 0,
       "tp": 2,
       "fp": 0,
-      "fn": 1,
+      "fn": 0,
       "tn": 2,
       "aborts": 0,
       "precision": 1.0,
-      "recall": 0.6667,
-      "f1": 0.8,
+      "recall": 1.0,
+      "f1": 1.0,
       "fp_rate_safe": 0.0,
       "per_case": [
         {
@@ -129,16 +129,6 @@
           ],
           "findings": 1,
           "outcome": "TP",
-          "aborted": false
-        },
-        {
-          "path": "/rest/products/search?q=test",
-          "safe": false,
-          "expected": [
-            "xss"
-          ],
-          "findings": 0,
-          "outcome": "FN",
           "aborted": false
         }
       ]
@@ -467,13 +457,13 @@
   "totals": {
     "tp": 12,
     "fp": 0,
-    "fn": 1,
+    "fn": 0,
     "tn": 24,
     "aborts": 0,
     "unmatched_findings": 0,
     "precision": 1.0,
-    "recall": 0.9231,
-    "f1": 0.96,
+    "recall": 1.0,
+    "f1": 1.0,
     "fp_rate_safe": 0.0
   },
   "apps_with_errors": []

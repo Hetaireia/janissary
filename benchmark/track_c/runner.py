@@ -165,7 +165,7 @@ def _dedupe_jsonl(path: Path) -> int:
     return dropped
 
 
-def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -> dict:
+def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, idx: int) -> dict:
     base = cfg["base_url"]
     url = base + case["path"]
     cmd = [
@@ -190,8 +190,8 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path) -
     if session.cookies:
         cookie_hdr = "; ".join(f"{c.name}={c.value}" for c in session.cookies)
         cmd += ["--cookie", cookie_hdr]
-    out = out_dir / f"{case['vuln_class']}.jsonl"
-    err = out_dir / f"{case['vuln_class']}.stderr"
+    out = out_dir / f"{idx:03d}-{case['vuln_class']}.jsonl"
+    err = out_dir / f"{idx:03d}-{case['vuln_class']}.stderr"
     record = {
         "path": case["path"],
         "method": case["method"],
@@ -252,8 +252,8 @@ def main() -> None:
     print(f"[track_c] run dir: {out_dir}")
 
     records = []
-    for c in cases:
-        records.append(scan_case(cfg, session, c, out_dir))
+    for idx, c in enumerate(cases):
+        records.append(scan_case(cfg, session, c, out_dir, idx))
 
     (out_dir / "manifest.json").write_text(json.dumps({
         "app": args.app,
