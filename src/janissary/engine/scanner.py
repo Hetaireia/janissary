@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import secrets
 import sys
+import asyncio
 import time
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -48,6 +49,8 @@ from janissary.recon import (
 from janissary.protocols import BaselineNormalizer, HTTPNormalizer
 from janissary.integrations.graphql import GraphQLClient, detect
 from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
+from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
+from janissary.integrations.websocket_learn import learn
 from janissary.verification import (
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
@@ -721,6 +724,97 @@ class Scanner:
             pending = still_pending
             if not pending:
                 break
+
+    def scan_ws(self, payloads: list[str] | None = None) -> ScanSummary:
+        """Run WebSocket discovery against ``self.target``.
+
+        Flow: learn() -> WebSocketDiscoveryModule.discover() -> _ENGINE verify.
+        Every candidate is routed through _ENGINE.verify() so the
+        WebSocketReconConfirmer marks it unproven. Same emission
+        boundary HTTP and GraphQL findings go through.
+
+        Caller MUST provide payloads. Empty payloads yields a summary
+        with ``scan_incomplete=True`` and reason
+        "no WS payloads provided" -- not a silent clean result. See
+        LIMITATIONS.md "What no finding means".
+
+        If learn() finds no injectable fields (e.g. target sends only
+        text frames, or no server response), ``scan_incomplete=True``
+        with the reason from learn()'s notes. Not a silent clean.
+
+        This method does not run the HTTP payload loop. Callers wanting
+        both HTTP and WS findings should invoke scan() and scan_ws()
+        separately and merge them (see CLI --ws in FN-16 part 6).
+
+        See docs/PHASE-6-PLAN.md FN-16.
+        """
+        summary = ScanSummary(
+            target=self.target,
+            params=list(self.params),
+            method="WS",
+        )
+
+        if not payloads:
+            summary.scan_incomplete = True
+            summary.abort_reason = "no WS payloads provided"
+            return summary
+
+        ok, reason = self.preflight()
+        summary.total_requests += 1
+        if not ok:
+            summary.aborted = True
+            summary.abort_reason = reason
+            return summary
+
+        try:
+            model = asyncio.run(
+                learn(self.target, payloads=payloads, timeout=self.timeout)
+            )
+        except Exception as exc:
+            summary.scan_incomplete = True
+            summary.abort_reason = f"learn failed: {type(exc).__name__}"
+            return summary
+        summary.total_requests += len(payloads) + 2
+
+        joined_notes = " ".join(model.notes)
+        if "no_probe_payloads_provided" in joined_notes:
+            summary.scan_incomplete = True
+            summary.abort_reason = "no WS payloads provided"
+            return summary
+        if "connect_failed" in joined_notes:
+            summary.scan_incomplete = True
+            summary.abort_reason = "WS connect failed during learn"
+            return summary
+        if not model.injectable_fields:
+            summary.scan_incomplete = True
+            summary.abort_reason = (
+                "no injectable fields in learned model (notes: "
+                + (joined_notes or "none")
+                + ")"
+            )
+            return summary
+
+        module = WebSocketDiscoveryModule(
+            url=self.target, model=model, timeout=self.timeout
+        )
+        try:
+            candidates = asyncio.run(module.discover(max_probes=50))
+        except Exception as exc:
+            summary.scan_incomplete = True
+            summary.abort_reason = f"discover failed: {type(exc).__name__}"
+            return summary
+        summary.total_requests += max(len(candidates) * 2, 10)
+
+        for candidate in candidates:
+            result = _ENGINE.verify(candidate)
+            if not isinstance(result, VerifiedFinding):
+                continue
+            finding = _to_scan_finding(result)
+            summary.findings.append(finding)
+            summary.finding_count += 1
+
+        return summary
+
 
     def scan_graphql(
         self,
