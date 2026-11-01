@@ -102,7 +102,7 @@ def test_engine_confirmer_order_is_load_bearing():
     graphql candidates would be marked verified (overclaim). This test
     pins the order."""
     names = [c.name for c in _ENGINE._confirmers]
-    assert names == ["corroborator", "graphql_recon", "analyzer_implicit"], (
+    assert names == ["corroborator", "websocket_recon", "graphql_recon", "analyzer_implicit"], (
         f"confirmer order changed; got {names}. GraphQLReconConfirmer "
         f"must run BEFORE AnalyzerImplicitConfirmer or graphql candidates "
         f"get marked verified instead of unproven."

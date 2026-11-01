@@ -30,8 +30,10 @@ from janissary.protocols.websocket import (
     MessageSequence,
     ProbeResult,
     WebSocketMessage,
+    WebSocketNormalizer,
     WireFormat,
 )
+from janissary.verification import CandidateFinding
 
 from .websocket import _connect
 
@@ -501,3 +503,102 @@ async def probe(
                     await ws.close()
 
     return results
+
+
+# ===========================================================================
+# Part 5: verify orchestration
+# ===========================================================================
+
+
+def _extract_baseline_response(
+    model: LearnedModel, message_index: int
+) -> tuple[str, ...]:
+    """Extract s2c frames that came after message_index's c2s message
+    and before the next c2s message. These are the baseline responses
+    the original (unmutated) payload produced."""
+    msgs = model.baseline_sequence.messages
+    out: list[str] = []
+    for m in msgs[message_index + 1:]:
+        if m.direction == "c2s":
+            break
+        out.append(m.payload)
+    return tuple(out)
+
+
+def _seq_from_s2c_frames(frames: tuple[str, ...]) -> MessageSequence:
+    """Build a MessageSequence of only s2c frames for normalization."""
+    return MessageSequence(
+        messages=[
+            WebSocketMessage(direction="s2c", payload=f) for f in frames
+        ]
+    )
+
+
+def _probe_to_candidate(
+    probe: ProbeResult,
+    url: str,
+) -> CandidateFinding:
+    detail = (
+        f"Probe on {probe.field_path!r} (msg {probe.message_index}, "
+        f"payload {probe.payload_name}) produced a server response that "
+        f"differs from baseline after normalization"
+    )
+    return CandidateFinding(
+        param=probe.field_path,
+        payload_name=probe.payload_name,
+        payload_value=probe.payload_value,
+        category="websocket",
+        severity="medium",
+        finding_type=f"websocket_{probe.category}_probe",
+        detail=detail,
+        url=url,
+        method="WS",
+    )
+
+
+def verify(
+    probes: list[ProbeResult],
+    model: LearnedModel,
+    url: str = "",
+) -> list[CandidateFinding]:
+    """Emit CandidateFindings for probes whose response differs from baseline.
+
+    For each probe: extract the baseline response frames that followed
+    the original (unmutated) c2s message at probe.message_index, normalize
+    both baseline and probe responses via WebSocketNormalizer, and compare
+    canonical bodies. Differing bodies yield a candidate.
+
+    Probes with sent_ok=False carry no signal and are skipped.
+    Probes with empty response_frames are also skipped in v1 -- a silent
+    server gives no differential signal. This is a v1 limitation; see FN-16.
+
+    Candidates carry finding_type=f"websocket_{category}_probe" so
+    WebSocketReconConfirmer can route them to unproven.
+    """
+    if not probes:
+        return []
+
+    normalizer = WebSocketNormalizer()
+    candidates: list[CandidateFinding] = []
+
+    for p in probes:
+        if not p.sent_ok:
+            continue
+        if not p.response_frames:
+            continue
+
+        baseline_frames = _extract_baseline_response(model, p.message_index)
+        if not baseline_frames:
+            # No baseline response to compare against -- skip
+            continue
+
+        baseline_seq = _seq_from_s2c_frames(baseline_frames)
+        probe_seq = _seq_from_s2c_frames(p.response_frames)
+
+        baseline_norm = normalizer.normalize(baseline_seq).body
+        probe_norm = normalizer.normalize(probe_seq).body
+
+        if baseline_norm != probe_norm:
+            candidates.append(_probe_to_candidate(p, url))
+
+    return candidates
