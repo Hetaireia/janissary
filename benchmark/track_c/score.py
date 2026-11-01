@@ -37,7 +37,7 @@ def load_cases(app: str) -> list[dict]:
 def collect_findings(run_dir: Path) -> list[dict]:
     findings = []
     for jl in run_dir.glob("*.jsonl"):
-        case_class = jl.stem
+        case_class = jl.stem.split('-', 1)[1] if '-' in jl.stem else jl.stem
         for line in jl.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
