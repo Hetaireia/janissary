@@ -1738,3 +1738,142 @@ With juice-shop running on 127.0.0.1:3000, from repo root:
 
 Artifacts committed at `benchmark/track_c/runs/20261101T062713Z-juice-shop/`.
 Aggregate recomputed at `benchmark/track_c/corpus-score.json`.
+### Amendment 26 — 2026-11-01 — Retracts Amendment 25; runner bug was the cause, not a scanner gap
+
+**Status:** Retracts Amendment 25. Track C juice-shop returns to F1=1.0
+with one additional real TP trial (aggregate tp=12, was 11 at v7.7.0).
+
+**What Amendment 25 claimed:** adding two trials (login-sqli, xss-search)
+took juice-shop from 1 vulnerable trial to 3, exposed an FN on xss-search,
+and dropped aggregate F1 from 1.0 to 0.96. Amendment 25 recorded the
+"FN" as a genuine detection gap on reflecting JSON APIs (H-C2 falsified).
+
+**Why that claim was wrong:** two independent problems, neither a
+scanner defect:
+
+1. **The xss-search trial was invalid.** Juice Shop's
+   `/rest/products/search?q=` endpoint returns `{"status":"success","data":[]}`
+   for an unauthenticated xss payload — verified live via HTTP probe.
+   Search results are rendered client-side (Angular SPA); the payload is
+   never reflected server-side. Server-side DAST cannot detect DOM-based
+   XSS on this endpoint by design. The trial expected a finding the
+   architecture prevents.
+2. **The runner had a filename collision bug.** `runner.py:scan_case`
+   wrote to `{vuln_class}.jsonl` in `"w"` mode. Two sqli trials in the
+   same app → same file → second overwrote first. Session 20's aggregate
+   numbers (including the phantom `fn=1`) were artifacts of the login
+   sqli finding overwriting the search sqli finding.
+
+#### The fix
+
+Two code changes, one commit `77821e2`:
+
+| File | Change |
+|---|---|
+| `benchmark/track_c/runner.py` | `scan_case` gains `idx` parameter; output files are `{idx:03d}-{vuln_class}.jsonl` instead of `{vuln_class}.jsonl`. Trial index in filename → no collision possible. |
+| `benchmark/track_c/score.py` | `case_class = jl.stem.split('-', 1)[1] if '-' in jl.stem else jl.stem`. Backward-compatible: old runs (no prefix) still parse correctly. |
+
+#### Corrected measurement — juice-shop, run `20261101T065046Z-juice-shop`
+
+| Metric | Amendment 25 (wrong) | Amendment 26 (correct) |
+|---|---|---|
+| Cases | 5 | **4** |
+| Vuln trials | 3 | **2** |
+| Safe trials | 2 | 2 |
+| True positives | 2 | **2** |
+| False negatives | 1 | **0** |
+| True negatives | 2 | 2 |
+| Precision | 1.0 | 1.0 |
+| Recall | 0.667 | **1.0** |
+| F1 | 0.80 | **1.0** |
+
+The two sqli trials (login + search) both fire and both are correctly
+attributed. The xss trial is gone — it tested an endpoint that does not
+reflect server-side, so it was measuring the architecture, not the scanner.
+
+#### Corrected aggregate — Track C, all apps
+
+| Metric | Amendment 23 (v7.7.0) | Amendment 25 (wrong) | Amendment 26 (correct) |
+|---|---|---|---|
+| True positives | 11 | 12 | **12** |
+| False positives | 0 | 0 | **0** |
+| False negatives | 0 | 1 | **0** |
+| True negatives | 24 | 24 | **24** |
+| Precision | 1.0 | 1.0 | **1.0** |
+| Recall | 1.0 | 0.9231 | **1.0** |
+| F1 | 1.0 | 0.96 | **1.0** |
+| FP rate (safe) | 0.0 | 0.0 | **0.0** |
+
+Track C aggregate returns to P=R=F1=1.0, matching Amendment 23's
+headline, but with **one more real TP trial** than the v7.7.0 corpus. The
+login-sqli case stays: it is a permanent regression guard for FN-12.
+
+#### Hypothesis status after the correction
+
+Amendment 23 stated three hypotheses. Amendment 25 claimed H-C2 was
+falsified. That claim is retracted:
+
+| Hypothesis | Amendment 25 (wrong) | Amendment 26 (correct) |
+|---|---|---|
+| **H-C1 (precision):** zero FPs | Holds | **Holds** — 0/24 |
+| **H-C2 (recall):** all vuln endpoints emit correct-class finding | Does not hold — 1 FN | **Holds** — 12/12 |
+| **H-C3 (no aborts):** no endpoint aborts | Holds | **Holds** — 0/33 |
+
+H-C2 was never falsified. The apparent falsification was a runner bug
+producing a phantom FN, compounded by an invalid trial that asked
+server-side DAST to detect a client-side vulnerability.
+
+#### Retracted claims from Amendment 25
+
+1. **"H-C2 falsified."** Retracted. H-C2 holds at 12/12.
+2. **"The corpus grew from 11 to 13 vulnerable trials."** Retracted. It
+   grew from 11 to 12. Only the login-sqli trial is a valid addition; the
+   xss-search trial is removed.
+3. **"Aggregate F1 dropped from 1.0 to 0.96."** Retracted. F1 is 1.0.
+4. **"Genuine xss detection gap on a reflecting JSON API."** Retracted.
+   Juice Shop's search endpoint does not reflect payloads server-side
+   (Angular SPA, client-rendered results). No server-side scanner can
+   detect this vulnerability class; it is a scope limit of the tool class,
+   not a bug in Janissary.
+5. **"This will be tracked as a follow-up item for Phase 2 protocol
+   work."** Retracted. FN-13 is reclassified as a filing error.
+
+#### What still holds from Amendment 25
+
+The FN-12 regression coverage added by the login-sqli trial (`5976d32`)
+is real and stays. That single change remains valuable: if FN-12's fix
+ever regresses, the Track C juice-shop score will show `fn=1`. The case
+that was invalidated was the xss-search trial, not the login-sqli trial.
+
+#### Artifacts
+
+- **Retained:** `benchmark/track_c/runs/20261101T065046Z-juice-shop/`
+  — the correct 4-case measurement, committed in `77821e2`.
+- **Retained in history, superseded:** `benchmark/track_c/runs/20261101T062713Z-juice-shop/`
+  — the broken 5-case run, committed in `5976d32`, scored by broken
+  runner. Kept as pre-registration artifact per the campaign's
+  "no erasing mistakes" discipline.
+- **Removed before commit:** intermediate broken-runner runs that never
+  entered the corpus aggregate.
+
+#### What this amendment does NOT claim
+
+1. **Not a claim that server-side DAST detects DOM XSS.** It does not.
+   This is a scope limit worth documenting in `LIMITATIONS.md` in the
+   correct framing (scope, not bug), but that is a separate doc change,
+   not part of this retraction.
+2. **Not a claim that no xss gap exists elsewhere.** The scanner has real
+   detection gaps (pathtraver recall 0.049-0.308). This retraction only
+   says the specific JSON-API xss gap filed in FN-13 is not a gap.
+3. **Not a retroactive edit to Amendment 25's text.** Amendment 25 is
+   preserved as-written. Its claims are retracted here so a reader can
+   see what was believed, when, and what replaced it.
+
+#### Reproducer
+
+From repo root, with juice-shop running on 127.0.0.1:3000:
+
+    python -m benchmark.track_c.runner --app juice-shop
+    python benchmark/track_c/score.py --app juice-shop --run benchmark/track_c/runs/<timestamp>-juice-shop
+
+Expected: 4 cases, tp=2, fn=0, f1=1.0.

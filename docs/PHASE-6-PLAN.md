@@ -410,9 +410,28 @@ Template committed at `benchmark/track_c/templates/juice_login.json`.
 
 Session 2026-11-01, second handover. Diagnostic scripts in transcript.
 
-## FN-13 — Reflected XSS on JSON APIs is a detection blind spot
+## FN-13 — Reflected XSS on JSON APIs is a detection blind spot (RETRACTED)
 
-**Status: FILED 2026-11-01. Root cause identified. Fix not started.**
+**Status: RETRACTED 2026-11-01. Filed on a false premise.**
+
+> **Retraction note:** FN-13 was filed based on a Track C expansion
+> (BENCHMARK.md Amendment 25) that appeared to expose an xss detection
+> gap on Juice Shop's `/rest/products/search?q=` endpoint. Subsequent
+> investigation (session 24, commit `77821e2`) found two compounding
+> errors in the original filing:
+>
+> 1. The xss trial used an endpoint that does not reflect payloads
+>    server-side (Angular SPA, client-rendered results). The response was
+>    verified live: `{"status":"success","data":[]}`.
+> 2. The benchmark runner had a filename collision bug that produced a
+>    phantom sqli FN, which was conflated with the xss trial's expected
+>    miss.
+>
+> Neither was a scanner defect. See BENCHMARK.md Amendment 26 for the
+> full retraction and corrected Track C measurement (P=R=F1=1.0, tp=12,
+> fn=0). The DOM-based XSS scope limit is documented in LIMITATIONS.md
+> under "DOM-based XSS on SPAs" — as a limit of the tool class, not a
+> bug.
 
 ### Symptom
 
@@ -498,3 +517,67 @@ Session 2026-11-01 (session 20). Track C expansion. Full trail:
 - `LIMITATIONS.md` "Reflected XSS on JSON APIs" — user-facing entry
 - `benchmark/track_c/runs/20261101T062713Z-juice-shop/` — the run artifacts
 - `benchmark/track_c/corpus-score.json` — corpus aggregate at `ac8e19e`
+
+## FN-14 — Track C runner overwrites findings when two trials share a vuln_class
+
+**Status: FIXED 2026-11-01 (commit `77821e2`).**
+
+### Symptom
+
+Running `benchmark/track_c/runner.py --app juice-shop` with two sqli
+trials (login + search) produced only one sqli finding in the run
+directory. The second trial's output file overwrote the first's.
+
+### Root cause
+
+`runner.py:scan_case` wrote findings to `{case['vuln_class']}.jsonl` in
+`"w"` mode. Any two trials in the same app with the same `vuln_class`
+shared a filename. The last trial to run clobbered the previous one.
+
+Session 20's Track C expansion added two sqli trials to juice-shop
+(`5976d32`). The runner collision turned the correct `tp=2` result into
+`tp=1, fn=1` — a phantom FN that was then attributed to an unrelated
+xss trial, cascading into FN-13's false filing.
+
+### How it was found
+
+Session 24 investigation of FN-13's claimed xss gap. Verifying whether
+the xss payload was actually reflected (it wasn't) also revealed that
+the sqli findings file contained only the login finding, not the search
+finding — despite both trials returning exit code 1 with non-empty
+output.
+
+### Fix
+
+`benchmark/track_c/runner.py`:
+- `scan_case` gains an `idx` parameter (trial index within the app's case set)
+- Output files become `{idx:03d}-{vuln_class}.jsonl` and `.stderr`
+- Caller passes `idx` from `enumerate(cases)`
+
+`benchmark/track_c/score.py`:
+- `case_class` extraction now strips the numeric prefix:
+  `jl.stem.split('-', 1)[1] if '-' in jl.stem else jl.stem`
+- Backward-compatible: old runs without numeric prefix still parse correctly
+
+### Verification
+
+New juice-shop run `20261101T065046Z-juice-shop` produces four separate
+files (`000-sqli.jsonl`, `001-safe.jsonl`, `002-safe.jsonl`,
+`003-sqli.jsonl`). Score: `tp=2, fn=0, f1=1.0`. See BENCHMARK.md
+Amendment 26.
+
+### Filed-by evidence
+
+Session 2026-11-01 (session 24). Investigation of FN-13. Full trail:
+
+- `77821e2` — the fix commit (runner.py + score.py + re-run artifacts)
+- BENCHMARK.md Amendment 26 — the retraction and corrected numbers
+- `benchmark/track_c/runs/20261101T065046Z-juice-shop/` — the correct run artifacts
+
+### Retrospective
+
+This bug existed since Track C was introduced (Amendment 23, 2026-10-30).
+It was latent because every app in the pre-expansion corpus had at most
+one trial per vuln_class. The juice-shop expansion was the first app with
+two sqli trials, which exposed the collision. Any future app with
+multiple trials of the same class would have hit the same bug.
