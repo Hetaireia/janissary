@@ -913,3 +913,142 @@ Files inspected:
 No commit fixed this — the filing is the record of the gap, and it
 records the three-phase audit finding: **the roadmap is accurate about
 Phase 2.3 and undersells Phases 2.1 and 2.2.**
+
+## FN-18 — GraphQL depth_probe returns 1 (no depth testing) against every real server
+
+**Status: FILED 2026-11-01. Real bug, not a fixture gap. Silent false negative.**
+
+### Symptom
+
+`GraphQLDiscoveryModule` against any real GraphQL server never emits
+`graphql_depth_abuse`. `depth_probe` returns `(1, "<any error>")` and the
+`< _DEPTH_THRESHOLD` check skips emission — reported as "no depth issue"
+when no depth was actually tested.
+
+### Root cause
+
+`build_nested_query(field, depth)` produces `{ field { field { ... } } }`.
+`depth_probe` calls it with `field_name="__typename"` (its default). But
+`__typename` is a GraphQL built-in scalar (`String!`) — scalars cannot
+have subfields. Any server responds with a validation error:
+
+    Field "__typename" must not have a selection since type "String!" has no subfields.
+
+In `depth_probe`:
+
+    if _refused(resp, DEPTH_ERROR_RE) or _is_error_only(resp):
+        high = d
+
+`_is_error_only()` returns True for ANY error-only response — validation
+errors included. The loop treats a validation error on depth-2 as a
+"depth refusal" and returns `low=1`. Then `1 < 10` = no finding.
+
+### How it was found
+
+Session 36, live validation against a real graphql-core server. Session 35
+missed it — I attributed "no depth_abuse finding" to "shallow fixture" but
+the actual cause was client code silently accepting a validation error
+as a depth refusal.
+
+### Proposed fix
+
+**A (real fix):** `GraphQLDiscoveryModule._probe_candidates` derives a
+self-referencing field from the introspected schema (e.g. `User.friend:
+User`, `Post.author: User` + `User.posts: [Post]`). Pass that field name
+to `depth_probe(field_name=...)`. `depth_probe` already accepts the
+parameter (unused because default is `__typename`).
+
+**B (safety net):** in `depth_probe`, remove `_is_error_only()` from the
+depth-refusal branch. Only treat a refusal as depth-related if
+`DEPTH_ERROR_RE` matches. The current query would then fail loudly
+(server rejects it) and return `depth=None` — still no finding, but
+honest about why.
+
+A is the fix; B ensures the fix can't silently regress.
+
+### Verification criterion
+
+- Against a fixture with recursive type: `depth_probe` returns `(low>1, refusal)`;
+  `graphql_depth_abuse` fires with real depth in detail
+- Against a schema with no self-referencing type: no finding emitted,
+  note logged (not "no depth issue" but "depth not testable on this schema")
+
+### Filed-by evidence
+
+Session 36 inspection of `graphql.py:185-190` (`build_nested_query`) and
+`graphql.py:512-550` (`depth_probe`). Session 35 live-validation commit
+`334b625` surfaced the absence by not exercising depth; session 36
+identified the cause.
+
+---
+
+## FN-19 — GraphQL suggestions_enabled can never fire on a real server
+
+**Status: FILED 2026-11-01. Real bug, not a fixture gap. Silent false negative.**
+
+### Symptom
+
+`GraphQLDiscoveryModule` never emits `graphql_suggestions_enabled` against
+any real GraphQL server, regardless of whether the server produces field
+suggestions.
+
+### Root cause
+
+`detect()` probes with:
+
+    query { __definitelyNotARealField_xyz }
+
+and looks for a response matching:
+
+    r'Did you mean\s+["\']?([A-Za-z_][A-Za-z0-9_]*)["\']?'
+
+Real GraphQL servers (graphql-core, Apollo, Hasura) emit suggestions only
+when the probe name is *close to* a real field — typically Levenshtein
+distance ≤ 2-3. `__definitelyNotARealField_xyz` is ~20 edits from any real
+field. No suggestion is ever produced. `SUGGESTION_RE` never matches.
+
+### How it was found
+
+Same session 36 inspection as FN-18. Session 35 called it "correct
+behavior, probe too far from schema fields" — treating the fixture as the
+constraint. In reality the constraint is the client's probe choice, which
+is fixed regardless of schema.
+
+### Proposed fix
+
+`_probe_endpoint` in `graphql.py` should do suggestions detection AFTER
+introspection (which is step 2):
+
+1. Pick a real field name from `profile.schema`
+2. Mutate by one character: delete one, transpose two, substitute one
+3. Send `{ <mutated> }` as the probe
+4. Check `SUGGESTION_RE` against error messages
+5. If suggestion mentions the original field name, `suggestions_supported = True`
+
+If introspection is unavailable, report `suggestions_untestable` rather
+than `suggestions_supported = False` — honest about the uncertainty.
+
+### Verification criterion
+
+- Against graphql-core: `suggestions_enabled` fires with `True`
+- Against a server that disables suggestions: `False`
+- Against schema-inaccessible server: `False` with a note (not silent FN)
+
+### Filed-by evidence
+
+Same as FN-18. Session 36 inspection of `graphql.py:83-95` and
+`graphql.py:~410` (`_probe_endpoint` step 4).
+
+---
+
+## FN-18 / FN-19 — shared root cause and lesson
+
+Both bugs share a pattern: **client code assumes a fixed probe shape works
+against any schema, without deriving it from the schema itself.** Both
+would have been caught by session-36 inspection; both were masked in
+session 35 by my initial "shallow fixture" explanation.
+
+The general lesson: **a probe that never fires because of an assumed
+constant is indistinguishable from a probe that works and reports
+"clean."** Any future `probe_*` function needs a positive-control test
+against a real server, not just unit tests with mock responses.
