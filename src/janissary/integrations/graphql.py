@@ -448,12 +448,26 @@ def _probe_endpoint(
         if batch.ok and isinstance(batch.body, list):
             profile.batched_queries = True
 
-    # Step 4: field-suggestion support.
-    sugg = client.query("{ __definitelyNotARealField_xyz }")
-    for msg in sugg.error_messages():
-        if SUGGESTION_RE.search(msg):
-            profile.suggestions_supported = True
-            break
+    # Step 4: field-suggestion support (FN-19).
+    # Requires schema to derive a near-miss probe name. Without schema
+    # we cannot honestly test this; log it rather than silently claiming
+    # suggestions are off.
+    if profile.introspection_enabled and profile.schema:
+        probe_field = _derive_suggestion_probe(profile.schema)
+        if probe_field:
+            sugg = client.query("{ " + probe_field + " }")
+            for msg in sugg.error_messages():
+                if SUGGESTION_RE.search(msg):
+                    profile.suggestions_supported = True
+                    break
+        else:
+            profile.notes.append(
+                "suggestions: no suitable probe field in schema"
+            )
+    else:
+        profile.notes.append(
+            "suggestions: untestable without introspection"
+        )
 
     return profile
 
@@ -468,6 +482,138 @@ def _type_name(node: Any) -> str | None:
 # ---------------------------------------------------------------------------
 # Field enumeration via suggestions
 # ---------------------------------------------------------------------------
+
+
+def _type_name_from_field(field: dict) -> str | None:
+    """Unwrap NON_NULL/LIST wrappers on a field's type descriptor to get
+    the base named type. Returns None if the field has no resolvable name.
+    """
+    t = field.get("type") if isinstance(field, dict) else None
+    while isinstance(t, dict):
+        kind = t.get("kind")
+        if kind in ("NON_NULL", "LIST"):
+            t = t.get("ofType")
+        else:
+            name = t.get("name")
+            return str(name) if isinstance(name, str) else None
+    return None
+
+
+def _derive_depth_path(schema: dict) -> tuple[str | None, str | None]:
+    """Derive (top_level_query_field, self_referencing_field) for depth probing.
+
+    Looks for a Query field F whose return type T has a self-referencing
+    field R (R returns T). If found, depth_probe can construct
+    ``{ F { R { R { ... } } } }`` and measure depth properly.
+
+    Returns (None, None) if no such path exists in the schema. Callers
+    must treat that as "depth not testable on this schema" rather than
+    as "no depth issue" (FN-18).
+
+    Limitation: assumes the top-level field has no required arguments.
+    Schemas requiring arguments for the entry field cannot be depth-probed
+    without introspection-derived values; not handled in this version.
+    """
+    if not isinstance(schema, dict):
+        return None, None
+    qroot = schema.get("queryType")
+    if not isinstance(qroot, dict):
+        return None, None
+    query_type_name = qroot.get("name")
+    if not isinstance(query_type_name, str):
+        return None, None
+
+    types = schema.get("types") or []
+    type_map = {t.get("name"): t for t in types if isinstance(t, dict)}
+
+    query_t = type_map.get(query_type_name)
+    if not isinstance(query_t, dict):
+        return None, None
+
+    for top_field in query_t.get("fields") or []:
+        if not isinstance(top_field, dict):
+            continue
+        fname = top_field.get("name")
+        if not fname or fname.startswith("__"):
+            continue
+        # Skip fields with required args (would need introspection-derived values)
+        has_required = any(
+            isinstance(a, dict) and a.get("type", {}).get("kind") == "NON_NULL"
+            for a in (top_field.get("args") or [])
+        )
+        if has_required:
+            continue
+        ret_type = _type_name_from_field(top_field)
+        if not ret_type:
+            continue
+        target_t = type_map.get(ret_type)
+        if not isinstance(target_t, dict):
+            continue
+        for rec_field in target_t.get("fields") or []:
+            if not isinstance(rec_field, dict):
+                continue
+            rname = rec_field.get("name")
+            if not rname or rname.startswith("__"):
+                continue
+            if _type_name_from_field(rec_field) == ret_type:
+                return fname, rname
+    return None, None
+
+
+def _derive_suggestion_probe(schema: dict) -> str | None:
+    """Derive a probe field name that should trigger a "Did you mean" suggestion.
+
+    Picks a real Query field name and mutates by dropping one character.
+    Servers typically emit suggestions when the wrong name is within
+    Levenshtein distance 2-3 of a real field. Returns None if no
+    suitable field exists (FN-19).
+    """
+    if not isinstance(schema, dict):
+        return None
+    qroot = schema.get("queryType")
+    if not isinstance(qroot, dict):
+        return None
+    query_type_name = qroot.get("name")
+    if not isinstance(query_type_name, str):
+        return None
+
+    for t in schema.get("types") or []:
+        if not isinstance(t, dict):
+            continue
+        if t.get("name") != query_type_name:
+            continue
+        for field in t.get("fields") or []:
+            if not isinstance(field, dict):
+                continue
+            fname = field.get("name")
+            if not fname or fname.startswith("__") or len(fname) < 3:
+                continue
+            # Drop middle char to produce a near-miss
+            mid = len(fname) // 2
+            return fname[:mid] + fname[mid+1:]
+        return None
+    return None
+
+
+def build_wrapped_nested_query(path: str, field: str, depth: int) -> str:
+    """Build ``{ path { field { field { ... { __typename } } } } }``.
+
+    Terminates the innermost selection with ``__typename`` (a scalar
+    valid on any object type). Without this leaf, ``{ path { field } }``
+    is invalid GraphQL on servers that require subfield selections for
+    object-typed fields -- the whole nested query gets rejected with a
+    validation error, not a depth refusal, and ``depth_probe`` cannot
+    distinguish the two. FN-18 follow-up, 2026-11-01.
+
+    ``depth`` counts the number of ``field`` selections. Depth 1 =
+    ``{ path { field { __typename } } }``. Depth N = N field nestings
+    plus the leaf.
+    """
+    depth = max(1, int(depth))
+    inner = "__typename"
+    for _ in range(depth):
+        inner = f"{field} {{ {inner} }}"
+    return "{ " + path + " { " + inner + " } }"
 
 
 def enumerate_fields(
@@ -514,23 +660,43 @@ def depth_probe(
     field_name: str = "__typename",
     start: int = 1,
     ceiling: int = 32,
+    path: str | None = None,
 ) -> tuple[int | None, str]:
     """Return the deepest accepted depth and the refusal message.
 
     Doubles the depth until a refusal, then binary-searches between the
     last success and first failure.
+
+    When ``path`` is provided, wraps the nested query as
+    ``{ path { field { field { ... } } } }``. Used by FN-18's fix to probe
+    through Query.user -> User.friend or similar self-referencing paths.
+
+    Refusal classification (FN-18 fix): a response is treated as a depth
+    refusal ONLY when DEPTH_ERROR_RE matches. Any other error-only
+    response is treated as an "invalid probe" and returns (None, reason)
+    -- the caller knows depth was NOT tested, versus a false "clean" that
+    reports low=1.
     """
+    def _build(d: int) -> str:
+        if path:
+            return build_wrapped_nested_query(path, field_name, d)
+        return build_nested_query(field_name, d)
+
     low = 0
     high: int | None = None
     refusal = ""
 
     d = start
     while d <= ceiling:
-        resp = client.query(build_nested_query(field_name, d))
-        if _refused(resp, DEPTH_ERROR_RE) or _is_error_only(resp):
+        resp = client.query(_build(d))
+        if _refused(resp, DEPTH_ERROR_RE):
             high = d
             refusal = (resp.error_messages() or [resp.note or ""])[0]
             break
+        if _is_error_only(resp):
+            # Not a depth refusal -- probe is invalid (e.g. field is scalar
+            # or query has wrong shape). Report honestly; do not claim depth=1.
+            return None, (resp.error_messages() or [resp.note or ""])[0]
         low = d
         d *= 2
 
@@ -541,10 +707,12 @@ def depth_probe(
     # Binary search between low and high.
     while low + 1 < high:
         mid = (low + high) // 2
-        resp = client.query(build_nested_query(field_name, mid))
-        if _refused(resp, DEPTH_ERROR_RE) or _is_error_only(resp):
+        resp = client.query(_build(mid))
+        if _refused(resp, DEPTH_ERROR_RE):
             high = mid
             refusal = (resp.error_messages() or [resp.note or ""])[0]
+        elif _is_error_only(resp):
+            return None, (resp.error_messages() or [resp.note or ""])[0]
         else:
             low = mid
 
