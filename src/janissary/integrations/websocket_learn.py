@@ -1,45 +1,50 @@
-"""WebSocket learning algorithms (Phase 2.2 + FN-16 part 2).
+"""WebSocket learn — algorithms and orchestration (Phase 2.2 + FN-16 parts 2-3).
 
-Pure functions that analyze a captured MessageSequence to determine:
-- what wire format the c2s messages use (JSON, XML, text, unknown)
-- which leaf values are safely injectable in c2s JSON payloads
-- how to reconstruct a mutated JSON payload from a field path
+Part 2 (pure algorithms): detect_wire_format, find_injectable_fields, set_field_value.
+Part 3 (async orchestration): learn().
 
-The async orchestration (connect, sample traffic, call these) is
-``integrations.websocket_learn.learn()`` in FN-16 part 3. These
-functions are pure, deterministic, and unit-testable in isolation.
+Design notes for learn():
+- Caller MUST provide payloads. The scanner cannot construct valid
+  WebSocket messages without knowing the target's API. Empty payloads
+  yields an honest-empty LearnedModel with note
+  "no_probe_payloads_provided" -- not a fabricated "clean" result.
+- A brief passive window precedes active probing to capture any
+  spontaneous server traffic.
+- After each c2s payload, s2c responses are collected until a quiet
+  period (response_quiet_s) or an overall timeout.
 
 See docs/PHASE-6-PLAN.md FN-16.
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import re
+import time
 from typing import Any
 
 from janissary.protocols.websocket import (
     InjectableField,
+    LearnedModel,
     MessageSequence,
+    WebSocketMessage,
     WireFormat,
 )
+
+from .websocket import _connect
 
 
 _XML_PREFIX_RE = re.compile(r"^\s*<\?xml", re.IGNORECASE)
 
 
+# ===========================================================================
+# Part 2: pure algorithms
+# ===========================================================================
+
+
 def detect_wire_format(sequence: MessageSequence) -> WireFormat:
-    """Determine the wire format from c2s messages.
-
-    Only client-to-server messages are inspected: s2c traffic is
-    server-authored and we cannot inject into it, so it does not
-    constrain probe strategy.
-
-    Tie-break rule: if fewer than half of c2s messages parse as
-    JSON, or if no c2s messages exist, returns "unknown". XML
-    detection requires an ``<?xml`` declaration on the first
-    non-empty c2s message. "text" is returned when c2s messages
-    exist but are neither JSON nor XML.
-    """
+    """Determine the wire format from c2s messages."""
     c2s_payloads = [m.payload for m in sequence.messages if m.direction == "c2s"]
     non_empty = [p.strip() for p in c2s_payloads if p.strip()]
     if not non_empty:
@@ -78,43 +83,29 @@ def _walk_injectables(
     message_index: int,
     out: list[InjectableField],
 ) -> None:
-    """Depth-first walk; append InjectableField for each allowed leaf.
-
-    Injectable leaves: str, int (not bool), float. Everything else
-    (dict/list containers, None, bool) is descended into or skipped.
-    """
-    # bool is a subclass of int in Python; check it first.
     if isinstance(value, bool):
         return
     if value is None:
         return
     if isinstance(value, str):
         out.append(InjectableField(
-            message_index=message_index,
-            path=prefix,
-            value_kind="string",
-            original_value=value,
+            message_index=message_index, path=prefix,
+            value_kind="string", original_value=value,
         ))
         return
     if isinstance(value, int):
         out.append(InjectableField(
-            message_index=message_index,
-            path=prefix,
-            value_kind="integer",
-            original_value=value,
+            message_index=message_index, path=prefix,
+            value_kind="integer", original_value=value,
         ))
         return
     if isinstance(value, float):
         out.append(InjectableField(
-            message_index=message_index,
-            path=prefix,
-            value_kind="float",
-            original_value=value,
+            message_index=message_index, path=prefix,
+            value_kind="float", original_value=value,
         ))
         return
     if isinstance(value, dict):
-        # Sort keys for deterministic traversal across otherwise-equivalent
-        # payloads with different JSON key ordering.
         for k in sorted(value.keys()):
             _walk_injectables(value[k], _join_path(prefix, k), message_index, out)
         return
@@ -125,15 +116,7 @@ def _walk_injectables(
 
 
 def find_injectable_fields(sequence: MessageSequence) -> list[InjectableField]:
-    """Enumerate leaf fields in c2s JSON messages that a probe can mutate.
-
-    Non-JSON c2s messages are skipped (they are not safely mutable
-    without format-specific handling). s2c messages are never walked.
-
-    Returned order: message_index ascending, then depth-first within
-    each message with dict keys sorted. Deterministic across captures
-    that carry the same semantic traffic (post-normalization).
-    """
+    """Enumerate leaf fields in c2s JSON messages that a probe can mutate."""
     out: list[InjectableField] = []
     for msg_index, msg in enumerate(sequence.messages):
         if msg.direction != "c2s":
@@ -152,7 +135,6 @@ def find_injectable_fields(sequence: MessageSequence) -> list[InjectableField]:
 
 
 def _split_path(path: str) -> list[tuple[str, Any]]:
-    """Parse 'a.b[0].c' into [('key','a'), ('key','b'), ('index',0), ('key','c')]."""
     steps: list[tuple[str, Any]] = []
     i = 0
     n = len(path)
@@ -186,21 +168,7 @@ def _split_path(path: str) -> list[tuple[str, Any]]:
 
 
 def set_field_value(payload: str, path: str, new_value: Any) -> str:
-    """Mutate one leaf in a JSON payload; return canonical JSON.
-
-    ``path`` is the format produced by ``find_injectable_fields``:
-    ``a.b[0].c``. Only leaf writes are supported: the target must
-    currently be a str/int/float, not a dict/list.
-
-    Raises ValueError if:
-    - payload is not valid JSON
-    - path is malformed or does not match the structure
-    - target leaf is a container (dict/list) rather than a leaf
-
-    The mutated value is written verbatim: caller is responsible for
-    type compatibility (injecting a string into an integer-typed field
-    is allowed; that is the point of a probe).
-    """
+    """Mutate one leaf in a JSON payload; return canonical JSON."""
     try:
         parsed = json.loads(payload)
     except (ValueError, TypeError) as exc:
@@ -210,19 +178,17 @@ def set_field_value(payload: str, path: str, new_value: Any) -> str:
     if not steps:
         raise ValueError(f"empty path: {path!r}")
 
-    # Walk to parent, then write.
     node: Any = parsed
     for kind, seg in steps[:-1]:
         if kind == "key":
             if not isinstance(node, dict) or seg not in node:
                 raise ValueError(f"path segment {seg!r} not found")
             node = node[seg]
-        else:  # index
+        else:
             if not isinstance(node, list) or not (0 <= seg < len(node)):
                 raise ValueError(f"list index {seg} out of range")
             node = node[seg]
 
-    # Final write.
     last_kind, last_seg = steps[-1]
     if last_kind == "key":
         if not isinstance(node, dict) or last_seg not in node:
@@ -242,3 +208,126 @@ def set_field_value(payload: str, path: str, new_value: Any) -> str:
         node[last_seg] = new_value
 
     return json.dumps(parsed, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+# ===========================================================================
+# Part 3: async orchestration
+# ===========================================================================
+
+
+def _decode_frame(frame) -> str:
+    if isinstance(frame, str):
+        return frame
+    if isinstance(frame, (bytes, bytearray)):
+        return frame.decode("utf-8", "replace")
+    return str(frame)
+
+
+async def _collect_s2c(
+    ws,
+    quiet_s: float,
+    total_budget_s: float,
+) -> list[str]:
+    """Collect s2c frames until quiet_s passes without a new message,
+    or total_budget_s elapses."""
+    out: list[str] = []
+    start = time.perf_counter()
+    while True:
+        remaining = total_budget_s - (time.perf_counter() - start)
+        if remaining <= 0:
+            break
+        wait_for = min(quiet_s, remaining)
+        try:
+            frame = await asyncio.wait_for(ws.recv(), timeout=wait_for)
+        except asyncio.TimeoutError:
+            break
+        out.append(_decode_frame(frame))
+    return out
+
+
+async def learn(
+    url: str,
+    payloads: list[str],
+    timeout: float = 10.0,
+    origin: str | None = None,
+    headers: dict | None = None,
+    passive_window_s: float = 1.5,
+    response_quiet_s: float = 1.0,
+) -> LearnedModel:
+    """Learn a target's WebSocket message structure.
+
+    See module docstring for design rationale and constraints.
+    """
+    if not payloads:
+        return LearnedModel(
+            wire_format="unknown",
+            baseline_sequence=MessageSequence(),
+            injectable_fields=[],
+            notes=("no_probe_payloads_provided",),
+        )
+
+    try:
+        ws = await _connect(
+            url, timeout=timeout, origin=origin, headers=headers
+        )
+    except Exception as exc:
+        return LearnedModel(
+            wire_format="unknown",
+            baseline_sequence=MessageSequence(),
+            injectable_fields=[],
+            notes=(f"connect_failed: {type(exc).__name__}: {exc}",),
+        )
+
+    messages: list[WebSocketMessage] = []
+    session_start = time.perf_counter()
+
+    def _elapsed() -> float:
+        return time.perf_counter() - session_start
+
+    try:
+        passive_frames = await _collect_s2c(
+            ws, quiet_s=response_quiet_s, total_budget_s=passive_window_s
+        )
+        for frame in passive_frames:
+            messages.append(WebSocketMessage(
+                direction="s2c", payload=frame, elapsed=_elapsed()
+            ))
+
+        for payload in payloads:
+            try:
+                await ws.send(payload)
+            except Exception as exc:
+                messages.append(WebSocketMessage(
+                    direction="c2s",
+                    payload=f"<send_error: {type(exc).__name__}>",
+                    elapsed=_elapsed(),
+                ))
+                continue
+            messages.append(WebSocketMessage(
+                direction="c2s", payload=payload, elapsed=_elapsed()
+            ))
+            s2c_frames = await _collect_s2c(
+                ws, quiet_s=response_quiet_s, total_budget_s=timeout
+            )
+            for frame in s2c_frames:
+                messages.append(WebSocketMessage(
+                    direction="s2c", payload=frame, elapsed=_elapsed()
+                ))
+    finally:
+        with contextlib.suppress(Exception):
+            await ws.close()
+
+    sequence = MessageSequence(messages=messages)
+    wire_format = detect_wire_format(sequence)
+    fields = find_injectable_fields(sequence)
+
+    notes_list: list[str] = []
+    if not fields:
+        notes_list.append("no_injectable_fields_found")
+
+    return LearnedModel(
+        wire_format=wire_format,
+        baseline_sequence=sequence,
+        injectable_fields=fields,
+        notes=tuple(notes_list),
+    )
