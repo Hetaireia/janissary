@@ -269,9 +269,12 @@ class ResponseSnapshot:
     content_type: str
 
     @classmethod
-    def from_response(cls, response) -> ResponseSnapshot:
+    def from_response(cls, response, normalizer=None) -> ResponseSnapshot:
         body = response.text or ""
-        normalized = normalize_body(body)
+        if normalizer is None:
+            normalized = normalize_body(body)
+        else:
+            normalized = normalizer.normalize(response).body
         elapsed = 0.0
         if getattr(response, "elapsed", None) is not None:
             elapsed = response.elapsed.total_seconds()
