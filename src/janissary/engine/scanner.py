@@ -48,6 +48,7 @@ from janissary.recon import (
 from janissary.protocols import BaselineNormalizer, HTTPNormalizer
 from janissary.verification import (
     CorroboratorConfirmer,
+    GraphQLReconConfirmer,
     AnalyzerImplicitConfirmer,
     CandidateFinding,
     VerificationEngine,
@@ -243,7 +244,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     return finding
 
 
-_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), AnalyzerImplicitConfirmer()])
+_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), GraphQLReconConfirmer(), AnalyzerImplicitConfirmer()])
 
 
 class _VerifiedFindingsList(list):
