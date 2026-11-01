@@ -9,14 +9,15 @@ it means the limitation is not yet known. If you find one, file it.
 ## Supported vulnerability classes
 
 Recall is measured on the OWASP Benchmark DAST-applicable corpus (track_a).
-Per-class breakdown for crAPI and Juice Shop is pending Phase 1.1.
+Per-class breakdown for Juice Shop is published in `BENCHMARK.md`
+Amendment 25 (Track C). crAPI breakdown is pending.
 
 | Class | Protocol | Recall | Notes |
 |---|---|---|---|
 | SQL injection (quote / union) | HTTP | high | See FN-12 for 4xx-baseline exception |
 | SQL injection (error-based) | HTTP | high | Requires SQL text in error body |
 | SQL injection (blind) | HTTP | medium | Timing-based; requires stable baseline |
-| Reflected XSS | HTTP | high | Unescaped echo is the bug |
+| Reflected XSS | HTTP | **high (HTML) / low (JSON)** | Unescaped HTML echo caught; JSON body echo not caught — see "Reflected XSS on JSON APIs" |
 | Path traversal | HTTP | **0.049-0.308** | Partially supported; see "Known gaps" |
 | LDAP injection | HTTP | medium | — |
 | LFI | HTTP | medium | — |
@@ -81,6 +82,39 @@ findings; SARIF `properties` block carries the same two fields.
 
 **Reproducer:** `benchmark/track_c/templates/juice_login.json` (with
 `_categories: ["sqli"]`).
+
+### Reflected XSS on JSON APIs
+
+**Status:** Open. Documented 2026-11-01 by Track C expansion (BENCHMARK.md
+Amendment 25). Not yet filed as a formal FN item.
+
+**What it is:** the reflected-xss oracle detects unescaped HTML echo but
+does not detect a JSON response that reflects the xss payload in a
+string field. On OWASP Juice Shop's `/rest/products/search?q=` endpoint,
+xss payloads are reflected in the JSON `data` array, but the scanner
+emits no xss finding (it emits a correctly-classed sqli finding on the
+same endpoint, because the endpoint *is* SQLi-vulnerable).
+
+This is a genuine detection gap: the payload *is* reflected, the JSON
+response *would* be exploitable by a downstream consumer that renders
+it in HTML context, but the current reflection gate either cannot see
+into JSON or refuses to classify JSON reflection as xss.
+
+**What to expect:** scans against JSON APIs that echo xss payloads in
+string fields will produce zero xss findings even when the payload is
+present in the response. HTML-rendering endpoints are unaffected.
+
+**Tracked at:** `BENCHMARK.md` Amendment 25, H-C2 falsification.
+
+**Reproducer:** with OWASP Juice Shop running on `127.0.0.1:3000`:
+
+    janissary scan -u "http://127.0.0.1:3000/rest/products/search?q=test" -p q --jsonl --quiet
+
+Expected: xss finding. Actual: no xss finding (sqli finding emitted).
+
+**Unblock:** Phase 2 protocol-specific oracle work — a JSON-aware
+reflection confirmer that inspects `data` field values for the payload
+under an HTML-rendering assumption. Not yet scheduled.
 
 ### Path traversal
 
