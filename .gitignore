@@ -128,8 +128,8 @@ benchmark/track_a/tools_recovery.env
 
 # commit message scratch (see e4bcb7e fixup)
 commit-msg.txt
-scripts/
-
+scripts/*
+!scripts/graphql_fixture_server.py
 # Local volume snapshots for reproducing locked corpus numbers
 volumes-backup/
 # Ascension roadmap tracker — local-only, never commit
