@@ -311,14 +311,24 @@ documented anywhere.
 
 ## FN-12 — SQLi on non-2xx baseline endpoints is a detection blind spot
 
-**Status: FILED 2026-11-01. Reclassified 2026-11-01 to Phase 0.2(b).**
-**Root cause identified. Fix blocked on Phase 0.1 data model:**
-**`CandidateFinding`/`VerifiedFinding`/`verification_status` do not exist**
-**in the codebase as of `8c6af05`. See `docs/ROADMAP.md` Phase 0.**
+**Status: FIXED 2026-11-01.**
+
+**Fix commits:** `faade6c` (core: analyzer gate + conditional corroborator
+drop), `2707a32` (template `_categories` opt-in), `ef79e31` (CLI display),
+`96e0e49` (JSON/SARIF output), `c4e994a` (`scan_incomplete` flag),
+`fd1c870` (regression suite).
+
+**Verified end-to-end:** OWASP Juice Shop `/rest/user/login` produces
+findings marked `unproven` with `verification_reason='corroborator_structural'`.
+See `LIMITATIONS.md` FN-12 (FIXED 2026-11-01) and `BENCHMARK.md`
+Amendment 25.
 
 > **Session-4 correction to `f28b10e`:** that commit's message claimed to
-> reclassify this entry but the file was not modified. This commit
-> performs the reclassification that `f28b10e` claimed.
+> reclassify this entry but the file was not modified; a subsequent
+> commit performed the reclassification.
+>
+> **Session-22 status update:** reclassified to FIXED after Phase 0.2(b)
+> landed.
 
 ### Symptom
 
@@ -390,10 +400,101 @@ baseline is 401 and a test that 400-vs-401 is not (to avoid FP regression).
     juice-shop,/rest/user/login,POST,email,sqli,false,sqli,json_body:templates/juice_login.json,,
 
 Template committed at `benchmark/track_c/templates/juice_login.json`.
-Do not add the cases.csv row until FN-12's fix makes it detect. Adding it now
-would put a permanent FN in the corpus (`tp` unchanged, `fn` +1) that masks the
-underlying scanner bug by attributing it to case coverage.
+
+> **Session-22 update:** the case WAS added on 2026-11-01 in commit
+> `5976d32` after the fix landed. It is now a permanent regression guard:
+> if FN-12 ever recurs, the Track C juice-shop run will show `fn=1`.
+> The original "do not add" guidance applied only to the pre-fix state.
 
 ### Filed-by evidence
 
 Session 2026-11-01, second handover. Diagnostic scripts in transcript.
+
+## FN-13 — Reflected XSS on JSON APIs is a detection blind spot
+
+**Status: FILED 2026-11-01. Root cause identified. Fix not started.**
+
+### Symptom
+
+`janissary scan -u "http://127.0.0.1:3000/rest/products/search?q=test" -p q --jsonl --quiet`
+produces zero xss findings against an endpoint that reflects xss payloads
+back in the JSON `data` array.
+
+### How it was found
+
+Not by a user report — by the Track C expansion on 2026-11-01. Adding the
+xss-search trial to `benchmark/track_c/cases.csv` (commit `5976d32`) took
+the corpus from tp=11 fn=0 to tp=12 fn=1, falsifying Track C hypothesis
+H-C2 (see `BENCHMARK.md` Amendment 25). The FN exposed a real gap that
+the previous 1.0 F1 was hiding.
+
+### Root cause
+
+Two compounding issues in the reflection path:
+
+1. **The reflection gate is category-scoped.** `scanner.py` refuses to
+   emit `payload_reflected` under any category except xss (correctly — an
+   echo on an sqli probe is not evidence of sqli). But it also does not
+   promote `payload_reflected` to `reflected_xss` when the response is a
+   JSON API — the reflected-xss oracle expects HTML context.
+2. **No JSON-aware xss oracle exists.** The reflected-xss oracle runs
+   against HTML responses. On a `Content-Type: application/json` response,
+   the payload in the body is real reflection but the oracle cannot classify
+   it because it does not parse JSON to find the reflected value under an
+   HTML-rendering assumption.
+
+The sqli finding *is* correctly emitted on this endpoint because the
+endpoint *is* SQLi-vulnerable. The xss signal is lost, not the sqli signal.
+
+### Why the corpus didn't catch it
+
+Track C's juice-shop had 3 cases (1 vuln sqli, 2 safe) prior to `5976d32`.
+xss was in `apps.json` `known_vulnerable` but had no trial in `cases.csv`.
+Amendment 23 recorded the corpus as it stood; the gap was latent from the
+start.
+
+### Proposed fix
+
+Phase 2 protocol-specific oracle work. Two options, not mutually exclusive:
+
+- **A (JSON-aware confirmer, ~2 hrs):** add a `JsonReflectionConfirmer`
+  that parses `application/json` response bodies, searches string fields
+  for the payload, and confirms reflection with `verification_reason='json_reflection'`.
+  Emit as `verified` (not `unproven`) because JSON-reflected payloads are
+  documented exploitable when the consumer renders them — this is signal,
+  not a structural observation.
+- **B (content-type dispatch, ~30 min):** route responses by `Content-Type`
+  header so JSON bodies go to a JSON-aware path and HTML bodies to the
+  existing oracle. Lighter than A; leaves JSON as `unproven` pending A.
+
+B is the minimum viable fix; A is the correct one. B unblocks the corpus
+quickly; A closes the gap properly.
+
+### Verification criterion
+
+After the fix, re-run `benchmark/track_c/runner.py --app juice-shop`.
+Expected: `xss.jsonl` in the run directory contains at least one finding
+with `class='xss'` on `/rest/products/search?q=test`. Corpus
+`H-C2` then holds again at 13/13, and Track C aggregate returns to F1=1.0
+— but with genuinely broader coverage than the pre-`5976d32` 11-trial
+corpus.
+
+Do **not** re-run with `fn=1` accepted as the new normal. H-C2 falsification
+is a record of the gap, not a change to the hypothesis.
+
+### Reproducer
+
+    docker start janissary-trackc-juice  # or docker run -d -p 3000:3000 ...
+    janissary scan -u "http://127.0.0.1:3000/rest/products/search?q=test" -p q --jsonl --quiet
+
+Expected: xss finding on the q parameter.
+Actual: no xss finding (sqli finding emitted).
+
+### Filed-by evidence
+
+Session 2026-11-01 (session 20). Track C expansion. Full trail:
+
+- `BENCHMARK.md` Amendment 25 — the measurement and H-C2 falsification
+- `LIMITATIONS.md` "Reflected XSS on JSON APIs" — user-facing entry
+- `benchmark/track_c/runs/20261101T062713Z-juice-shop/` — the run artifacts
+- `benchmark/track_c/corpus-score.json` — corpus aggregate at `ac8e19e`
