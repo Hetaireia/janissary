@@ -10,14 +10,14 @@ it means the limitation is not yet known. If you find one, file it.
 
 Recall is measured on the OWASP Benchmark DAST-applicable corpus (track_a).
 Per-class breakdown for Juice Shop is published in `BENCHMARK.md`
-Amendment 25 (Track C). crAPI breakdown is pending.
+Amendment 26 (Track C). crAPI breakdown is pending.
 
 | Class | Protocol | Recall | Notes |
 |---|---|---|---|
 | SQL injection (quote / union) | HTTP | high | See FN-12 for 4xx-baseline exception |
 | SQL injection (error-based) | HTTP | high | Requires SQL text in error body |
 | SQL injection (blind) | HTTP | medium | Timing-based; requires stable baseline |
-| Reflected XSS | HTTP | **high (HTML) / low (JSON)** | Unescaped HTML echo caught; JSON body echo not caught — see "Reflected XSS on JSON APIs" |
+| Reflected XSS | HTTP | high | Unescaped HTML echo caught. DOM-based XSS on SPAs is out of scope — see "DOM-based XSS on SPAs" |
 | Path traversal | HTTP | **0.049-0.308** | Partially supported; see "Known gaps" |
 | LDAP injection | HTTP | medium | — |
 | LFI | HTTP | medium | — |
@@ -83,38 +83,45 @@ findings; SARIF `properties` block carries the same two fields.
 **Reproducer:** `benchmark/track_c/templates/juice_login.json` (with
 `_categories: ["sqli"]`).
 
-### Reflected XSS on JSON APIs
+### DOM-based XSS on SPAs
 
-**Status:** Open. Documented 2026-11-01 by Track C expansion (BENCHMARK.md
-Amendment 25). Not yet filed as a formal FN item.
+**Status:** Out of scope for server-side DAST. Documented 2026-11-01
+(BENCHMARK.md Amendment 26, which retracted an earlier false filing
+as FN-13).
 
-**What it is:** the reflected-xss oracle detects unescaped HTML echo but
-does not detect a JSON response that reflects the xss payload in a
-string field. On OWASP Juice Shop's `/rest/products/search?q=` endpoint,
-xss payloads are reflected in the JSON `data` array, but the scanner
-emits no xss finding (it emits a correctly-classed sqli finding on the
-same endpoint, because the endpoint *is* SQLi-vulnerable).
+**What it is:** many modern web applications render content client-side
+via JavaScript frameworks (Angular, React, Vue). A search query or user
+input may reflect into the rendered page *after* JavaScript executes, but
+never into the server's HTTP response body. On OWASP Juice Shop's
+`/rest/products/search?q=` endpoint, for example, the unauthenticated
+response is `{"status":"success","data":[]}` — the payload is not
+reflected server-side at all. The search results are rendered by
+Angular's client-side router.
 
-This is a genuine detection gap: the payload *is* reflected, the JSON
-response *would* be exploitable by a downstream consumer that renders
-it in HTML context, but the current reflection gate either cannot see
-into JSON or refuses to classify JSON reflection as xss.
+**Why it is out of scope:** Janissary is a server-side scanner. It sends
+HTTP requests and analyzes HTTP responses. It does not execute
+JavaScript, does not build a DOM, and does not simulate browser behavior.
+A vulnerability that only manifests inside the browser's DOM is not
+observable from the server side, regardless of how the scanner is
+architected. This is a limit of the tool class, not a bug.
 
-**What to expect:** scans against JSON APIs that echo xss payloads in
-string fields will produce zero xss findings even when the payload is
-present in the response. HTML-rendering endpoints are unaffected.
+**What to expect:** scan output against SPA endpoints will not include
+DOM-based xss findings even when the client-side application is
+vulnerable. HTML-rendering endpoints (traditional server-rendered pages)
+are unaffected — reflected-xss detection there remains high-quality.
 
-**Tracked at:** `BENCHMARK.md` Amendment 25, H-C2 falsification.
+**What would close it:** a headless browser engine (Playwright,
+Puppeteer) driving the scan and executing client-side code, then
+inspecting the live DOM for unescaped reflections. That is a different
+scanner architecture, not a feature of the current one. No work is
+scheduled.
 
-**Reproducer:** with OWASP Juice Shop running on `127.0.0.1:3000`:
-
-    janissary scan -u "http://127.0.0.1:3000/rest/products/search?q=test" -p q --jsonl --quiet
-
-Expected: xss finding. Actual: no xss finding (sqli finding emitted).
-
-**Unblock:** Phase 2 protocol-specific oracle work — a JSON-aware
-reflection confirmer that inspects `data` field values for the payload
-under an HTML-rendering assumption. Not yet scheduled.
+**Prior mis-filing:** this limit was originally filed as FN-13 on
+2026-11-01, framed as "JSON-API reflected-XSS detection gap." That
+framing was wrong — the endpoint tested returned no reflection
+server-side, and the apparent miss was compounded by a benchmark-runner
+bug (see Amendment 26). FN-13 is retracted; the limit is recorded here
+as scope, not bug.
 
 ### Path traversal
 
