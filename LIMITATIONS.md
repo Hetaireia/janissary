@@ -26,7 +26,7 @@ Amendment 26 (Track C). crAPI breakdown is pending.
 | Secure cookie | HTTP | high | — |
 | Weak randomness | HTTP | high | — |
 | Trust boundary | HTTP | medium | — |
-| GraphQL | HTTP | partial | Introspection and depth only; see Phase 2.1 |
+| GraphQL | HTTP | **present, unintegrated** | Features implemented (introspection, depth, alias, argument fuzzing) but not routed through VerificationEngine or BaselineNormalizer. See FN-15 |
 | WebSocket | WS | **not supported** | See Phase 2.2 |
 | gRPC | gRPC | **not supported** | See Phase 2.3 |
 
@@ -134,8 +134,12 @@ content-signature expansion.
 
 ## Unsupported protocols
 
-- **GraphQL:** introspection and depth checks are partial. Full
-  query/mutation argument fuzzing is Phase 2.1.
+- **GraphQL:** feature coverage is present (introspection, depth
+  probes, alias probes, argument fuzzing, batch detection) but the
+  integration into `VerificationEngine` and `BaselineNormalizer` is
+  not done — findings surface directly from the standalone
+  `janissary graphql` subcommand without differential verification.
+  Tracked as FN-15; see Phase 2.1.
 - **WebSocket:** no support. Phase 2.2.
 - **gRPC:** no support. Phase 2.3.
 

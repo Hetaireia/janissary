@@ -38,6 +38,28 @@ a distinct output category that does not claim Janissary verification.
 oracle that does not exist yet. `WebSocketProfile.findings` does not
 flow into `ScanSummary.findings`.
 
+### GraphQL (`src/janissary/integrations/graphql.py`)
+
+GraphQL findings are emitted directly from the standalone
+`janissary graphql` subcommand (`cli.py:cmd_graphql`), not routed
+through `ScanSummary.findings`. The `integrations/graphql.py` module
+implements introspection, depth probes, alias probes, argument
+fuzzing, and batch detection — feature coverage is present. The
+missing piece is integration: findings surface as raw recon output
+rather than as `VerifiedFinding` objects subject to Phase 0.1's
+boundary invariant and Phase 0.3's normalizer.
+
+When GraphQL is wired into `Scanner.scan()` (Phase 2.1 proper), its
+findings must:
+1. Produce `CandidateFinding` objects with the schema path attached.
+2. Route through `VerificationEngine.verify()` before entering
+   `ScanSummary.findings`.
+3. Use a `GraphQLNormalizer` (Phase 0.3 interface) to strip
+   field-order variance and resolver-timing noise before delta
+   comparison.
+
+Tracked as FN-15 in `docs/PHASE-6-PLAN.md`.
+
 ### Store merge (`src/janissary/agent/agent.py`)
 
 `store.extend(findings)` merges already-emitted findings into the

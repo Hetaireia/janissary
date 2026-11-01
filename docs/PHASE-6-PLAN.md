@@ -581,3 +581,110 @@ It was latent because every app in the pre-expansion corpus had at most
 one trial per vuln_class. The juice-shop expansion was the first app with
 two sqli trials, which exposed the collision. Any future app with
 multiple trials of the same class would have hit the same bug.
+
+## FN-15 — GraphQL findings bypass the VerificationEngine and BaselineNormalizer
+
+**Status: FILED 2026-11-01. Not a bug — a documented integration gap
+for Phase 2.1.**
+
+### What it is
+
+GraphQL feature coverage is present (`src/janissary/integrations/graphql.py`,
+20KB, 25 tests): introspection, depth probes, alias probes, argument
+fuzzing, batch detection. The module works.
+
+The missing piece is integration. Findings produced by the
+`janissary graphql` subcommand do not route through
+`VerificationEngine.verify()`. They are printed directly by
+`cli.py:cmd_graphql` and never become `CandidateFinding` or
+`VerifiedFinding` objects. They therefore do not participate in:
+
+- Phase 0.1's emission boundary invariant (`ScanSummary.findings` only
+  accepts engine-produced findings)
+- Phase 0.3's baseline normalization (no `GraphQLNormalizer` exists)
+- Cross-class grouping in `summary.groups`
+- SARIF/JSON output uniformity with other finding classes
+
+Same structural shape as nuclei (`PHASE-0.1-SCOPE.md` section 1) and
+WebSocket (section 2). GraphQL is the third deliberate scope exception
+to Phase 0.1's "engine is sole emitter" invariant.
+
+### How it was found
+
+Session 26 inspection during Phase 2.1 scoping. LIMITATIONS.md claimed
+"introspection and depth only" — factually wrong in one direction
+(module does more) and missing the integration caveat in another.
+Corrected in the same session.
+
+### Root cause
+
+Not a defect. `integrations/graphql.py` was developed before Phase 0.1
+existed and predates the engine boundary. Wiring the subcommand
+through `Scanner.scan()` was never in scope for the graphql recon
+workflow — it was a standalone tool.
+
+### Proposed integration (Phase 2.1 proper)
+
+Three pieces, independent:
+
+1. **`GraphQLNormalizer`** — `protocols/graphql.py`, implementing the
+   Phase 0.3 `BaselineNormalizer` interface. Must:
+   - Parse JSON responses
+   - Sort object keys recursively (field-order variance)
+   - Strip resolver timing fields
+   - Normalize error message formatting
+   - Return `NormalizedResponse` with `stripped` metadata
+
+2. **`GraphQLDiscoveryModule`** — wraps existing `detect()` +
+   `introspect()` + `fuzz_arguments()` to produce `CandidateFinding`
+   objects with schema path attached. No direct emission.
+
+3. **Scanner integration** — `Scanner.scan()` optionally invokes the
+   discovery module when the endpoint reports GraphQL support. All
+   candidates route through `VerificationEngine.verify()` before
+   entering `summary.findings`. Confirmer strategy TBD — likely a
+   `GraphQLResponseConfirmer` that inspects the `data` field
+   structurally (per ROADMAP Phase 2.1).
+
+### Verification criterion
+
+After the integration:
+
+1. `janissary scan -u <graphql-endpoint> -p x` produces findings in
+   `summary.findings` with `verification_status` populated.
+2. `janissary graphql -u <endpoint>` remains as a recon-only subcommand
+   (unchanged behavior; or deprecated in favor of scan path — decide
+   during implementation).
+3. SARIF/JSON output for GraphQL findings is structurally identical to
+   HTTP findings.
+4. `tests/unit/test_graphql.py` gains coverage for:
+   - `GraphQLNormalizer` construction and behavior (analogous to
+     `test_protocols_http.py`)
+   - Candidate emission shape
+   - Engine routing (i.e., the finding is a `VerifiedFinding`, not a
+     raw dict)
+
+### Not blocked by
+
+- Phase 0.1 — complete, the interface is stable
+- Phase 0.3 — complete, `BaselineNormalizer` is stable
+
+The GraphQL integration can be scheduled whenever Phase 2.1 opens.
+Estimated effort: 2-4 hours for `GraphQLNormalizer` + tests, plus
+however much integration into `Scanner.scan()` needs (unknown until
+the Scanner routing for GraphQL is inspected).
+
+### Filed-by evidence
+
+Session 2026-11-01 (session 26). Investigation of Phase 2.1 readiness.
+Relevant files inspected:
+
+- `src/janissary/integrations/graphql.py` (20KB, 25 tests, standalone)
+- `src/janissary/cli.py:426` (`cmd_graphql` — prints directly, no
+  engine routing)
+- `src/janissary/agent/adapters.py:103` (imports `detect`, agent path)
+- `LIMITATIONS.md` (stale claim, corrected this session)
+- `docs/PHASE-0.1-SCOPE.md` (did not mention GraphQL, corrected this
+  session)
+
+No commit fixed this — the filing is the record of the gap.
