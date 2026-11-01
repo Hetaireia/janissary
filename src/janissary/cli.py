@@ -177,6 +177,35 @@ def _print_summary(summary: ScanSummary) -> None:
 # -------------------------------------------------------------------
 
 
+def _merge_graphql_into_scan(summary, gql_summary):
+    """Merge GraphQL discovery findings into a completed HTTP scan summary.
+
+    Findings from gql_summary already have ``_engine_emitted=True``
+    (they were routed through ``_ENGINE`` in ``Scanner.scan_graphql``),
+    so they pass the asserting list's append check when merged into
+    ``summary.findings``.
+
+    Total request counts sum. ``aborted`` and ``scan_incomplete``
+    propagate to the outer summary so exit code reflects GraphQL state.
+
+    See docs/PHASE-6-PLAN.md FN-15 part 3c.
+    """
+    for f in gql_summary.findings:
+        summary.findings.append(f)
+        summary.finding_count += 1
+    summary.total_requests += gql_summary.total_requests
+    if gql_summary.scan_incomplete and not summary.scan_incomplete:
+        summary.scan_incomplete = True
+        if not summary.abort_reason:
+            summary.abort_reason = (
+                gql_summary.abort_reason or "graphql scan incomplete"
+            )
+    if gql_summary.aborted and not summary.aborted:
+        summary.aborted = True
+        summary.abort_reason = gql_summary.abort_reason
+    return summary
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -302,6 +331,19 @@ def cmd_scan(args: argparse.Namespace) -> int:
     summary = scanner.scan(quiet=args.quiet)
     if summary.aborted:
         _emit_abort_reason(summary.abort_reason)
+
+    if getattr(args, "graphql", False) and not summary.aborted:
+        if not args.quiet:
+            print("[*] GraphQL discovery...")
+        gql_summary = scanner.scan_graphql(
+            include_probes=True, include_fuzz=False
+        )
+        summary = _merge_graphql_into_scan(summary, gql_summary)
+        if not args.quiet and gql_summary.findings:
+            print(
+                f"[*] GraphQL: {len(gql_summary.findings)} finding(s) "
+                f"(see --json / --jsonl / --export for detail)"
+            )
 
     if not args.quiet:
         _print_summary(summary)
@@ -1266,6 +1308,11 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--delay", type=float, default=0.0)
     scan.add_argument("--baseline-count", type=int, default=10)
     scan.add_argument("--stealth", action="store_true")
+    scan.add_argument(
+        "--graphql",
+        action="store_true",
+        help="Also run GraphQL discovery (introspection, depth/alias probes) against the target",
+    )
     scan.add_argument(
         "--no-waf",
         action="store_true",
