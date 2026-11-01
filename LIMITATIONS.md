@@ -26,7 +26,7 @@ Amendment 26 (Track C). crAPI breakdown is pending.
 | Secure cookie | HTTP | high | — |
 | Weak randomness | HTTP | high | — |
 | Trust boundary | HTTP | medium | — |
-| GraphQL | HTTP | **present, unintegrated** | Features implemented (introspection, depth, alias, argument fuzzing) but not routed through VerificationEngine or BaselineNormalizer. See FN-15 |
+| GraphQL | HTTP | **integrated** | Full feature coverage (introspection, depth, alias, argument fuzzing) routed through VerificationEngine and BaselineNormalizer. Findings emitted with verification_status='unproven' — recon observations, not vulnerability proofs. See FN-15 (FIXED) |
 | WebSocket | WS | **passive recon only** | Plaintext, missing Origin, blind echo, no-auth checks. Learn/probe/verify pipeline not built. See FN-16 |
 | gRPC | gRPC | **not supported** | See Phase 2.3 |
 
@@ -134,12 +134,13 @@ content-signature expansion.
 
 ## Unsupported protocols
 
-- **GraphQL:** feature coverage is present (introspection, depth
-  probes, alias probes, argument fuzzing, batch detection) but the
-  integration into `VerificationEngine` and `BaselineNormalizer` is
-  not done — findings surface directly from the standalone
-  `janissary graphql` subcommand without differential verification.
-  Tracked as FN-15; see Phase 2.1.
+- **GraphQL:** integrated as of 2026-11-01 (`--graphql` flag).
+  Full feature coverage (introspection, depth probes, alias probes,
+  argument fuzzing, batch detection) routed through `VerificationEngine`
+  and `BaselineNormalizer`. Findings emitted with
+  `verification_status='unproven'` and
+  `verification_reason='graphql_recon'` — recon observations, not
+  vulnerability proofs. See FN-15 (FIXED).
 - **WebSocket:** passive reconnaissance only — plaintext detection,
   missing-Origin (CSWSH) detection, blind echo detection, no-auth
   handshake check. The full Phase 2.2 learn/probe/verify pipeline
