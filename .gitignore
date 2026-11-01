@@ -100,6 +100,7 @@ benchmark/track-a/
 benchmark/track-a
 # Session scratch (untracked working files, do not commit)
 _*.py
+!__init__.py
 _*.md
 _*.html
 *.log
