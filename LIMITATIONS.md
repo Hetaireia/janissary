@@ -156,6 +156,59 @@ Currently none — discovery and verification are the same code path.
 Phase 3 will introduce candidate-only classes; this section will list
 them when it does.
 
+## What "no finding" means (and doesn't mean)
+
+A scan that produces no findings is not a claim that the target is clean.
+It is a claim that the scanner did not detect anything. In some cases
+those are the same thing. In others, "no finding" means the scanner
+never actually tested that path.
+
+### Silent false negatives — a real bug class
+
+Two GraphQL detection paths shipped reporting "clean" against every real
+server they ever ran against. The cause: probes that hardcoded
+assumptions about response shape (`__typename` as a nestable field; a
+probe name close enough to trigger a suggestion) that no real server
+matches. The scanner had no way to say "I couldn't test this" — it
+reported "no finding" identically to a genuine clean result.
+
+Filed as FN-18 and FN-19, fixed 2026-11-01, and live-validated against
+a graphql-core fixture server. The general lesson: **a probe that never
+fires because of an assumed constant is indistinguishable from a probe
+that works and reports "clean."**
+
+These were not caught by the unit test suite. They were caught by
+running the scanner against a real GraphQL server and inspecting the
+results. Mocks that match the code's assumptions confirm the code's
+assumptions; they do not test the code against reality.
+
+### How we're improving this
+
+As of 2026-11-01, protocol detection paths are validated against a live
+server, not just mocked unit tests:
+
+- `scripts/graphql_fixture_server.py` — real GraphQL server using
+  graphql-core, exercises all 5 GraphQL detection paths (introspection,
+  batching, suggestions, depth, alias). Committed at `334b625`, extended
+  at `1f4cca5`.
+- Future WebSocket and gRPC work (FN-16, FN-17) will follow the same
+  pattern: a live fixture server under `scripts/`, positive-control
+  tests that prove each detection fires, and a "no finding" result on
+  that fixture treated as a claim that requires live verification.
+
+### What to expect today
+
+If a scan reports "no finding," the honest question is: was the path
+tested?
+
+- **HTTP classes** (SQLi, XSS, traversal, etc.): yes — positive-control
+  tests against known-vulnerable endpoints.
+- **GraphQL** (all 5 paths): yes — live-verified 2026-11-01.
+- **WebSocket** (FN-16): partial — passive recon only; learn/probe/verify
+  pipeline not built. "No finding" there means "not tested" by design.
+- **gRPC** (FN-17): no support. "No finding" there means "not tested"
+  by design.
+
 ## What this document is not
 
 This is not a vulnerability disclosure policy. If you are reporting a
