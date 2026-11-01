@@ -27,7 +27,7 @@ Amendment 26 (Track C). crAPI breakdown is pending.
 | Weak randomness | HTTP | high | — |
 | Trust boundary | HTTP | medium | — |
 | GraphQL | HTTP | **present, unintegrated** | Features implemented (introspection, depth, alias, argument fuzzing) but not routed through VerificationEngine or BaselineNormalizer. See FN-15 |
-| WebSocket | WS | **not supported** | See Phase 2.2 |
+| WebSocket | WS | **passive recon only** | Plaintext, missing Origin, blind echo, no-auth checks. Learn/probe/verify pipeline not built. See FN-16 |
 | gRPC | gRPC | **not supported** | See Phase 2.3 |
 
 ## Known gaps (false negatives)
@@ -140,7 +140,13 @@ content-signature expansion.
   not done — findings surface directly from the standalone
   `janissary graphql` subcommand without differential verification.
   Tracked as FN-15; see Phase 2.1.
-- **WebSocket:** no support. Phase 2.2.
+- **WebSocket:** passive reconnaissance only — plaintext detection,
+  missing-Origin (CSWSH) detection, blind echo detection, no-auth
+  handshake check. The full Phase 2.2 learn/probe/verify pipeline
+  (traffic sampling, schema fingerprinting, message-sequence oracle)
+  is not built. Findings surface from the standalone `janissary ws`
+  subcommand, not through `Scanner.scan()` or `VerificationEngine`.
+  Tracked as FN-16.
 - **gRPC:** no support. Phase 2.3.
 
 ## Candidate-only classes

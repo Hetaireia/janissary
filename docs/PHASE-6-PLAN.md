@@ -688,3 +688,97 @@ Relevant files inspected:
   session)
 
 No commit fixed this — the filing is the record of the gap.
+
+## FN-16 — WebSocket recon exists; Phase 2.2 learn/probe/verify pipeline does not
+
+**Status: FILED 2026-11-01. Phase 2.2 build gap, distinct from FN-15
+(GraphQL integration).**
+
+### What exists
+
+`src/janissary/integrations/websocket.py` (8KB, 13 tests) provides
+passive reconnaissance for one endpoint at a time:
+
+- `is_plaintext()` — `ws://` detection on non-loopback hosts
+- Missing-Origin validation (cross-site WebSocket hijacking detector)
+- Blind echo detection
+- No-auth handshake check
+- `scan_sync()` / `scan()` entry point
+
+The `janissary ws <url>` subcommand calls `scan_sync()` directly and
+prints findings; nothing routes through `Scanner.scan()`,
+`VerificationEngine`, or `BaselineNormalizer`.
+
+### What Phase 2.2 requires that does not exist
+
+From `docs/ROADMAP.md` Phase 2.2:
+
+1. **Learn phase** — sample traffic passively for N seconds, fingerprint
+   the wire format (JSON/XML/Protobuf), identify injectable fields, and
+   record a baseline message sequence. **Not implemented.**
+2. **Probe phase** — inject the payload into a well-formed base message
+   (not a raw string). **Not implemented.**
+3. **Verify phase** — compare observed message sequences against the
+   baseline, allowing for interleaving and delay, and flag only a
+   reproducible semantic delta. **Not implemented.**
+
+Without (1) and (3), the current module cannot detect WebSocket-based
+injection — it only detects configuration-level weaknesses (plaintext,
+missing Origin, no-auth) and blind echo.
+
+### Why this is a different gap than FN-15
+
+| | GraphQL (FN-15) | WebSocket (FN-16) |
+|---|---|---|
+| Existing size | 20KB | **8KB** |
+| Existing detection classes | 5 (full) | **4 (passive only)** |
+| Missing | Engine routing + `GraphQLNormalizer` | **Learn/probe/verify pipeline + engine routing + `WebSocketNormalizer`** |
+| Effort to complete Phase | ~2–4 hours | **~8–16 hours (substantial build)** |
+
+FN-15 is a wiring task — the features are there, they just need to flow
+through the engine. FN-16 is a build task — the Phase 2.2 features do
+not exist. Scheduling them the same way would underestimate FN-16 by a
+factor of four.
+
+### Not blocked by
+
+- Phase 0.1 — complete, the engine interface is stable
+- Phase 0.3 — complete, `BaselineNormalizer` is stable
+- Phase 2.1 / FN-15 — independent
+
+Can be scheduled whenever Phase 2.2 opens. The existing passive-recon
+code is a solid foundation to build on; the missing pieces are the
+bidirectional stateful test harness, the wire-format fingerprinter,
+and the message-sequence differ.
+
+### Verification criterion (for Phase 2.2 proper)
+
+1. `janissary scan -u <ws-endpoint>` (or a `--ws` flag) runs the
+   learn/probe/verify pipeline, produces findings in
+   `ScanSummary.findings` with `verification_status` populated.
+2. A `WebSocketNormalizer` exists in `protocols/websocket.py`,
+   implementing the Phase 0.3 `BaselineNormalizer` interface, and
+   normalizes message *sequences*, not frames.
+3. Test corpus includes at least one realtime app with documented
+   CSWSH and injection issues (roadmap Phase 2.2 requires a benchmark
+   target — currently none exists).
+4. Existing `janissary ws` subcommand either stays as a passive-recon
+   entry point or is deprecated in favor of the scan path; decide
+   during implementation.
+
+### Filed-by evidence
+
+Session 2026-11-01 (session 27). Investigation following FN-15's
+identification of the "roadmap may underestimate existing code" pattern.
+
+Relevant files inspected:
+
+- `src/janissary/integrations/websocket.py` (8KB, passive-only)
+- `src/janissary/cli.py:520` (`cmd_websocket` — standalone, prints directly)
+- `docs/PHASE-0.1-SCOPE.md` — WebSocket section is accurate as-written
+  (verified this session; no change needed)
+- `LIMITATIONS.md` — "not supported" was wrong; corrected to "passive
+  recon only" this session
+
+No commit fixed this — the filing is the record of the gap. FN-16 is
+the concrete scope for whoever opens Phase 2.2.
