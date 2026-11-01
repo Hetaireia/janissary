@@ -147,3 +147,45 @@ class WebSocketNormalizer:
             headers={},
             stripped=tuple(stripped),
         )
+
+
+WireFormat = Literal["json", "xml", "text", "unknown"]
+
+
+@dataclass(frozen=True)
+class InjectableField:
+    """A single leaf value in a c2s message that a probe can replace.
+
+    ``message_index`` is the position within ``MessageSequence.messages``
+    (0-indexed, counts both c2s and s2c frames, so the value distinguishes
+    which specific frame this field belongs to).
+
+    ``path`` uses dotted notation with bracket array indexing:
+    ``user.id``, ``items[0].name``, ``.config.timeout``.
+
+    ``value_kind`` is the JSON type of the leaf: string, integer, float.
+    Booleans and nulls are not injectable (not payload carriers).
+    """
+
+    message_index: int
+    path: str
+    value_kind: str
+    original_value: Any
+
+
+@dataclass(frozen=True)
+class LearnedModel:
+    """Output of learn(): what to probe against this target.
+
+    Produced by ``integrations.websocket_learn.learn()`` (FN-16 part 3),
+    consumed by the probe phase (part 4) and the verifier (part 5).
+
+    ``injectable_fields`` is ordered by message index then by JSON
+    traversal order (depth-first). Callers that want deterministic
+    fuzzing order rely on this.
+    """
+
+    wire_format: WireFormat
+    baseline_sequence: MessageSequence
+    injectable_fields: list[InjectableField] = field(default_factory=list)
+    notes: tuple[str, ...] = ()
