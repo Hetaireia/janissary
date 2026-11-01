@@ -1642,3 +1642,99 @@ against 1.0. A future run scoring 8/9 with 0 FP is a failure of H-C2 by
 this standard, even if F1 stays high - the hypothesis is "all", not
 "enough".
 
+### Amendment 25 — 2026-11-01 — Track C juice-shop expanded to 5 cases; F1 0.96
+
+**Status:** Applied. Track C corpus expansion. No change to Track A or
+Track B claims.
+
+**What changed:** juice-shop had 3 cases (1 vuln sqli, 2 safe). Expanded
+to 5 cases by adding two vulnerable trials:
+
+| Added trial | Class | Why |
+|---|---|---|
+| `POST /rest/user/login` (json-body, `templates/juice_login.json`) | sqli | Regression coverage for FN-12, fixed 2026-11-01 |
+| `GET /rest/products/search?q=test` | xss | Tests reflected-XSS oracle on the same endpoint as the sqli trial |
+
+The FN-12 login case uses the `json_body:<path>` notes convention added
+in SCHEMA.md v2.1. No new schema features were introduced.
+
+**Why the headline moves down:** the pre-expansion corpus scored
+tp=11 fn=0 -> F1=1.0. That number was real but under-tested — juice-shop
+contributed a single vulnerable trial. Expanding coverage properly
+surfaces a genuine detection gap that F1=1.0 was hiding. The new number
+is not a regression; it is a more accurate measurement of the same
+scanner against a harder case set.
+
+#### Track C — Results at v7.10.2 (juice-shop expansion)
+
+juice-shop, run `20261101T062713Z-juice-shop`:
+
+| Metric | Value |
+|---|---|
+| Cases | 5 (was 3) |
+| Vuln trials | 3 (was 1) |
+| Safe trials | 2 |
+| True positives | 2 |
+| False positives | 0 |
+| False negatives | 1 |
+| True negatives | 2 |
+| Precision | 1.0 |
+| Recall | 0.667 |
+| F1 | 0.80 |
+
+Corpus aggregate (all 7 apps), run `2026-11-01T06:27:13Z`:
+
+| Metric | Was (v7.7.0) | Now (v7.10.2) |
+|---|---|---|
+| True positives | 11 | **12** |
+| False positives | 0 | **0** |
+| False negatives | 0 | **1** |
+| True negatives | 24 | **24** |
+| Precision | 1.0 | **1.0** |
+| Recall | 1.0 | **0.9231** |
+| F1 | 1.0 | **0.96** |
+| FP rate (safe) | 0.0 | **0.0** |
+
+#### Hypothesis status
+
+Amendment 23 stated three hypotheses for Track C. Restating their
+status after the expansion:
+
+| Hypothesis | Status |
+|---|---|
+| **H-C1 (precision):** zero FPs across safe endpoints | **Holds** — 0/24 FPs |
+| **H-C2 (recall):** all vulnerable endpoints emit correct-class finding | **Does not hold** — 1 FN on the added xss-search trial |
+| **H-C3 (no aborts):** all endpoints complete without abort | **Holds** — 0/33 aborts |
+
+**H-C2 failure detail:** the `GET /rest/products/search?q=test` xss
+trial produced a correctly-classed **sqli** finding (real: the search
+endpoint *is* SQLi-vulnerable) but no xss finding. juice-shop reflects
+the xss payload on this endpoint, but the scanner's reflection gate
+correctly refuses to emit `payload_reflected` under non-xss categories,
+and no xss-specific oracle matched. This is a genuine xss detection gap
+on a reflecting JSON API, not a scoring artifact. It will be tracked as
+a follow-up item for Phase 2 protocol work.
+
+#### What this amendment does NOT claim
+
+1. **Not a claim of generalization.** The corpus grew from 11 to 13
+   vulnerable trials. 13 is still a hand-curated spot-check, not a
+   statistical sample. See Amendment 23 caveat #2.
+2. **Not a retroactive change to Amendment 23.** Amendment 23 recorded
+   the v7.7.0 snapshot accurately. That snapshot is preserved as-written;
+   this amendment records a later, larger snapshot at v7.10.2.
+3. **Not a fix.** H-C2 is now falsified. We are recording the falsification
+   rather than tuning the case set to make H-C2 true again. If a future
+   session adds xss coverage to the search endpoint, that becomes a new
+   amendment, not a modification of this one.
+4. **Not comparable to Track A F1=0.921.** See Amendment 23 caveat #4.
+
+#### Reproducer
+
+With juice-shop running on 127.0.0.1:3000, from repo root:
+
+    python -m benchmark.track_c.runner --app juice-shop
+    python benchmark/track_c/score.py --app juice-shop --run benchmark/track_c/runs/<timestamp>-juice-shop
+
+Artifacts committed at `benchmark/track_c/runs/20261101T062713Z-juice-shop/`.
+Aggregate recomputed at `benchmark/track_c/corpus-score.json`.
