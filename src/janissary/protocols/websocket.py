@@ -1,0 +1,149 @@
+"""WebSocket BaselineNormalizer (Phase 2.2 + FN-16 part 1).
+
+WebSocket verification operates on *message sequences*, not single
+frames. This module defines the data model for a captured sequence and
+a normalizer that makes two sequences comparable.
+
+Design note:
+    NormalizedResponse.body is a canonical JSON array of frame records.
+    Two MessageSequences that carry the same semantic traffic normalize
+    to byte-identical bodies, regardless of frame timestamps or
+    incidental key ordering. This is what lets the verify() phase
+    (FN-16 part 4) diff sequences meaningfully.
+
+    Stripped metadata lists what was removed (timing, per-message
+    session tokens) so a finding can record "these were volatile and
+    ignored" per Phase 0.3's transparency requirement.
+
+See docs/PHASE-6-PLAN.md FN-16.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from typing import Any, Literal
+
+from .base import NormalizedResponse
+
+
+Direction = Literal["c2s", "s2c"]  # client-to-server or server-to-client
+
+
+@dataclass(frozen=True)
+class WebSocketMessage:
+    """One frame in a captured WebSocket session.
+
+    ``direction`` is "c2s" (client sent) or "s2c" (server sent).
+    ``payload`` is the raw text or decoded bytes (UTF-8 replacement).
+    ``elapsed`` is seconds since session start; stripped by the normalizer.
+    """
+
+    direction: Direction
+    payload: str
+    elapsed: float = 0.0
+
+
+@dataclass(frozen=True)
+class MessageSequence:
+    """A captured WebSocket session: ordered frames plus context.
+
+    ``protocol`` is "websocket" (this module). Future protocol adapters
+    reuse NormalizedResponse but not MessageSequence directly.
+    """
+
+    messages: list[WebSocketMessage] = field(default_factory=list)
+    protocol: str = "websocket"
+
+
+_VOLATILE_MESSAGE_KEYS = frozenset({
+    "timestamp", "ts", "time", "sent_at", "received_at",
+    "session_id", "sessionId", "request_id", "requestId",
+})
+
+
+def _canonical_json(obj: Any) -> str:
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _normalize_payload(payload: str, stripped: list[str]) -> str:
+    """Normalize one frame payload: parse JSON, strip volatile keys,
+    re-canonicalize. Non-JSON payloads pass through unchanged (after
+    whitespace collapse).
+
+    Returns the canonical string form.
+    """
+    text = payload.strip()
+    if not text:
+        return ""
+    try:
+        parsed = json.loads(text)
+    except (ValueError, TypeError):
+        # Not JSON; treat as opaque text, collapse whitespace.
+        import re as _re
+        return _re.sub(r"\s+", " ", text)
+    cleaned = _strip_volatile_keys(parsed, stripped)
+    return _canonical_json(cleaned)
+
+
+def _strip_volatile_keys(obj: Any, stripped: list[str]) -> Any:
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k in _VOLATILE_MESSAGE_KEYS:
+                marker = f"payload:key_stripped:{k}"
+                if marker not in stripped:
+                    stripped.append(marker)
+                continue
+            out[k] = _strip_volatile_keys(v, stripped)
+        return out
+    if isinstance(obj, list):
+        return [_strip_volatile_keys(x, stripped) for x in obj]
+    return obj
+
+
+class WebSocketNormalizer:
+    """BaselineNormalizer for WebSocket message sequences.
+
+    Input: MessageSequence.
+    Output: NormalizedResponse whose .body is a canonical JSON array of
+    {direction, payload} objects (timing stripped, JSON keys sorted,
+    volatile keys removed).
+
+    Two sequences that carry the same semantic traffic produce
+    identical .body strings. That equality is what the FN-16 verify
+    phase (part 4) uses to distinguish signal from noise.
+    """
+
+    protocol_name = "websocket"
+
+    def normalize(self, response: Any) -> NormalizedResponse:
+        if not isinstance(response, MessageSequence):
+            return NormalizedResponse(
+                body="",
+                length=0,
+                status=None,
+                stripped=("body:wrong_input_type",),
+            )
+
+        stripped: list[str] = []
+        frames = []
+        for msg in response.messages:
+            norm_payload = _normalize_payload(msg.payload, stripped)
+            frames.append({
+                "direction": msg.direction,
+                "payload": norm_payload,
+            })
+
+        # Per-frame timing is always dropped from the canonical form;
+        # record its presence once (not per frame) to avoid noise.
+        if any(m.elapsed for m in response.messages):
+            stripped.append("body:timing_dropped")
+
+        body = _canonical_json(frames)
+        return NormalizedResponse(
+            body=body,
+            length=len(body),
+            status=None,  # WebSocket sessions do not have an HTTP status
+            headers={},
+            stripped=tuple(stripped),
+        )
