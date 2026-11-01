@@ -78,6 +78,38 @@ class AnalyzerImplicitConfirmer:
             reason=f"analyzer:{candidate.finding_type or 'unknown'}",
         )
 
+class GraphQLReconConfirmer:
+    """Mark GraphQL recon findings as unproven.
+
+    Recon observations (introspection enabled, depth abuse, alias abuse,
+    argument fuzz errors) are *structural observations*, not vulnerability
+    proofs. Introspection being enabled on a GraphQL endpoint is a
+    configuration detail that MAY be a finding depending on deployment
+    context; the scanner cannot prove exploitation from the recon output
+    alone. This confirmer marks every ``graphql_*`` candidate as
+    ``unproven`` so the engine does not claim a verdict the evidence does
+    not support.
+
+    Fires before ``AnalyzerImplicitConfirmer`` in the engine's confirmer
+    list: without this ordering, the recon candidates would fall through
+    to ``AnalyzerImplicitConfirmer`` and be marked ``verified``, which is
+    an overclaim.
+
+    See docs/PHASE-6-PLAN.md FN-15.
+    """
+
+    name = "graphql_recon"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        if candidate.finding_type.startswith("graphql_"):
+            return Confirmation(
+                confirmed=True,
+                reason="graphql_recon",
+                unproven=True,
+            )
+        return None
+
+
 class CorroboratorConfirmer:
     """Marks structural-signal findings as unproven.
 
