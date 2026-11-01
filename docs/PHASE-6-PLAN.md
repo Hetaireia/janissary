@@ -782,3 +782,117 @@ Relevant files inspected:
 
 No commit fixed this — the filing is the record of the gap. FN-16 is
 the concrete scope for whoever opens Phase 2.2.
+
+## FN-17 — gRPC protocol support does not exist (Phase 2.3 greenfield)
+
+**Status: FILED 2026-11-01. Build gap. Unlike FN-15 and FN-16, no
+existing code exists at all.**
+
+### Current state
+
+- `src/janissary/integrations/grpc.py` — **does not exist**
+- `tests/unit/test_grpc.py` — **does not exist**
+- Zero references to `grpc`, `protobuf`, or `proto3` in `src/` (verified
+  via grep after correcting an over-broad pattern that was also matching
+  XSS `reflection` code)
+- `LIMITATIONS.md` says "not supported" — **accurate**
+- `docs/PHASE-0.1-SCOPE.md` makes no mention of gRPC — **accurate**,
+  nothing to scope out
+
+This is the first of the three protocol phases where the roadmap's claim
+matches reality. Phase 2.1 and 2.2 both had more existing code than the
+roadmap assumed. Phase 2.3 is genuinely greenfield.
+
+### Roadmap Phase 2.3 scope (unmodified)
+
+From `docs/ROADMAP.md`:
+
+1. **`gRPCDiscoveryModule`** — uses server reflection to enumerate
+   services and methods; parses message descriptors to understand field
+   types; generates type-aware mutations
+2. **`baseline_message()`** — constructs a valid request from the
+   descriptor
+3. **`fuzz_field()`** — mutates one field at a time, per type class
+   (strings get SQLi/XSS/traversal payloads; ints get boundary values;
+   bytes get null-byte patterns)
+4. **Verification oracle** — decode the response Protobuf, compare
+   field values structurally against baseline, require reproducible
+   delta across three runs before emitting
+
+Plus a **hard constraint from the roadmap**:
+
+> If server reflection is unavailable, the module must report
+> `grpc_reflection_unavailable` and produce zero findings. It must not
+> fall back to HTTP-level guessing.
+
+That constraint is important and is why gRPC is *harder* than HTTP
+protocol work. HTTP always has a message you can send even without a
+schema. gRPC requires schema knowledge to construct a valid Protobuf
+message at all. Guessing at binary framing is not a fallback — it is
+either a decode error or a false positive. The roadmap is right to
+forbid it.
+
+### Why this is different from FN-15 and FN-16
+
+Three-way sizing comparison:
+
+| Tracker | Existing code | Missing | Effort |
+|---|---|---|---|
+| **FN-15 (GraphQL)** | 20KB, 5 classes | Engine wiring + normalizer | ~2–4 hrs |
+| **FN-16 (WebSocket)** | 8KB, 4 passive checks | Learn/probe/verify pipeline | ~8–16 hrs |
+| **FN-17 (gRPC)** | **0 bytes** | **Everything** | **~12–20 hrs** |
+
+FN-17 is harder than FN-16 for two structural reasons:
+
+1. **Binary protocol infrastructure.** Protobuf requires encode/decode
+   tooling. Whether to use `google.protobuf`, `grpcio`, or a leaner
+   dependency is a project decision with license/bundle-size implications.
+2. **Reflection gating.** gRPC server reflection is not universally
+   enabled. A tool that requires it produces zero findings on
+   non-reflecting servers — a large fraction of real deployments. The
+   roadmap's "don't fall back to guessing" constraint means gRPC support
+   will be narrower in applicability than HTTP support, and that's a
+   documented posture, not a temporary limitation.
+
+### Not blocked by
+
+- Phase 0.1 — complete, the engine interface is stable
+- Phase 0.3 — complete, `BaselineNormalizer` is stable; a future
+  `GRPCNormalizer` would implement the same interface
+- FN-15 or FN-16 — independent
+
+Schedulable whenever Phase 2.3 opens, but should not be scheduled
+optimistically. The infrastructure decision (Protobuf dependency)
+should be made explicitly before code work begins.
+
+### Verification criterion (for Phase 2.3 proper)
+
+1. `GRPCDiscoveryModule` enumerates services and methods via reflection
+   on a test gRPC server that has reflection enabled.
+2. The module emits `CandidateFinding` objects with the schema path
+   attached (e.g., `Service.Method.Field`).
+3. All candidates route through `VerificationEngine.verify()`.
+4. `GRPCNormalizer` exists in `protocols/grpc.py`, decodes Protobuf
+   responses to comparable structures, and normalizes before delta
+   computation.
+5. On a server without reflection: module reports
+   `grpc_reflection_unavailable`, emits zero findings, and does not
+   fall back to HTTP framing guesses.
+6. Benchmark target added to `benchmark/track_c/` (a gRPC service with
+   known vulnerabilities) — currently none exists.
+
+### Filed-by evidence
+
+Session 2026-11-01 (session 28). Final phase of the roadmap-vs-reality
+audit begun in sessions 26 (GraphQL) and 27 (WebSocket).
+
+Files inspected:
+
+- `Get-ChildItem '*grpc*'` in `src/` and `tests/unit/` — **zero results**
+- `Select-String 'grpc|protobuf|proto3'` in `src/` — matches are all
+  `reflection` (XSS context), zero gRPC
+- `LIMITATIONS.md` line 31 + line 150 — "not supported" is accurate
+
+No commit fixed this — the filing is the record of the gap, and it
+records the three-phase audit finding: **the roadmap is accurate about
+Phase 2.3 and undersells Phases 2.1 and 2.2.**
