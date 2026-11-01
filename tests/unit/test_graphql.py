@@ -150,7 +150,10 @@ def test_detect_introspection_enabled():
             "queryType": {"name": "Query"},
             "mutationType": {"name": "Mutation"},
             "subscriptionType": None,
-            "types": [{"name": "Query"}, {"name": "Mutation"}],
+            "types": [
+                {"name": "Query", "fields": [{"name": "user", "args": []}]},
+                {"name": "Mutation"},
+            ],
         }
     }
     intro_body = {"data": schema}
@@ -316,3 +319,23 @@ def test_fuzz_arguments_reports_errors():
     )
     assert len(results) == 1
     assert results[0].errors == ["argument id invalid"]
+
+
+def test_detect_suggestions_untestable_without_introspection():
+    """FN-19: without schema, suggestions cannot be derived; note is logged,
+    suggestions_supported stays False (honest, not silently false)."""
+    typename_body = {"data": {"__typename": "Query"}}
+    intro_body = {"errors": [{"message": "Introspection is disabled"}]}
+    batch_body = {"errors": [{"message": "batch not supported"}]}
+
+    client = _client(
+        [
+            FakeResp(body=typename_body),
+            FakeResp(body=intro_body),
+            FakeResp(body=batch_body),
+        ]
+    )
+    profile = g.detect("http://t/graphql", client=client)
+    assert profile.introspection_enabled is False
+    assert profile.suggestions_supported is False
+    assert any("untestable" in n for n in profile.notes), profile.notes

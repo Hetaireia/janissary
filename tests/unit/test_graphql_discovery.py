@@ -227,3 +227,120 @@ def test_all_finding_types_have_graphql_prefix():
         assert c.finding_type.startswith("graphql_"), (
             f"finding_type must be prefixed with graphql_; got {c.finding_type!r}"
         )
+
+
+def test_depth_uses_schema_derived_path_when_available():
+    """FN-18: when schema has a self-referencing path, depth_probe receives
+    the derived field name and path= argument, not __typename."""
+    from unittest.mock import patch as _p
+
+    schema = {
+        "queryType": {"name": "Query"},
+        "types": [
+            {
+                "name": "Query",
+                "fields": [
+                    {
+                        "name": "currentUser",
+                        "args": [],
+                        "type": {"kind": "OBJECT", "name": "User"},
+                    },
+                ],
+            },
+            {
+                "name": "User",
+                "fields": [
+                    {
+                        "name": "friend",
+                        "args": [],
+                        "type": {"kind": "OBJECT", "name": "User"},
+                    },
+                ],
+            },
+        ],
+    }
+    m = _module(query_type="Query", schema=schema)
+
+    captured = {}
+
+    def fake_depth(client, field_name="__typename", path=None, **kw):
+        captured["field_name"] = field_name
+        captured["path"] = path
+        return (20, "")
+
+    with _p("janissary.integrations.graphql_discovery.depth_probe", fake_depth):
+        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+            out = m.discover(include_probes=True, include_fuzz=False)
+
+    assert captured["field_name"] == "friend"
+    assert captured["path"] == "currentUser"
+    depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]
+    assert len(depth) == 1
+    assert "currentUser.friend" in depth[0].detail
+
+
+def test_depth_falls_back_when_no_self_ref_path():
+    """FN-18: no self-ref path in schema -> depth not tested, no false claim."""
+    from unittest.mock import patch as _p
+
+    schema = {
+        "queryType": {"name": "Query"},
+        "types": [
+            {"name": "Query", "fields": [
+                {"name": "user", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
+            ]},
+            {"name": "User", "fields": [
+                {"name": "name", "args": [], "type": {"kind": "SCALAR", "name": "String"}},
+            ]},
+        ],
+    }
+    m = _module(query_type="Query", schema=schema)
+
+    with _p("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "validation error")):
+        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+            out = m.discover(include_probes=True, include_fuzz=False)
+
+    depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]
+    assert depth == []
+
+
+def test_depth_fires_with_derived_path_above_threshold():
+    """FN-18: derived path + depth above threshold -> finding fires."""
+    from unittest.mock import patch as _p
+
+    schema = {
+        "queryType": {"name": "Query"},
+        "types": [
+            {"name": "Query", "fields": [
+                {"name": "me", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
+            ]},
+            {"name": "User", "fields": [
+                {"name": "friend", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
+            ]},
+        ],
+    }
+    m = _module(query_type="Query", schema=schema)
+
+    with _p("janissary.integrations.graphql_discovery.depth_probe", return_value=(25, "")):
+        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+            out = m.discover(include_probes=True, include_fuzz=False)
+
+    depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]
+    assert len(depth) == 1
+    assert "25" in depth[0].detail
+
+
+def test_build_wrapped_nested_query_ends_with_typename_leaf():
+    """FN-18 follow-up: without __typename terminator, object-typed field
+    selections are invalid GraphQL at every depth. This pins the leaf."""
+    from janissary.integrations.graphql import build_wrapped_nested_query
+
+    q1 = build_wrapped_nested_query("currentUser", "friend", 1)
+    assert "__typename" in q1
+    assert q1.count("friend") == 1
+    assert q1 == "{ currentUser { friend { __typename } } }"
+
+    q3 = build_wrapped_nested_query("currentUser", "friend", 3)
+    assert "__typename" in q3
+    assert q3.count("friend") == 3
+    assert q3 == "{ currentUser { friend { friend { friend { __typename } } } } }"

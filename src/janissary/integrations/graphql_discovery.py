@@ -34,6 +34,7 @@ from .graphql import (
     FuzzResult,
     GraphQLClient,
     GraphQLProfile,
+    _derive_depth_path,
     alias_probe,
     depth_probe,
     fuzz_arguments,
@@ -133,17 +134,32 @@ class GraphQLDiscoveryModule:
     def _probe_candidates(self) -> list[CandidateFinding]:
         out: list[CandidateFinding] = []
 
-        depth, refusal = depth_probe(self.client)
+        top_field, recursive_field = _derive_depth_path(self.profile.schema or {})
+        if top_field and recursive_field:
+            depth_field_desc = f"{top_field}.{recursive_field}"
+            depth, refusal = depth_probe(
+                self.client,
+                field_name=recursive_field,
+                path=top_field,
+            )
+        else:
+            # No self-referencing path in schema; depth untestable.
+            # depth_probe would return None (validation error on __typename),
+            # so no candidate fires.
+            depth_field_desc = "__typename"
+            depth, refusal = depth_probe(self.client)
+
         if depth is not None and depth >= _DEPTH_THRESHOLD:
             out.append(self._candidate(
                 finding_type="depth_abuse",
                 severity="medium",
                 detail=(
-                    f"Query depth {depth} accepted without refusal "
-                    f"(threshold {_DEPTH_THRESHOLD}); DoS amplification risk"
+                    f"Query depth {depth} accepted on field path "
+                    f"{depth_field_desc!r} (threshold {_DEPTH_THRESHOLD}); "
+                    f"DoS amplification risk"
                 ),
                 payload_name="depth_probe",
-                payload_value=f"nested __typename x{depth}",
+                payload_value=f"nested {depth_field_desc} x{depth}",
             ))
 
         aliases, alias_refusal = alias_probe(self.client)

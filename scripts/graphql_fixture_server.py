@@ -27,6 +27,7 @@ SCHEMA = build_schema(
     """
     type Query {
       user(id: String!): User
+      currentUser: User
       posts(limit: Int, offset: Int): [Post]
       secret(key: String): String
     }
@@ -34,6 +35,7 @@ SCHEMA = build_schema(
       id: String
       email: String
       name: String
+      friend: User
     }
     type Post {
       id: String
@@ -48,7 +50,21 @@ def _resolve_user(root, info, id):
         raise RuntimeError(
             'Database error: unterminated quoted string at or near "\'"'
         )
-    return {"id": id, "email": f"user{id}@example.invalid", "name": "Test User"}
+    return {
+        "id": id,
+        "email": f"user{id}@example.invalid",
+        "name": "Test User",
+        "friend": None,
+    }
+
+
+def _resolve_currentuser(root, info):
+    return {
+        "id": "me",
+        "email": "me@example.invalid",
+        "name": "Current User",
+        "friend": None,
+    }
 
 
 def _resolve_posts(root, info, limit=None, offset=None):
@@ -64,6 +80,7 @@ def _resolve_secret(root, info, key=None):
 
 _q = SCHEMA.get_type("Query")
 _q.fields["user"].resolve = _resolve_user
+_q.fields["currentUser"].resolve = _resolve_currentuser
 _q.fields["posts"].resolve = _resolve_posts
 _q.fields["secret"].resolve = _resolve_secret
 
