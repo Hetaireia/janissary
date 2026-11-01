@@ -584,8 +584,25 @@ multiple trials of the same class would have hit the same bug.
 
 ## FN-15 — GraphQL findings bypass the VerificationEngine and BaselineNormalizer
 
-**Status: FILED 2026-11-01. Not a bug — a documented integration gap
-for Phase 2.1.**
+**Status: FIXED 2026-11-01.**
+
+**Fix commits:**
+- `cdda9d3` — `GraphQLNormalizer` (part 1)
+- `1c60ac1` — `GraphQLDiscoveryModule` (part 2)
+- `918365a` — `GraphQLReconConfirmer` + `_ENGINE` wiring (part 3a)
+- `5e6ecc3` — `Scanner.scan_graphql()` (part 3b)
+- `acf528d` — `--graphql` CLI flag + merge helper (part 3c)
+
+> **Session-34 status update:** reclassified from FILED to FIXED after
+> the five-part integration landed across sessions 29–33. The original
+> framing — "not a bug, a documented integration gap" — remained
+> accurate throughout; the gap is now closed. Findings now flow through
+> `VerificationEngine.verify()` and are marked `unproven` by
+> `GraphQLReconConfirmer` (reason `graphql_recon`) rather than
+> overclaimed as `verified`. See the 51 integration tests across
+> `test_protocols_graphql.py`, `test_graphql_discovery.py`,
+> `test_graphql_recon_confirmer.py`, `test_scan_graphql.py`, and
+> `test_graphql_cli.py`.
 
 ### What it is
 
