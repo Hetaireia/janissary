@@ -46,6 +46,8 @@ from janissary.recon import (
 )
 
 from janissary.protocols import BaselineNormalizer, HTTPNormalizer
+from janissary.integrations.graphql import GraphQLClient, detect
+from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
 from janissary.verification import (
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
@@ -718,6 +720,81 @@ class Scanner:
             pending = still_pending
             if not pending:
                 break
+
+    def scan_graphql(
+        self,
+        include_probes: bool = True,
+        include_fuzz: bool = False,
+        max_fuzz_targets: int | None = 20,
+    ) -> ScanSummary:
+        """Run GraphQL discovery against ``self.target``.
+
+        Returns a ScanSummary whose findings have been routed through
+        ``_ENGINE.verify()`` -- so ``GraphQLReconConfirmer`` marks them
+        ``unproven`` (recon observations are signals, not vulnerability
+        proofs). Same emission boundary HTTP findings go through.
+
+        This method does not run the HTTP payload loop. It is GraphQL
+        discovery only. Callers wanting both HTTP and GraphQL findings
+        should invoke ``scan()`` and ``scan_graphql()`` separately and
+        merge them (see CLI --graphql in part 3c).
+
+        Fuzzing is opt-in: one HTTP request per payload per schema
+        target. ``max_fuzz_targets`` caps the number of (field, arg)
+        pairs fuzzed (default 20 is a safety valve).
+
+        See docs/PHASE-6-PLAN.md FN-15 part 3b.
+        """
+        summary = ScanSummary(
+            target=self.target,
+            params=list(self.params),
+            method="POST",  # GraphQLClient is POST-only
+        )
+
+        ok, reason = self.preflight()
+        summary.total_requests += 1
+        if not ok:
+            summary.aborted = True
+            summary.abort_reason = reason
+            return summary
+
+        client = GraphQLClient(
+            endpoint=self.target,
+            timeout=self.timeout,
+            proxies=self.proxies,
+            session=self.session,
+        )
+
+        profile = detect(self.target, client=client)
+        # Approximate request count -- GraphQLDiscoveryModule does not
+        # instrument its own HTTP calls. These estimates keep
+        # summary.total_requests from being misleadingly zero.
+        summary.total_requests += 4  # detect: typename/introspection/batch/suggestions
+
+        if not profile.reachable:
+            summary.scan_incomplete = True
+            summary.abort_reason = "GraphQL endpoint not reachable"
+            return summary
+
+        module = GraphQLDiscoveryModule(client, profile)
+        candidates = module.discover(
+            include_probes=include_probes,
+            include_fuzz=include_fuzz,
+            max_fuzz_targets=max_fuzz_targets,
+        )
+
+        if include_probes:
+            summary.total_requests += 6  # depth_probe + alias_probe, rough
+
+        for candidate in candidates:
+            result = _ENGINE.verify(candidate)
+            if not isinstance(result, VerifiedFinding):
+                continue
+            finding = _to_scan_finding(result)
+            summary.findings.append(finding)
+            summary.finding_count += 1
+
+        return summary
 
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
