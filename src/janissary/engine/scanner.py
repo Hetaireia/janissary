@@ -45,6 +45,7 @@ from janissary.recon import (
     WAFProfile,
 )
 
+from janissary.protocols import BaselineNormalizer, HTTPNormalizer
 from janissary.verification import (
     CorroboratorConfirmer,
     AnalyzerImplicitConfirmer,
@@ -344,6 +345,7 @@ class Scanner:
         ssrf_timeout: float = 10.0,
         json_template: dict | None = None,
         baseline_value: str = "",
+        normalizer: "BaselineNormalizer | None" = None,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -358,6 +360,7 @@ class Scanner:
         self.collaborator = collaborator
         self.ssrf_timeout = ssrf_timeout
         self.json_template = json_template
+        self.normalizer = normalizer if normalizer is not None else HTTPNormalizer()
         self.baseline_value = baseline_value
         self._ssrf_poll_delays: list[float] = [2.0, 3.0, 5.0]
         self._consecutive_401s: int = 0
@@ -608,7 +611,7 @@ class Scanner:
                 continue
             if r is None:
                 continue
-            baseline.add(ResponseSnapshot.from_response(r))
+            baseline.add(ResponseSnapshot.from_response(r, normalizer=self.normalizer))
         return baseline
 
     def _ssrf_phase(
@@ -814,7 +817,7 @@ class Scanner:
                     )
                     break
 
-                snapshot = ResponseSnapshot.from_response(r)
+                snapshot = ResponseSnapshot.from_response(r, normalizer=self.normalizer)
 
                 # Collapse oracle (ADR-006, Phase 1.3d): fires when a
                 # payload response structurally collapses from the armed
@@ -1360,7 +1363,7 @@ class Scanner:
                     r2 = None
                 summary.total_requests += 1
                 if r2 is not None:
-                    snap2 = ResponseSnapshot.from_response(r2)
+                    snap2 = ResponseSnapshot.from_response(r2, normalizer=self.normalizer)
                     oracle = check_pathtraver_oracle(
                         baseline=baseline,
                         snapshot_exists=traversal_snap,
