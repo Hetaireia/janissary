@@ -8,6 +8,7 @@ from .confirmers import (
     Confirmer,
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
+    WebSocketReconConfirmer,
 )
 from .engine import VerificationEngine, VerificationResult
 from .types import (
@@ -24,6 +25,7 @@ __all__ = [
     "Confirmer",
     "CorroboratorConfirmer",
     "GraphQLReconConfirmer",
+    "WebSocketReconConfirmer",
     "FailedVerification",
     "VerificationEngine",
     "VerificationResult",

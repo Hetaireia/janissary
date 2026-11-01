@@ -51,6 +51,7 @@ from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
 from janissary.verification import (
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
+    WebSocketReconConfirmer,
     AnalyzerImplicitConfirmer,
     CandidateFinding,
     VerificationEngine,
@@ -246,7 +247,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     return finding
 
 
-_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), GraphQLReconConfirmer(), AnalyzerImplicitConfirmer()])
+_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), WebSocketReconConfirmer(), GraphQLReconConfirmer(), AnalyzerImplicitConfirmer()])
 
 
 class _VerifiedFindingsList(list):

@@ -57,6 +57,38 @@ class Confirmer(Protocol):
 
     def confirm(self, candidate: CandidateFinding) -> Confirmation | None: ...
 
+class WebSocketReconConfirmer:
+    """Mark WebSocket probe findings as unproven.
+
+    WebSocket probe results compare a mutated-payload response sequence
+    against the baseline response sequence, via WebSocketNormalizer.
+    A difference proves the server behaved differently; it does NOT
+    prove exploitability. The candidate is a signal, not a verdict.
+
+    This confirmer marks every ``websocket_*`` candidate as
+    ``unproven`` so the engine does not claim a verdict the evidence
+    does not support.
+
+    Ordering note: must fire before ``AnalyzerImplicitConfirmer``.
+    Order relative to ``GraphQLReconConfirmer`` does not affect
+    correctness (each prefix-matches exclusively), but WebSocket is
+    placed first as the newest protocol for read-order consistency.
+
+    See docs/PHASE-6-PLAN.md FN-16.
+    """
+
+    name = "websocket_recon"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        if candidate.finding_type.startswith("websocket_"):
+            return Confirmation(
+                confirmed=True,
+                reason="websocket_recon",
+                unproven=True,
+            )
+        return None
+
+
 class AnalyzerImplicitConfirmer:
     """Implicit confirmation from the analyzer pipeline.
 
