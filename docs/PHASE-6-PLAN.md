@@ -1141,7 +1141,7 @@ change, not a small refinement:
 (d) new probe-cycle test fixtures. Separate session with a decision
 doc.
 
-**Smaller alternative — TAKEN (commit pending push at time of writing):**
+**Smaller alternative — TAKEN (commit c9f2035):**
 `_classify_delta` refined to a four-way taxonomy with precedence
 echoed_payload > frame_count_delta > length_delta > content_delta.
 `response_delta` renamed to `content_delta` (same count, same length,
