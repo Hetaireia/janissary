@@ -166,10 +166,19 @@ def _print_summary(summary: ScanSummary) -> None:
         print()
         print("  Findings by severity:")
         by_sev: dict[str, int] = {}
+        unproven_by_sev: dict[str, int] = {}
         for f in summary.findings:
             by_sev[f.severity] = by_sev.get(f.severity, 0) + 1
+            if getattr(f, "verification_status", "verified") == "unproven":
+                unproven_by_sev[f.severity] = (
+                    unproven_by_sev.get(f.severity, 0) + 1
+                )
         for sev in sorted(by_sev, key=lambda s: SEV_ORDER.get(s, 99)):
-            print(f"    {sev.upper():10} {by_sev[sev]}")
+            line = f"    {sev.upper():10} {by_sev[sev]}"
+            n_unproven = unproven_by_sev.get(sev, 0)
+            if n_unproven:
+                line += f"  (unproven: {n_unproven})"
+            print(line)
 
 
 # -------------------------------------------------------------------
