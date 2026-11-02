@@ -534,15 +534,38 @@ def _seq_from_s2c_frames(frames: tuple[str, ...]) -> MessageSequence:
     )
 
 
+def _classify_delta(
+    probe: ProbeResult, baseline_norm: str, probe_norm: str
+) -> str:
+    """Classify how probe_norm differs from baseline_norm.
+
+    Binary taxonomy grounded in data verify() already computes:
+      - ``echoed_payload``: probe.payload_value appears in probe_norm
+        but not baseline_norm (mutation reflected verbatim).
+      - ``response_delta``: any other normalized-body difference.
+
+    Status and timing deltas are not tracked by verify() today; the
+    taxonomy stays strictly to what the normalizer compares. See
+    FN-16 follow-up in docs/PHASE-6-PLAN.md.
+    """
+    pv = probe.payload_value or ""
+    if pv and pv in probe_norm and pv not in baseline_norm:
+        return "echoed_payload"
+    return "response_delta"
+
+
 def _probe_to_candidate(
     probe: ProbeResult,
     url: str,
+    delta_kind: str | None = None,
 ) -> CandidateFinding:
     detail = (
         f"Probe on {probe.field_path!r} (msg {probe.message_index}, "
         f"payload {probe.payload_name}) produced a server response that "
         f"differs from baseline after normalization"
     )
+    if delta_kind:
+        detail += f" (delta: {delta_kind})"
     return CandidateFinding(
         param=probe.field_path,
         payload_name=probe.payload_name,
@@ -599,6 +622,7 @@ def verify(
         probe_norm = normalizer.normalize(probe_seq).body
 
         if baseline_norm != probe_norm:
-            candidates.append(_probe_to_candidate(p, url))
+            delta_kind = _classify_delta(p, baseline_norm, probe_norm)
+            candidates.append(_probe_to_candidate(p, url, delta_kind))
 
     return candidates
