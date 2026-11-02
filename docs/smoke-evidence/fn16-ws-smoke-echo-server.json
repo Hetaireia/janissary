@@ -1,0 +1,404 @@
+{
+  "target": "http://127.0.0.1:8765/",
+  "params": [
+    "id",
+    "name",
+    "q",
+    "search",
+    "query",
+    "user",
+    "username",
+    "email"
+  ],
+  "method": "GET",
+  "total_requests": 378,
+  "finding_count": 11,
+  "group_count": 0,
+  "aborted": false,
+  "abort_reason": null,
+  "scan_incomplete": false,
+  "baselines": {
+    "id": {
+      "samples": 10,
+      "mean_elapsed": 0.011,
+      "std_elapsed": 0.006,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "name": {
+      "samples": 10,
+      "mean_elapsed": 0.0073,
+      "std_elapsed": 0.0073,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "q": {
+      "samples": 10,
+      "mean_elapsed": 0.0077,
+      "std_elapsed": 0.007,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "search": {
+      "samples": 10,
+      "mean_elapsed": 0.0073,
+      "std_elapsed": 0.0062,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "query": {
+      "samples": 10,
+      "mean_elapsed": 0.0113,
+      "std_elapsed": 0.0072,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "user": {
+      "samples": 10,
+      "mean_elapsed": 0.0095,
+      "std_elapsed": 0.0063,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "username": {
+      "samples": 10,
+      "mean_elapsed": 0.0101,
+      "std_elapsed": 0.0078,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    },
+    "email": {
+      "samples": 10,
+      "mean_elapsed": 0.0063,
+      "std_elapsed": 0.0033,
+      "stable_body": true,
+      "has_oracle": true,
+      "arming": {
+        "armed": false,
+        "reason": "unarmed_no_html_samples",
+        "sample_count": 0,
+        "hamming_max": 0,
+        "has_root_signature": false,
+        "emitted_count": 0,
+        "emitted_by_reason": {}
+      }
+    }
+  },
+  "waf": {
+    "detected": false,
+    "vendor": null,
+    "confidence": 0.0,
+    "probes": [
+      {
+        "name": "sqli_quote",
+        "status": 426,
+        "elapsed": 0.0147,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      },
+      {
+        "name": "sqli_union",
+        "status": 426,
+        "elapsed": 0.0082,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      },
+      {
+        "name": "xss_script",
+        "status": 426,
+        "elapsed": 0.0203,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      },
+      {
+        "name": "traversal",
+        "status": 426,
+        "elapsed": 0.0176,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      },
+      {
+        "name": "cmdi",
+        "status": 426,
+        "elapsed": 0.0079,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      },
+      {
+        "name": "rce_sleep",
+        "status": 426,
+        "elapsed": 0.0209,
+        "blocked": false,
+        "vendor_hint": null,
+        "note": ""
+      }
+    ],
+    "notes": [
+      "no WAF signatures observed"
+    ]
+  },
+  "pacer": {
+    "current_delay": 0.0,
+    "clean_streak": 4,
+    "block_streak": 0,
+    "events": 344
+  },
+  "groups": [],
+  "findings": [
+    {
+      "param": "op",
+      "payload_name": "sqli_quote",
+      "payload_value": "'",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_sqli_probe",
+      "detail": "Probe on 'op' (msg 2, payload sqli_quote) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:208481f66dd6418389a12b7c31f27e36",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "sqli_or_1eq1",
+      "payload_value": "' OR '1'='1",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_sqli_probe",
+      "detail": "Probe on 'op' (msg 2, payload sqli_or_1eq1) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:208481f66dd6418389a12b7c31f27e36",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "sqli_union_null",
+      "payload_value": "' UNION SELECT NULL--",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_sqli_probe",
+      "detail": "Probe on 'op' (msg 2, payload sqli_union_null) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:208481f66dd6418389a12b7c31f27e36",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "sqli_sleep",
+      "payload_value": "' OR SLEEP(5)--",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_sqli_probe",
+      "detail": "Probe on 'op' (msg 2, payload sqli_sleep) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:208481f66dd6418389a12b7c31f27e36",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "xss_script",
+      "payload_value": "<script>alert(1)</script>",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_xss_probe",
+      "detail": "Probe on 'op' (msg 2, payload xss_script) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:5d7f25b2b7699edb2d7d4caa6de1bb70",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "xss_img",
+      "payload_value": "<img src=x onerror=alert(1)>",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_xss_probe",
+      "detail": "Probe on 'op' (msg 2, payload xss_img) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:5d7f25b2b7699edb2d7d4caa6de1bb70",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "traversal_passwd",
+      "payload_value": "../../../etc/passwd",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_traversal_probe",
+      "detail": "Probe on 'op' (msg 2, payload traversal_passwd) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:0d9fa4be2b2b90999ff3681cbc904c88",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "traversal_encoded",
+      "payload_value": "..%2f..%2f..%2fetc%2fpasswd",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_traversal_probe",
+      "detail": "Probe on 'op' (msg 2, payload traversal_encoded) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:0d9fa4be2b2b90999ff3681cbc904c88",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "cmdi_semicolon",
+      "payload_value": "; id",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_cmdi_probe",
+      "detail": "Probe on 'op' (msg 2, payload cmdi_semicolon) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:530b294b18997db9a70f71fbddd2ed3c",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "cmdi_pipe",
+      "payload_value": "| whoami",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_cmdi_probe",
+      "detail": "Probe on 'op' (msg 2, payload cmdi_pipe) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:530b294b18997db9a70f71fbddd2ed3c",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    },
+    {
+      "param": "op",
+      "payload_name": "generic_null_byte",
+      "payload_value": "\u0000",
+      "category": "websocket",
+      "severity": "medium",
+      "finding_type": "websocket_injection_probe",
+      "detail": "Probe on 'op' (msg 2, payload generic_null_byte) produced a server response that differs from baseline after normalization",
+      "response_status": null,
+      "response_length": 0,
+      "response_time": null,
+      "reflection_context": null,
+      "response_content_type": "",
+      "fingerprint": "jfv1:4cba3d0178c8cef2847c62232eb90336",
+      "verification_status": "unproven",
+      "verification_reason": "websocket_recon"
+    }
+  ]
+}

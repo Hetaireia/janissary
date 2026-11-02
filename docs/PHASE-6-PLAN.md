@@ -1078,3 +1078,27 @@ The general lesson: **a probe that never fires because of an assumed
 constant is indistinguishable from a probe that works and reports
 "clean."** Any future `probe_*` function needs a positive-control test
 against a real server, not just unit tests with mock responses.
+
+## FN-16 follow-up: WebSocket recon findings presentation
+
+Smoke test (local echo server, `--ws --ws-payloads payloads.txt`) produced
+11 findings, all `verification_status=unproven`, all `websocket_*_probe`,
+all `severity=medium`. Verification is correct; the human summary is not.
+Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
+
+### Items
+- [ ] Human summary (`cli.py _print_summary`) does not surface `unproven`.
+      A default run shows "MEDIUM 11" with no annotation, which reads as
+      "11 confirmed findings against an echo server." Fix: add an
+      `Unproven: N` line, or exclude unproven from severity buckets.
+- [ ] `WebSocketDiscoveryModule.discover()` detail string is
+      "produced a server response that differs from baseline" for every
+      payload class. Enrich with the kind of delta (echo/length/status/timing)
+      so a human can triage without `--json`.
+- [ ] `LIMITATIONS.md`: note that discover() fires on echo-reflection —
+      correct given inputs, but worth saying out loud.
+
+### Not bugs (do not "fix")
+- Verification engine marks all recon probes `unproven`: correct.
+- `Scanner.scan_ws` URL handling: fixed in 8f821ad, runtime-confirmed.
+- Discovery fires one candidate per payload: by design.
