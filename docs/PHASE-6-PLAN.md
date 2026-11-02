@@ -1091,10 +1091,14 @@ Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
       Fixed in 186c7a8: severity fallback now annotates `(unproven: N)`.
       Runtime-confirmed against local echo server:
       `    MEDIUM     11  (unproven: 11)`.
-- [ ] `WebSocketDiscoveryModule.discover()` detail string is
+- [x] `WebSocketDiscoveryModule.discover()` detail string is
       "produced a server response that differs from baseline" for every
-      payload class. Enrich with the kind of delta (echo/length/status/timing)
-      so a human can triage without `--json`.
+      payload class. Fixed in 02c6a05: binary taxonomy
+      (`echoed_payload` vs `response_delta`) appended as
+      ` (delta: <kind>)`. Runtime-confirmed against local echo server:
+      11/11 classified `echoed_payload`. Status/timing deltas deferred —
+      verify() does not currently compute them; adding that is a
+      separate change that would expand what the normalizer compares.
 - [ ] `LIMITATIONS.md`: note that discover() fires on echo-reflection —
       correct given inputs, but worth saying out loud.
 
