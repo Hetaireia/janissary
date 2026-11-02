@@ -1,9 +1,8 @@
 # ADR-013 — WebSocket echo-reflection candidate policy (FN-16)
 
-**Status:** Proposed (2026-11-02) — awaiting sign-off; if accepted as-is,
-a follow-up commit flips Status to Accepted. If a different option is
-preferred, edit the "Recommendation" and "Consequences" sections before
-accepting.
+**Status:** Accepted (2026-11-02) — Option 1 (status quo). The
+recommendation below was accepted as-is; no code change. A future
+reversal requires ADR-014 superseding this one.
 **Depends on:** ADR-007 (finding identity), FN-16 parts 6a/6b
 (`8f821ad`, `186c7a8`, `02c6a05`, `c9f2035`)
 **Blocks:** none — no downstream work waits on this decision
