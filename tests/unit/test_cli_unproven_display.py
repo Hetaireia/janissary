@@ -88,3 +88,87 @@ def test_mixed_group_header_unmarked_findings_marked_individually(capsys):
     p2_line = next(ln for ln in lines if "[p2]" in ln)
     assert "[unproven]" not in p1_line
     assert "[unproven]" in p2_line
+
+
+# --- FN-16 follow-up: severity fallback must surface unproven ---------------
+
+def _summary_ungrouped(findings: list[ScanFinding]) -> ScanSummary:
+    """Summary with findings but no groups (the WS recon case).
+
+    Smoke test against a local echo server produced 11 unproven MEDIUM
+    findings in 0 groups. The grouped-unproven display (see tests above)
+    never runs when findings don't cluster; the severity fallback at
+    cli._print_summary (lines 165-172) must show the unproven count itself.
+    """
+    s = ScanSummary(target="http://x/", params=["q"], method="GET")
+    for f in findings:
+        s.findings.append(f)
+    s.finding_count = len(s.findings)
+    return s
+
+
+def test_severity_line_shows_unproven_when_findings_not_grouped(capsys):
+    findings = [
+        _base(
+            verification_status="unproven",
+            verification_reason="websocket_recon",
+            severity="medium",
+            category="websocket",
+            payload_name=f"p{i}",
+        )
+        for i in range(3)
+    ]
+    _print_summary(_summary_ungrouped(findings))
+    out = capsys.readouterr().out
+    medium_lines = [ln for ln in out.splitlines() if "MEDIUM" in ln]
+    assert medium_lines, (
+        f"MEDIUM line missing from severity summary; got {out!r}"
+    )
+    assert any("unproven: 3" in ln for ln in medium_lines), (
+        f"severity line must annotate unproven count; got {medium_lines!r}"
+    )
+
+
+def test_severity_line_mixed_shows_partial_unproven(capsys):
+    findings = [
+        _base(
+            verification_status="unproven",
+            verification_reason="websocket_recon",
+            severity="medium",
+            category="websocket",
+            payload_name="p1",
+        ),
+        _base(
+            verification_status="verified",
+            verification_reason=None,
+            severity="medium",
+            category="sqli",
+            payload_name="p2",
+        ),
+    ]
+    _print_summary(_summary_ungrouped(findings))
+    out = capsys.readouterr().out
+    medium_lines = [ln for ln in out.splitlines() if "MEDIUM" in ln]
+    assert medium_lines, (
+        f"MEDIUM line missing from severity summary; got {out!r}"
+    )
+    assert any("unproven: 1" in ln for ln in medium_lines), (
+        f"mixed severity must show partial unproven count; got {medium_lines!r}"
+    )
+
+
+def test_severity_line_verified_only_has_no_unproven_annotation(capsys):
+    findings = [
+        _base(
+            verification_status="verified",
+            verification_reason=None,
+            severity="high",
+            payload_name="p1",
+        ),
+    ]
+    _print_summary(_summary_ungrouped(findings))
+    out = capsys.readouterr().out
+    assert "HIGH" in out
+    assert "unproven" not in out, (
+        f"verified-only scan must not mention unproven; got {out!r}"
+    )
