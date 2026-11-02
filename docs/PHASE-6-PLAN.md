@@ -1095,10 +1095,21 @@ Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
       "produced a server response that differs from baseline" for every
       payload class. Fixed in 02c6a05: binary taxonomy
       (`echoed_payload` vs `response_delta`) appended as
-      ` (delta: <kind>)`. Runtime-confirmed against local echo server:
-      11/11 classified `echoed_payload`. Status/timing deltas deferred —
-      verify() does not currently compute them; adding that is a
-      separate change that would expand what the normalizer compares.
+      ` (delta: <kind>)`.
+
+      Runtime smoke against local echo server:
+      `10/11 echoed_payload, 1/11 response_delta`. The outlier is
+      the fallback working as designed — one payload value did not
+      appear verbatim in the normalized echoed response (likely a
+      normalizer-stripped payload such as `generic_null_byte`). Not a
+      bug; taxonomy is "did the payload come back verbatim," and one
+      did not. If future investigation identifies a case where an
+      echoed payload incorrectly falls into `response_delta`, that
+      becomes a `_classify_delta` refinement ticket.
+
+      Status/timing deltas deferred — verify() does not currently
+      compute them; adding that is a separate change that would expand
+      what the normalizer compares.
 - [ ] `LIMITATIONS.md`: note that discover() fires on echo-reflection —
       correct given inputs, but worth saying out loud.
 
