@@ -535,23 +535,34 @@ def _seq_from_s2c_frames(frames: tuple[str, ...]) -> MessageSequence:
 
 
 def _classify_delta(
-    probe: ProbeResult, baseline_norm: str, probe_norm: str
+    probe: ProbeResult,
+    baseline_norm: str,
+    probe_norm: str,
+    baseline_frame_count: int = 0,
+    probe_frame_count: int = 0,
 ) -> str:
     """Classify how probe_norm differs from baseline_norm.
 
-    Binary taxonomy grounded in data verify() already computes:
-      - ``echoed_payload``: probe.payload_value appears in probe_norm
-        but not baseline_norm (mutation reflected verbatim).
-      - ``response_delta``: any other normalized-body difference.
+    Four-way taxonomy, precedence highest-to-lowest:
+      1. ``echoed_payload``: probe.payload_value appears in probe_norm
+         but not baseline_norm (mutation reflected verbatim). Echo wins
+         precedence because it is the most specific signal.
+      2. ``frame_count_delta``: s2c frame counts differ.
+      3. ``length_delta``: same count, normalized-body length differs.
+      4. ``content_delta``: same count and length, content differs.
 
-    Status and timing deltas are not tracked by verify() today; the
-    taxonomy stays strictly to what the normalizer compares. See
-    FN-16 follow-up in docs/PHASE-6-PLAN.md.
+    Status and timing deltas are not tracked by verify() today. See
+    the scoping note in docs/PHASE-6-PLAN.md (FN-16 follow-up) for why
+    adding them is a multi-session change.
     """
     pv = probe.payload_value or ""
     if pv and pv in probe_norm and pv not in baseline_norm:
         return "echoed_payload"
-    return "response_delta"
+    if baseline_frame_count != probe_frame_count:
+        return "frame_count_delta"
+    if len(baseline_norm) != len(probe_norm):
+        return "length_delta"
+    return "content_delta"
 
 
 def _probe_to_candidate(
@@ -622,7 +633,10 @@ def verify(
         probe_norm = normalizer.normalize(probe_seq).body
 
         if baseline_norm != probe_norm:
-            delta_kind = _classify_delta(p, baseline_norm, probe_norm)
+            delta_kind = _classify_delta(
+                p, baseline_norm, probe_norm,
+                len(baseline_frames), len(p.response_frames),
+            )
             candidates.append(_probe_to_candidate(p, url, delta_kind))
 
     return candidates
