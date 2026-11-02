@@ -27,7 +27,7 @@ Amendment 26 (Track C). crAPI breakdown is pending.
 | Weak randomness | HTTP | high | — |
 | Trust boundary | HTTP | medium | — |
 | GraphQL | HTTP | **integrated** | Full feature coverage (introspection, depth, alias, argument fuzzing) routed through VerificationEngine and BaselineNormalizer. Findings emitted with verification_status='unproven' — recon observations, not vulnerability proofs. See FN-15 (FIXED) |
-| WebSocket | WS | **passive recon only** | Plaintext, missing Origin, blind echo, no-auth checks. Learn/probe/verify pipeline not built. See FN-16 |
+| WebSocket | WS | **partial** | Passive recon (plaintext, missing Origin, blind echo, no-auth) + learn/probe/verify pipeline (FN-16 6a/6b). Findings emitted with verification_status='unproven' — recon candidates, not vulnerability proofs. See FN-16 and "WebSocket recon findings" below |
 | gRPC | gRPC | **not supported** | See Phase 2.3 |
 
 ## Known gaps (false negatives)
