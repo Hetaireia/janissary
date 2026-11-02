@@ -225,8 +225,12 @@ echo server means "11 probes produced a response delta, none proven
 injectable," not "11 confirmed vulnerabilities."
 
 Distinguishing echo from injection requires looking at *what* changed
-(verbatim echo vs. structural delta). Enriching the detail string is
-tracked as a follow-up in `docs/PHASE-6-PLAN.md` (FN-16).
+(verbatim echo vs. structural delta). The detail string now carries
+the delta classification — `echoed_payload` / `frame_count_delta` /
+`length_delta` / `content_delta` (`02c6a05`, `c9f2035`). The policy
+question of whether reflect-verbatim responses should produce
+candidates at all is open, with options laid out in
+`docs/decisions/ADR-013-ws-echo-reflection-policy.md`.
 
 ## What this document is not
 
