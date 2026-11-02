@@ -204,10 +204,29 @@ tested?
 - **HTTP classes** (SQLi, XSS, traversal, etc.): yes — positive-control
   tests against known-vulnerable endpoints.
 - **GraphQL** (all 5 paths): yes — live-verified 2026-11-01.
-- **WebSocket** (FN-16): partial — passive recon only; learn/probe/verify
-  pipeline not built. "No finding" there means "not tested" by design.
+- **WebSocket** (FN-16): partial — learn/probe/verify pipeline built
+  (parts 6a/6b); recon findings are unproven candidates by design.
+  See "WebSocket recon findings" below.
 - **gRPC** (FN-17): no support. "No finding" there means "not tested"
   by design.
+
+### WebSocket recon findings
+
+`WebSocketDiscoveryModule.discover()` emits one candidate per (field,
+payload) pair whenever the probe's response differs from the learned
+baseline. This is by design — candidates for verification, not claims.
+
+Against a server that reflects payloads back (echo services, some chat
+endpoints), every probe produces a delta, so a scan yields one unproven
+finding per payload. These are accurately marked
+`verification_status=unproven` — not false positives — but they are
+noise in the human-facing count. `MEDIUM 11  (unproven: 11)` against an
+echo server means "11 probes produced a response delta, none proven
+injectable," not "11 confirmed vulnerabilities."
+
+Distinguishing echo from injection requires looking at *what* changed
+(verbatim echo vs. structural delta). Enriching the detail string is
+tracked as a follow-up in `docs/PHASE-6-PLAN.md` (FN-16).
 
 ## What this document is not
 

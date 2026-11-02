@@ -1087,10 +1087,10 @@ all `severity=medium`. Verification is correct; the human summary is not.
 Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
 
 ### Items
-- [ ] Human summary (`cli.py _print_summary`) does not surface `unproven`.
-      A default run shows "MEDIUM 11" with no annotation, which reads as
-      "11 confirmed findings against an echo server." Fix: add an
-      `Unproven: N` line, or exclude unproven from severity buckets.
+- [x] Human summary (`cli.py _print_summary`) does not surface `unproven`.
+      Fixed in 186c7a8: severity fallback now annotates `(unproven: N)`.
+      Runtime-confirmed against local echo server:
+      `    MEDIUM     11  (unproven: 11)`.
 - [ ] `WebSocketDiscoveryModule.discover()` detail string is
       "produced a server response that differs from baseline" for every
       payload class. Enrich with the kind of delta (echo/length/status/timing)
