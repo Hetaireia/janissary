@@ -1141,14 +1141,21 @@ change, not a small refinement:
 (d) new probe-cycle test fixtures. Separate session with a decision
 doc.
 
-**Smaller alternative that IS computable today:** refine
-`_classify_delta` with `frame_count_delta` (baseline vs probe frame
-count differs), `length_delta` (same count, different total body
-length), `content_delta` (same count and length, different content).
-All data already in `verify()` scope — no changes to `ProbeResult`,
-`probe()`, or the normalizer. Would obsolete the current
-`response_delta` fallback name (renamed to `content_delta`) and
-require one existing test to update its expected value. Estimated
-scope: same as `02c6a05` (one file, ~4 tests, one commit). Deferred
-here because it was not on the original ticket — open if triage
-quality of the current `response_delta` bucket becomes a priority.
+**Smaller alternative — TAKEN (commit pending push at time of writing):**
+`_classify_delta` refined to a four-way taxonomy with precedence
+echoed_payload > frame_count_delta > length_delta > content_delta.
+`response_delta` renamed to `content_delta` (same count, same length,
+different content). One existing test updated (`response_delta` →
+`length_delta`, its scenario was a length delta under the new
+taxonomy), three new tests added (frame_count, content, echo-precedence).
+
+Runtime smoke against local echo server:
+`10/11 echoed_payload, 1/11 length_delta`. The outlier is
+`websocket_injection_probe` with the `generic_null_byte` payload —
+the null byte does not survive into the normalized echo body, so
+`echoed_payload` does not fire, but the length differs, so
+`length_delta` catches it correctly. Not a bug; the taxonomy names
+it precisely where `response_delta` used to blur it.
+
+**Still deferred (multi-session):** status and timing deltas — see
+the preceding "If pursued" section for the required work.
