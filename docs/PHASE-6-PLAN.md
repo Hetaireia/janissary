@@ -1110,8 +1110,9 @@ Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
       Status/timing deltas deferred — verify() does not currently
       compute them; adding that is a separate change that would expand
       what the normalizer compares.
-- [ ] `LIMITATIONS.md`: note that discover() fires on echo-reflection —
-      correct given inputs, but worth saying out loud.
+- [x] `LIMITATIONS.md`: note that discover() fires on echo-reflection —
+      correct given inputs, but worth saying out loud. Done in fd6a340;
+      class-table row corrected in 259ea38.
 
 ### Not bugs (do not "fix")
 - Verification engine marks all recon probes `unproven`: correct.
