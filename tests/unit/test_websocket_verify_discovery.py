@@ -211,3 +211,48 @@ def test_discovery_max_probes_passed_to_probe():
 
     assert captured.get("max_probes") == 7
     assert captured.get("response_quiet_s") == 0.5
+
+
+# --- FN-16 follow-up: detail string delta classification -------------------
+
+def test_classify_delta_echoed_payload():
+    """Payload value appearing in probe_norm but not baseline_norm -> echoed_payload."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="ECHO_MARKER")
+    kind = _classify_delta(
+        p, baseline_norm="orig", probe_norm="orig ECHO_MARKER",
+    )
+    assert kind == "echoed_payload", (
+        f"payload present only in probe_norm must classify as echoed_payload; "
+        f"got {kind!r}"
+    )
+
+
+def test_classify_delta_response_delta():
+    """Different response without payload echo -> response_delta."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
+    kind = _classify_delta(p, baseline_norm="ok", probe_norm="error internal")
+    assert kind == "response_delta", (
+        f"non-echo delta must classify as response_delta; got {kind!r}"
+    )
+
+
+def test_verify_detail_carries_delta_classification():
+    """End-to-end: verify() must put a delta tag in detail for every candidate."""
+    model = _build_model('{"a":"orig"}', '{"a":"orig"}')
+    probe = _probe(
+        response_frames=('{"a":"different"}',),
+        payload_value="some_payload",
+    )
+    candidates = verify([probe], model, url="ws://x")
+    assert len(candidates) == 1, (
+        f"verify() should emit a candidate for a differing response; "
+        f"got {len(candidates)}"
+    )
+    detail = candidates[0].detail
+    assert "delta" in detail, (
+        f"candidate detail must include delta classification; got {detail!r}"
+    )
