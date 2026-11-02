@@ -1118,3 +1118,37 @@ Evidence: `docs/smoke-evidence/fn16-ws-smoke-echo-server.json`.
 - Verification engine marks all recon probes `unproven`: correct.
 - `Scanner.scan_ws` URL handling: fixed in 8f821ad, runtime-confirmed.
 - Discovery fires one candidate per payload: by design.
+
+### FN-16 status/timing deltas — scoping note (post-discovery)
+
+The `978055c` annotation on item 2 said status/timing deltas were
+deferred. Discovery on 2026-11-02 confirmed they are a multi-session
+change, not a small refinement:
+
+- `ProbeResult` (protocols/websocket.py:195) carries no per-probe
+  `response_time` or `response_status` fields.
+- `WebSocketNormalizer.normalize()` explicitly strips timing
+  (websocket.py:139-140) and hard-codes `status=None` (websocket.py:146)
+  — WS has no HTTP status by protocol, not by omission.
+- Per-probe timing is not captured in `probe()`; the `perf_counter`
+  calls in `websocket_learn.py` measure learn-session budget, not
+  probe round-trip.
+
+**If pursued**, requires: (a) extending `ProbeResult` with timing,
+(b) deciding what "response time" means over a persistent connection
+(per-frame? first frame after send? close?), (c) deciding whether
+"status" means handshake outcome, close code, or nothing for WS,
+(d) new probe-cycle test fixtures. Separate session with a decision
+doc.
+
+**Smaller alternative that IS computable today:** refine
+`_classify_delta` with `frame_count_delta` (baseline vs probe frame
+count differs), `length_delta` (same count, different total body
+length), `content_delta` (same count and length, different content).
+All data already in `verify()` scope — no changes to `ProbeResult`,
+`probe()`, or the normalizer. Would obsolete the current
+`response_delta` fallback name (renamed to `content_delta`) and
+require one existing test to update its expected value. Estimated
+scope: same as `02c6a05` (one file, ~4 tests, one commit). Deferred
+here because it was not on the original ticket — open if triage
+quality of the current `response_delta` bucket becomes a priority.
