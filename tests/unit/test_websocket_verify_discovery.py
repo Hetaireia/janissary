@@ -229,14 +229,17 @@ def test_classify_delta_echoed_payload():
     )
 
 
-def test_classify_delta_response_delta():
-    """Different response without payload echo -> response_delta."""
+def test_classify_delta_length_delta():
+    """Same frame count, different body length -> length_delta."""
     from janissary.integrations.websocket_learn import _classify_delta
 
     p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
-    kind = _classify_delta(p, baseline_norm="ok", probe_norm="error internal")
-    assert kind == "response_delta", (
-        f"non-echo delta must classify as response_delta; got {kind!r}"
+    kind = _classify_delta(
+        p, baseline_norm="ok", probe_norm="error internal",
+        baseline_frame_count=1, probe_frame_count=1,
+    )
+    assert kind == "length_delta", (
+        f"same-count length difference must classify as length_delta; got {kind!r}"
     )
 
 
@@ -255,4 +258,46 @@ def test_verify_detail_carries_delta_classification():
     detail = candidates[0].detail
     assert "delta" in detail, (
         f"candidate detail must include delta classification; got {detail!r}"
+    )
+
+
+def test_classify_delta_frame_count_delta():
+    """Different number of s2c frames -> frame_count_delta."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
+    kind = _classify_delta(
+        p, baseline_norm="ab", probe_norm="cd",
+        baseline_frame_count=1, probe_frame_count=2,
+    )
+    assert kind == "frame_count_delta", (
+        f"differing frame counts must classify as frame_count_delta; got {kind!r}"
+    )
+
+
+def test_classify_delta_content_delta():
+    """Same frame count and length, different content -> content_delta."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
+    kind = _classify_delta(
+        p, baseline_norm="abc", probe_norm="xyz",
+        baseline_frame_count=1, probe_frame_count=1,
+    )
+    assert kind == "content_delta", (
+        f"same-length different-content must classify as content_delta; got {kind!r}"
+    )
+
+
+def test_classify_delta_precedence_echo_over_frame_count():
+    """echoed_payload must win precedence even when frame counts also differ."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="ECHO")
+    kind = _classify_delta(
+        p, baseline_norm="a", probe_norm="aECHO",
+        baseline_frame_count=1, probe_frame_count=2,
+    )
+    assert kind == "echoed_payload", (
+        f"echo precedence must override frame_count_delta; got {kind!r}"
     )
