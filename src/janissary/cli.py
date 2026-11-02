@@ -206,6 +206,42 @@ def _merge_graphql_into_scan(summary, gql_summary):
     return summary
 
 
+def _load_ws_payloads(path) -> list[str]:
+    """Read newline-delimited payloads. Skip blank lines and # comments."""
+    payloads: list[str] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        payloads.append(line)
+    return payloads
+
+
+def _merge_ws_into_scan(summary, ws_summary):
+    """Merge WebSocket discovery findings into a completed HTTP scan summary.
+
+    Mirrors _merge_graphql_into_scan. WebSocket findings already carry
+    _engine_emitted=True (routed through _ENGINE in Scanner.scan_ws),
+    so they pass the asserting list's append check when merged.
+
+    See docs/PHASE-6-PLAN.md FN-16.
+    """
+    for f in ws_summary.findings:
+        summary.findings.append(f)
+        summary.finding_count += 1
+    summary.total_requests += ws_summary.total_requests
+    if ws_summary.scan_incomplete and not summary.scan_incomplete:
+        summary.scan_incomplete = True
+        if not summary.abort_reason:
+            summary.abort_reason = (
+                ws_summary.abort_reason or "websocket scan incomplete"
+            )
+    if ws_summary.aborted and not summary.aborted:
+        summary.aborted = True
+        summary.abort_reason = ws_summary.abort_reason
+    return summary
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -213,6 +249,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
     if not args.url:
         print("[!] scan requires --url", file=sys.stderr)
+        return 64
+
+    if getattr(args, "ws", False) and not getattr(args, "ws_payloads", None):
+        print("[!] --ws requires --ws-payloads PATH", file=sys.stderr)
         return 64
     # --params is optional. Explicit --params always wins. If absent,
     # prefer the URL's own query-string keys; if the URL has no query
@@ -301,6 +341,21 @@ def cmd_scan(args: argparse.Namespace) -> int:
             print(f"[!] --json-template: invalid JSON: {_exc}", file=sys.stderr)
             return 64
 
+    ws_payloads = None
+    if getattr(args, "ws", False):
+        from pathlib import Path as _Path
+        _ws_path = _Path(args.ws_payloads)
+        if not _ws_path.exists():
+            print(f"[!] --ws-payloads: {_ws_path} not found", file=sys.stderr)
+            return 64
+        ws_payloads = _load_ws_payloads(_ws_path)
+        if not ws_payloads:
+            print(
+                f"[!] --ws-payloads: {_ws_path} contained no usable payloads",
+                file=sys.stderr,
+            )
+            return 64
+
     scanner = Scanner(
         target=args.url,
         params=params,
@@ -342,6 +397,17 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if not args.quiet and gql_summary.findings:
             print(
                 f"[*] GraphQL: {len(gql_summary.findings)} finding(s) "
+                f"(see --json / --jsonl / --export for detail)"
+            )
+
+    if getattr(args, "ws", False) and not summary.aborted:
+        if not args.quiet:
+            print("[*] WebSocket discovery...")
+        ws_summary = scanner.scan_ws(payloads=ws_payloads)
+        summary = _merge_ws_into_scan(summary, ws_summary)
+        if not args.quiet and ws_summary.findings:
+            print(
+                f"[*] WebSocket: {len(ws_summary.findings)} finding(s) "
                 f"(see --json / --jsonl / --export for detail)"
             )
 
@@ -1312,6 +1378,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--graphql",
         action="store_true",
         help="Also run GraphQL discovery (introspection, depth/alias probes) against the target",
+    )
+    scan.add_argument(
+        "--ws",
+        action="store_true",
+        help="Also run WebSocket discovery (requires --ws-payloads)",
+    )
+    scan.add_argument(
+        "--ws-payloads",
+        default=None,
+        metavar="PATH",
+        help="Newline-delimited payload file for WebSocket discovery "
+             "(required with --ws). Lines starting with # and blank lines are skipped.",
     )
     scan.add_argument(
         "--no-waf",
