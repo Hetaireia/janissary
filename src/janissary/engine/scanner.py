@@ -250,6 +250,26 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     return finding
 
 
+def _ws_url_from_target(target: str) -> str:
+    """Return a WebSocket URL derived from an HTTP(S) target.
+
+    scan_ws calls preflight() (HTTP-only) against self.target, then
+    hands the same target to learn() and WebSocketDiscoveryModule,
+    both of which call websockets.connect() -- which rejects http(s).
+    This seam is the one place that reconciles the two protocols.
+
+    ws:// and wss:// pass through unchanged so that callers already
+    on the right scheme are not double-converted.
+    """
+    if target.startswith("ws://") or target.startswith("wss://"):
+        return target
+    if target.startswith("https://"):
+        return "wss://" + target[len("https://"):]
+    if target.startswith("http://"):
+        return "ws://" + target[len("http://"):]
+    return target
+
+
 _ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), WebSocketReconConfirmer(), GraphQLReconConfirmer(), AnalyzerImplicitConfirmer()])
 
 
@@ -766,9 +786,10 @@ class Scanner:
             summary.abort_reason = reason
             return summary
 
+        ws_target = _ws_url_from_target(self.target)
         try:
             model = asyncio.run(
-                learn(self.target, payloads=payloads, timeout=self.timeout)
+                learn(ws_target, payloads=payloads, timeout=self.timeout)
             )
         except Exception as exc:
             summary.scan_incomplete = True
@@ -795,7 +816,7 @@ class Scanner:
             return summary
 
         module = WebSocketDiscoveryModule(
-            url=self.target, model=model, timeout=self.timeout
+            url=ws_target, model=model, timeout=self.timeout
         )
         try:
             candidates = asyncio.run(module.discover(max_probes=50))
