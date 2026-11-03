@@ -133,7 +133,8 @@
     },
     "M13": {
       "label": "WAF pacing e2e + published evasion result",
-      "proposed": "15-NOV-2026"
+      "proposed": "15-NOV-2026",
+      "delivered": "2026-10-20"
     },
     "M14": {
       "label": "OOB channel (interactsh) integration",

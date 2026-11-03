@@ -152,3 +152,6 @@ JANISSARY-ASCENSION.md
 
 # Ascension rendered dashboards (regenerable from local state)
 renders/
+
+audit_out/
+janissary_audit.tgz
