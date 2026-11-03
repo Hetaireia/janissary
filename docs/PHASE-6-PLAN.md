@@ -1365,6 +1365,32 @@ smallest change. Alone, inert.
 (`websocket_learn.py:296, 306, 310, 317`), not probe. Probe path has no
 send-to-first-s2c latency capture.
 
+**Modification point (discovered 2026-11-03):** first-frame timing
+cannot be inserted from outside `_collect_s2c`
+(`websocket_learn.py:229-248`). That helper is a self-contained async
+loop that already calls `perf_counter()` for the total-budget check
+(lines 237, 239) but discards the timestamp of the first successful
+`recv()`. Three viable change shapes, each with a different cost:
+
+1. Change its return type from `list[str]` to `tuple[list[str], float | None]`.
+   Cleanest interface. Requires auditing callers.
+2. Add a parallel `_collect_s2c_with_timing` variant. Duplication, but
+   isolates risk.
+3. Pass a mutable out-param (one-element list). Ugly, but smallest diff.
+
+Additionally, three error-path `ProbeResult(...)` constructions in
+`probe()` (mutation-fail ~line 430, connect-fail ~line 453, send-fail
+~line 483) each need a `response_time=` kwarg. The field defaults to
+`0.0`, so leaving them untouched is technically valid - but `0.0` is
+indistinguishable from "instant response". Whether error paths carry
+`0.0` or `None` is an implementation-session decision, not a filing
+decision.
+
+**Estimate correction:** FN-21's `~1-2 hours` for gap 2 is accurate.
+An initial read of `probe()` alone suggested `~30 min` on 2026-11-03;
+that estimate was wrong - it did not account for `_collect_s2c`'s
+shape or the three error-path constructions.
+
 ### Gap 3: the caller gates on content difference, excluding timing-only probes
 
 `websocket_learn.py:636-641`:
