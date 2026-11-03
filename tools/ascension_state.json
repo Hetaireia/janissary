@@ -139,10 +139,7 @@
     "M14": {
       "label": "OOB channel (interactsh) integration",
       "proposed": "22-NOV-2026",
-      "probe": {
-        "kind": "glob_exists",
-        "pattern": "src/**/oob*.py,src/**/interactsh*.py,tests/**/*oob*.py"
-      }
+      "delivered": "2026-11-04"
     },
     "M15": {
       "label": "Finding replay / Janissary explain",
