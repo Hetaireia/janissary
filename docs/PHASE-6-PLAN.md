@@ -202,7 +202,7 @@ schema-valid exports against a running corpus app.
 Neither needed code changes. Audit's "Medium if stubs" estimate was wrong;
 reality was Small, and Small is now zero remaining work.
 
-### Deferred work items (fully specified, not started)
+### Formerly-deferred work items (both shipped 2026-11-01)
 
 **FN-4 - SHIPPED (`f02d72d`) - agent orchestrator gap.** `janissary agent` against vampi exits 2
 with "no platforms detected and no fallback scan adapter registered".
@@ -218,17 +218,17 @@ own error message advertises the capability ("or pass nuclei_path explicitly").
 Fix shape: add `--nuclei-path` arg to the subparser at cli.py:1461, plumb
 through to `NucleiRunner(...)`, add a test. ~15-30 min.
 
-### Flag semantics discovery (worth a CLI docs fix, not yet filed)
+### Flag semantics discovery (documented 2026-11-01 at b4d9704)
 
 `--rate-limit` is total requests/second across all templates, not per-template.
 Observed: 219 templates at rate-limit 10 exceeded 120s; same set at rate-limit
-100 completed in 70.7s. `--rate-limit` help text (cli.py:1480) is silent on the
-semantic. One-line help update later; no behavior change.
+100 completed in 70.7s. `--rate-limit` help text (cli.py:1480) was silent on the
+semantic; fixed at `b4d9704` (2026-11-01 06:01). No behavior change.
 
 #
 ## Environment carry notes for next session
 
-- **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
+- **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`) - RESOLVED (see FN-6 resolution section below):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
 - Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
   needs manual PATH prepend, or use the shipped `--nuclei-path` flag (FN-5, `ebb449b`). `go install` would
   put it on PATH but fails on Go 1.27 (dependency graph mismatch); winget is
