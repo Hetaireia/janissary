@@ -222,13 +222,13 @@ through to `NucleiRunner(...)`, add a test. ~15-30 min.
 
 `--rate-limit` is total requests/second across all templates, not per-template.
 Observed: 219 templates at rate-limit 10 exceeded 120s; same set at rate-limit
-100 completed in 70.7s. `--rate-limit` help text (cli.py:1480) was silent on the
-semantic; fixed at `b4d9704` (2026-11-01 06:01). No behavior change.
+100 completed in 70.7s. `--rate-limit` help text was silent on the semantic; fixed at
+`b4d9704` (2026-11-01 06:01). No behavior change.
 
 #
 ## Environment carry notes for next session
 
-- **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`) - RESOLVED (see FN-6 resolution section below):** the fallback scan adapter runs and the agent exits 0, but a live run against vampi produced **0 findings**. Cause unmeasured: could be built-in default params not matching endpoint forms, or `scan -u` on a bare URL also finding 0. Next measurement: run `janissary scan -u http://127.0.0.1:5000` directly and compare findings count. If direct scan >0, gap is parameter discovery in the fallback; if 0, gap is broader.
+- **FN-6 candidate (surfaced 2026-11-01 at `f02d72d`) - RESOLVED (see FN-6 resolution section below):** the fallback scan adapter runs and the agent exits 0. The 2026-11-01 live run producing 0 findings was a measurement error, not a fallback bug: default `--inject-in auto` is query for GET, and the target endpoint is path-injection. The invocation that fires and the 9 findings it produces are documented in the FN-6 resolution section.
 - Nuclei not on PATH after direct-download install. `%LOCALAPPDATA%\Programs\nuclei`
   needs manual PATH prepend, or use the shipped `--nuclei-path` flag (FN-5, `ebb449b`). `go install` would
   put it on PATH but fails on Go 1.27 (dependency graph mismatch); winget is
