@@ -1159,3 +1159,138 @@ it precisely where `response_delta` used to blur it.
 
 **Still deferred (multi-session):** status and timing deltas — see
 the preceding "If pursued" section for the required work.
+
+## FN-20 — Host-header ACL bypass is undetected as a distinct finding class
+
+**Status: FILED 2026-11-03. New feature. Not a bug — the scanner's
+differential model catches the delta but does not name it.**
+
+### What it is
+
+Access-control lists that match the `Host` header by exact literal
+string (e.g. `if host == "target.com"`) can be bypassed by requests
+whose Host header is a *functionally equivalent but string-distinct*
+form:
+
+- `Host: target.com:443` — DNS-equivalent, string-distinct
+- `Host: target.com.` — trailing-dot FQDN, string-distinct
+- `Host: target.com:80` on an HTTPS listener, and similar variants
+
+The backend resolves each form correctly (the port suffix matches the
+listener, the trailing dot is stripped by DNS resolution), but the ACL
+sees a different string and does not match its block rule. A request
+that returned `403 Forbidden` under `Host: target.com` can return
+`200 OK` under `Host: target.com:443`.
+
+When that bypass exposes an application endpoint (login form, admin
+path), the exposed endpoint is then reachable by the scanner's existing
+payloads.
+
+### Current state
+
+- `--inject-in header` accepts an arbitrary header name via `-p`:
+  `scanner.py:476-478` sets `hdrs[param] = value`. `Host` is reachable.
+- A `Host`-header variation that changes the response is caught by the
+  existing differential model as `content_delta` (or reflection, or
+  length delta, depending on what changed). **The delta fires.**
+- But the finding carries no signal that the change is
+  access-control-bypass-shaped. A user reading "content delta on Host
+  parameter" cannot distinguish "reflected payload in an error page"
+  from "403 to 200 ACL bypass."
+- `LIMITATIONS.md` does not document Host-header bypass as a detection
+  class.
+
+### Why this matters
+
+The differential signal here is unusually clean: `403 Forbidden` to
+`200 OK` is nearly zero-false-positive. That matches the tool's
+"results you can trust" positioning more directly than most detection
+additions. It is the kind of finding a DAST scanner should produce.
+
+### Source and verification status
+
+**Community report** (public bug-bounty disclosure, `x.com` post,
+2026-11-03) describes a `Host: target.com:443` bypass that reached a
+time-based SQLi on a private BBP.
+
+**What is verified:** the technical class is well-documented. Exact-
+string Host allowlists are bypassable via the port-suffix and
+trailing-dot forms on systems that resolve-and-forward without
+normalizing the Host string. `scanner.py:476-478` reachability of Host
+via `-p` is verified by direct code read.
+
+**What is NOT verified:** whether the specific target described in the
+post behaves this way, because the original disclosure was not
+reproducible from the material available. The implementation session
+must build its own test target with a known-vulnerable configuration
+before any finding class is wired in.
+
+**Verification criterion 1 (feasibility):** a red test asserting that
+`-p Host --inject-in header` actually places the mutated value in the
+outgoing `Host:` header (not overridden by `requests.Session`). If
+`requests` overrides it, the implementation path is a raw socket or
+`http.client`, not `session.get` — this is the load-bearing unknown.
+
+**Verification criterion 2 (correctness):** a minimal test target —
+~20-line Flask app with `if request.host not in ("localhost:5000",):
+return 403` — must:
+  (a) return `403` under `Host: localhost:5000` (baseline),
+  (b) return `200` under `Host: localhost:5000:443` and
+      `Host: localhost.:5000` (bypass variants),
+  (c) prove the bypass on the target, not just in the harness.
+
+**Verification criterion 3 (no false positives):** a target that
+correctly parses the Host (e.g. uses `urlparse` after DNS) must not
+trigger the finding for any variant. `403` under all forms.
+
+**Verification criterion 4 (finding class):** a new finding class
+`host_header_acl_bypass` emitted when baseline-and-variant status codes
+differ (e.g. baseline `403`, variant `200`). Detail string includes
+the specific variant that bypassed. Severity: high (an ACL bypass on a
+live target is more severe than reflected content).
+
+**Verification criterion 5 (negative on unrelated Host changes):**
+`Host: localhost:5000` to `Host: localhost:5001` (different port,
+not listener-equivalent) must NOT emit the finding; the port-difference
+is not a bypass, it's a routing failure. Only same-listener variants
+(443/80 matching, trailing dot, case, whitespace) emit.
+
+### Proposed implementation
+
+**Estimate: 1-2 sessions.**
+
+1. **Feasibility red test** (criterion 1) — small, blocking. ~15 min.
+2. **Test target** — minimal Flask app with deliberately-weak Host check.
+   Goes in `tests/fixtures/` or `benchmark/track_c/fixtures/`. ~30 min.
+3. **ACL-bypass detection module** — `integrations/host_bypass.py`:
+   enumerates the variants (`:443`, `:80`, trailing dot, case, trailing
+   whitespace), issues each against the baseline, compares status codes.
+   Emits `CandidateFinding` when status differs and the variant is
+   listener-equivalent. ~2-3 hours.
+4. **Finding class + verification criterion 2/3/5 tests.** ~1-2 hours.
+5. **Scanner wiring** (optional — the module can ship standalone first,
+   matching GraphQL's `graphql` subcommand before `scan` integration).
+   Adds `--host-bypass` flag to `scan`, chains into summary. ~1 hour.
+6. **Benchmark case** in `benchmark/track_c/cases.csv` — one row
+   demonstrating the bypass. ~30 min.
+
+Total ~6-8 hours of work, distributed across 1-2 sessions.
+
+### Not blocked by
+
+- FN-15 (GraphQL) — independent
+- FN-16 (WebSocket) — independent
+- FN-17 (gRPC) — independent
+- ADR-014 (Protobuf dependency) — independent
+
+### Filed-by evidence
+
+- Public disclosure: bug-bounty report on `x.com`, 2026-11-03 (not
+  reproducible from available material; technical class verified,
+  specific target not)
+- `src/janissary/engine/scanner.py:476-478` — Host-header reachability
+  via `-p` (verified by direct read)
+- `src/janissary/engine/scanner.py:397-406` — `header` in the
+  `inject_in` whitelist
+- Verification block from 2026-11-03 session: feasibility confirmed,
+  detection class absent
