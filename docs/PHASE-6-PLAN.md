@@ -1294,3 +1294,116 @@ Total ~6-8 hours of work, distributed across 1-2 sessions.
   `inject_in` whitelist
 - Verification block from 2026-11-03 session: feasibility confirmed,
   detection class absent
+
+## FN-21 — WS timing delta requires five coordinated changes, not one branch
+
+**Status: FILED 2026-11-03. Scoping note. Supersedes the "smaller
+alternative" framing of the FN-16 follow-up scoping note
+(`PHASE-6-PLAN.md:1122-1161`).**
+
+### What it is
+
+The FN-16 follow-up note said timing deltas are a multi-session change.
+An implementation attempt on 2026-11-03 confirmed it. A naive
+implementation (add a branch to `_classify_delta`) is insufficient:
+a timing-only delta (identical content, different timing) **never
+reaches `_classify_delta`** from production. Five gaps must close
+together.
+
+### Gap 1: `_classify_delta` has no timing branch
+
+`websocket_learn.py:558-565` — 4-way taxonomy. `timing_delta` (below
+`content_delta` per ADR-013's "most specific signal wins") is the
+smallest change. Alone, inert.
+
+### Gap 2: `ProbeResult.response_time` is populated nowhere in production
+
+`protocols/websocket.py:195-221` — no timing field. `WebSocketMessage.elapsed`
+(`websocket.py:43`) is populated only in learn phase
+(`websocket_learn.py:296, 306, 310, 317`), not probe. Probe path has no
+send-to-first-s2c latency capture.
+
+### Gap 3: the caller gates on content difference, excluding timing-only probes
+
+`websocket_learn.py:636-641`:
+
+    if baseline_norm != probe_norm:
+        delta_kind = _classify_delta(...)
+        candidates.append(_probe_to_candidate(p, url, delta_kind))
+
+A timing-only delta fails the content guard and is never classified.
+**The load-bearing gap.** Guard becomes:
+
+    if baseline_norm != probe_norm or _timing_differs(baseline_rt, p.response_time):
+
+with `_timing_differs` reusing `detection/analyzer.py:651-681`'s
+z-score pattern.
+
+### Gap 4: baseline timing needs std-dev, not just a mean
+
+`detection/analyzer.py:313-344` implements the pattern: baseline across
+N samples, mean + std, `std_elapsed < 0.05` gates stability, z-score
+beyond threshold fires. Single-sample baseline is insufficient — local
+jitter is 20-50ms and will false-positive. Baseline capture gains a
+multi-sample cycle.
+
+### Gap 5: `no_delta` return is load-bearing
+
+Current fallthrough (`websocket_learn.py:565`) returns `content_delta`
+even on identical content, but the caller's guard makes it unreachable.
+Adding the timing branch forces `no_delta` for identical content and
+identical timing. `_probe_to_candidate` call must then be guarded on
+`delta_kind != "no_delta"`, not just `if delta_kind:`.
+
+### Verification criteria
+
+1. **Probe capture:** `ProbeResult.response_time` populated from
+   mock-session send/first-recv latency.
+2. **Baseline std-dev:** baseline capture produces mean + std across N
+   samples.
+3. **timing_delta fires:** identical-content, delayed-response probe
+   classifies `timing_delta` and emits a candidate.
+4. **Jitter does not fire:** timing delta inside baseline std classifies
+   `no_delta`, emits nothing.
+5. **Regression:** all 4 existing delta classes and 5 existing
+   `test_classify_delta_*` tests unchanged.
+
+### Why "implement the branch first" does not work
+
+An attempt on 2026-11-03 added the branch, field, parameter, and 4
+tests. 2 tests went red for the right reason, 2 green. Reverted: making
+all 4 green would have produced dead code (unreachable from
+`verify()`), and "tested and shipping" on inert code is worse than no
+implementation.
+
+### Proposed implementation
+
+**Estimate: 2-3 sessions, ~6-10 hours.**
+
+1. Probe capture (gap 2) — ~1-2 hours.
+2. Baseline multi-sample (gap 4) — ~1-2 hours.
+3. Caller guard widening (gap 3) — ~1 hour.
+4. Classify branch + `no_delta` (gaps 1, 5) — ~1 hour.
+5. Tests (all 5 criteria) — ~2-3 hours.
+6. Benchmark WebSocket fixture with known timing — ~1 hour.
+
+Order: (1) and (2) before (3); (4) last.
+
+### Not blocked by
+
+- FN-20, FN-17, ADR-014 — all independent.
+
+### Filed-by evidence
+
+- `docs/PHASE-6-PLAN.md:1122-1161` — original scoping note; 2026-11-02
+  judgment confirmed by 2026-11-03 attempt
+- `src/janissary/integrations/websocket_learn.py:636-641` — caller guard
+  (gap 3, load-bearing)
+- `src/janissary/integrations/websocket_learn.py:537-565` —
+  `_classify_delta`
+- `src/janissary/protocols/websocket.py:33-55, 195-235` —
+  `WebSocketMessage.elapsed`, `ProbeResult`
+- `src/janissary/detection/analyzer.py:313-344, 651-681` — z-score
+  pattern to reuse
+- 2026-11-03 implementation attempt, reverted (2 red, 2 green, would
+  have been dead code)
