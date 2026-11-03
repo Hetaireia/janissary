@@ -149,8 +149,6 @@ tools/*.bak-*
 
 # Ascension (hyphenated + inputs — untracked 2026-11-01)
 JANISSARY-ASCENSION.md
-tools/ascension.py
-tools/ascension_state.json
 
 # Ascension rendered dashboards (regenerable from local state)
 renders/
