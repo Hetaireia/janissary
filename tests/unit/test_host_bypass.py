@@ -338,3 +338,58 @@ def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
 
     assert rc == 0, f"expected rc=0, got {rc}"
     inst.scan_host_bypass.assert_called_once()
+# --- FN-20 follow-up: --baseline-host on scan ---
+
+
+def test_scan_baseline_host_flag_registered():
+    """--baseline-host must parse alongside --host-bypass."""
+    from janissary.cli import build_parser
+
+    p = build_parser()
+    args = p.parse_args([
+        "scan", "-u", "http://example.com/",
+        "--host-bypass", "--baseline-host", "app.local",
+    ])
+    assert args.host_bypass is True
+    assert args.baseline_host == "app.local"
+
+
+def test_scan_baseline_host_defaults_none():
+    """Absent --baseline-host leaves the value as None."""
+    from janissary.cli import build_parser
+
+    p = build_parser()
+    args = p.parse_args([
+        "scan", "-u", "http://example.com/", "--host-bypass",
+    ])
+    assert args.baseline_host is None
+
+
+def test_scan_passes_baseline_host_to_scanner():
+    """cmd_scan threads args.baseline_host into scan_host_bypass."""
+    import sys
+    from unittest.mock import patch
+    from janissary.cli import main
+    from janissary.engine.scanner import ScanSummary
+
+    empty = ScanSummary(target="http://example.com/", params=["x"], method="GET")
+    argv = [
+        "janissary", "scan", "-u", "http://example.com/",
+        "--host-bypass", "--baseline-host", "app.local", "--quiet", "--no-waf",
+    ]
+    with patch.object(sys, "argv", argv):
+        with patch("janissary.cli.Scanner") as MockScanner:
+            inst = MockScanner.return_value
+            inst.scan.return_value = empty
+            inst.scan_host_bypass.return_value = empty
+            try:
+                rc = main()
+            except SystemExit as exc:
+                rc = exc.code
+
+    assert rc == 0, f"expected rc=0, got {rc}"
+    inst.scan_host_bypass.assert_called_once()
+    call_kwargs = inst.scan_host_bypass.call_args.kwargs
+    assert call_kwargs.get("baseline_host") == "app.local", (
+        f"baseline_host must be passed through; got {call_kwargs!r}"
+    )
