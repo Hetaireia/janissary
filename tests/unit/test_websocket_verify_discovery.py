@@ -301,3 +301,157 @@ def test_classify_delta_precedence_echo_over_frame_count():
     assert kind == "echoed_payload", (
         f"echo precedence must override frame_count_delta; got {kind!r}"
     )
+
+# --- FN-21 gap 2: probe-path timing capture ---
+
+
+def test_probe_result_has_response_time_field():
+    """ProbeResult must expose response_time, default None.
+
+    None distinguishes "no timing captured" from "instant response" (0.0).
+    """
+    from janissary.protocols.websocket import ProbeResult
+
+    p = ProbeResult(
+        field_path="a", message_index=0, payload_name="x",
+        payload_value="'", category="sqli",
+        original_payload="o", mutated_payload="m",
+        response_frames=(), sent_ok=True,
+    )
+    assert hasattr(p, "response_time"), (
+        "ProbeResult must expose response_time (FN-21 gap 2)"
+    )
+    assert p.response_time is None, (
+        f"response_time default must be None, got {p.response_time!r}"
+    )
+
+    p2 = ProbeResult(
+        field_path="a", message_index=0, payload_name="x",
+        payload_value="'", category="sqli",
+        original_payload="o", mutated_payload="m",
+        response_frames=(), sent_ok=True,
+        response_time=0.42,
+    )
+    assert p2.response_time == 0.42
+
+
+def test_probe_result_to_dict_includes_response_time():
+    """to_dict() serializes response_time so it survives to JSON."""
+    from janissary.protocols.websocket import ProbeResult
+
+    p = ProbeResult(
+        field_path="a", message_index=0, payload_name="x",
+        payload_value="'", category="sqli",
+        original_payload="o", mutated_payload="m",
+        response_frames=(), sent_ok=True,
+        response_time=0.42,
+    )
+    d = p.to_dict()
+    assert "response_time" in d, (
+        f"to_dict() must include response_time; got keys {list(d.keys())}"
+    )
+    assert d["response_time"] == 0.42
+
+
+def test_collect_s2c_with_timing_returns_first_frame_time():
+    """_collect_s2c_with_timing reports elapsed seconds to first frame."""
+    import asyncio
+
+    class FakeWs:
+        def __init__(self, frames, delays):
+            self._frames = list(frames)
+            self._delays = list(delays)
+        async def recv(self):
+            if self._delays:
+                await asyncio.sleep(self._delays.pop(0))
+            if not self._frames:
+                await asyncio.sleep(3600)
+            return self._frames.pop(0)
+
+    from janissary.integrations.websocket_learn import _collect_s2c_with_timing
+
+    async def run():
+        ws = FakeWs(["f1", "f2"], [0.05, 0.0])
+        return await _collect_s2c_with_timing(
+            ws, quiet_s=0.1, total_budget_s=0.5
+        )
+
+    frames, first_s = asyncio.run(run())
+    assert frames == ["f1", "f2"], f"frames: {frames!r}"
+    assert first_s is not None, "first_s must be a float when a frame arrived"
+    assert 0.04 < first_s < 0.15, (
+        f"first_s ~= 0.05s expected (tolerance 0.04-0.15), got {first_s!r}"
+    )
+
+
+def test_collect_s2c_with_timing_returns_none_on_timeout():
+    """_collect_s2c_with_timing returns None for first_s when no frame arrived."""
+    import asyncio
+
+    class HangWs:
+        async def recv(self):
+            await asyncio.sleep(3600)
+
+    from janissary.integrations.websocket_learn import _collect_s2c_with_timing
+
+    async def run():
+        return await _collect_s2c_with_timing(
+            HangWs(), quiet_s=0.05, total_budget_s=0.2
+        )
+
+    frames, first_s = asyncio.run(run())
+    assert frames == [], f"expected no frames, got {frames!r}"
+    assert first_s is None, (
+        f"first_s must be None when no frame arrived, got {first_s!r}"
+    )
+def test_probe_populates_response_time():
+    """probe() must pass _collect_s2c_with_timing's first_s to ProbeResult.
+
+    FN-21 verification criterion 1. This test fails until probe() is
+    wired to call _collect_s2c_with_timing; the other four tests verify
+    the primitives but not the integration.
+    """
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from janissary.integrations.websocket_learn import probe
+
+    fake_ws = SimpleNamespace(
+        send=AsyncMock(),
+        recv=AsyncMock(),
+        close=AsyncMock(),
+    )
+    msg = SimpleNamespace(direction="c2s", payload='{"a":"orig"}')
+    seq = SimpleNamespace(messages=[msg])
+    field = SimpleNamespace(path="a", message_index=0)
+    model = SimpleNamespace(
+        injectable_fields=[field],
+        baseline_sequence=seq,
+    )
+
+    async def run():
+        with patch(
+            "janissary.integrations.websocket_learn._connect",
+            new=AsyncMock(return_value=fake_ws),
+        ), patch(
+            "janissary.integrations.websocket_learn._replay_prefix",
+            new=AsyncMock(),
+        ), patch(
+            "janissary.integrations.websocket_learn._collect_s2c",
+            new=AsyncMock(return_value=["fallback"]),
+        ), patch(
+            "janissary.integrations.websocket_learn._collect_s2c_with_timing",
+            new=AsyncMock(return_value=(["resp"], 0.42)),
+        ):
+            return await probe(
+                "ws://test/", model,
+                payloads=[("p1", "payload_val", "sqli")],
+                max_probes=1,
+            )
+
+    results = asyncio.run(run())
+    assert len(results) == 1, f"expected 1 result, got {len(results)}"
+    assert results[0].response_time == 0.42, (
+        f"probe() must populate response_time from "
+        f"_collect_s2c_with_timing; got {results[0].response_time!r}"
+    )

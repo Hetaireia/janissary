@@ -219,6 +219,7 @@ class ProbeResult:
     response_frames: tuple[str, ...]
     sent_ok: bool
     error_note: str | None = None
+    response_time: float | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -232,4 +233,5 @@ class ProbeResult:
             "response_frames": list(self.response_frames),
             "sent_ok": self.sent_ok,
             "error_note": self.error_note,
+            "response_time": self.response_time,
         }
