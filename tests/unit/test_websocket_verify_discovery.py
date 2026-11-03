@@ -455,3 +455,184 @@ def test_probe_populates_response_time():
         f"probe() must populate response_time from "
         f"_collect_s2c_with_timing; got {results[0].response_time!r}"
     )
+
+# --- FN-21 gap 4: baseline RTT sampling + std-dev ---
+
+
+def test_learned_model_has_baseline_rtt_field():
+    """LearnedModel exposes baseline_rtt, default empty dict.
+
+    Shape: dict[int, tuple[float, float, int]] mapping message_index
+    to (mean_seconds, stddev_seconds, n_samples). Empty when no
+    baseline timing was captured.
+    """
+    from janissary.protocols.websocket import LearnedModel, MessageSequence
+
+    m = LearnedModel(
+        wire_format="json",
+        baseline_sequence=MessageSequence(),
+    )
+    assert hasattr(m, "baseline_rtt"), (
+        "LearnedModel must expose baseline_rtt (FN-21 gap 4)"
+    )
+    assert m.baseline_rtt == {}, (
+        f"baseline_rtt default must be empty dict, got {m.baseline_rtt!r}"
+    )
+
+    m2 = LearnedModel(
+        wire_format="json",
+        baseline_sequence=MessageSequence(),
+        baseline_rtt={0: (0.05, 0.01, 3)},
+    )
+    assert m2.baseline_rtt[0] == (0.05, 0.01, 3)
+
+
+def test_rtt_stats_mean_and_pstdev():
+    """_rtt_stats returns (mean, population_stddev, n) for >=2 samples."""
+    from janissary.integrations.websocket_learn import _rtt_stats
+
+    mean, std, n = _rtt_stats([0.10, 0.12, 0.14])
+    assert n == 3
+    assert abs(mean - 0.12) < 1e-6, f"mean: {mean!r}"
+    # population stddev of [0.10, 0.12, 0.14] = sqrt((4e-4+0+4e-4)/3) ≈ 0.01633
+    assert abs(std - 0.01633) < 1e-3, f"std: {std!r}"
+
+
+def test_rtt_stats_handles_empty_and_single():
+    """Edge cases: empty list -> zeros; single sample -> std=0."""
+    from janissary.integrations.websocket_learn import _rtt_stats
+
+    assert _rtt_stats([]) == (0.0, 0.0, 0)
+    mean, std, n = _rtt_stats([0.05])
+    assert n == 1
+    assert abs(mean - 0.05) < 1e-6
+    assert std == 0.0
+
+
+def test_capture_baseline_timing_returns_stats():
+    """_capture_baseline_timing returns (mean, std, n) per c2s message index."""
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from janissary.integrations.websocket_learn import _capture_baseline_timing
+
+    class TimedWs:
+        def __init__(self):
+            self._recv_count = 0
+        async def send(self, payload):
+            self._recv_count = 0
+        async def recv(self):
+            if self._recv_count == 0:
+                self._recv_count += 1
+                await asyncio.sleep(0.02)
+                return "resp"
+            await asyncio.sleep(3600)
+        async def close(self):
+            pass
+
+    async def fake_connect(*args, **kwargs):
+        return TimedWs()
+
+    seq = SimpleNamespace(
+        messages=[
+            SimpleNamespace(direction="c2s", payload='{"a":"x"}'),
+            SimpleNamespace(direction="s2c", payload='{"a":"x"}'),
+        ]
+    )
+
+    async def run():
+        with patch(
+            "janissary.integrations.websocket_learn._connect",
+            new=AsyncMock(side_effect=fake_connect),
+        ):
+            return await _capture_baseline_timing(
+                "ws://test/", seq, n_samples=3,
+                timeout=0.5, quiet_s=0.05,
+            )
+
+    result = asyncio.run(run())
+    assert 0 in result, f"expected message_index 0 in result; got {result!r}"
+    mean, std, n = result[0]
+    assert n == 3, f"expected 3 samples, got {n}"
+    assert 0.005 < mean < 0.1, f"mean ~= 0.02s expected, got {mean!r}"
+    assert isinstance(std, float)
+
+
+def test_capture_baseline_timing_handles_connect_failure():
+    """_capture_baseline_timing returns {} when _connect raises."""
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from janissary.integrations.websocket_learn import _capture_baseline_timing
+
+    async def failing_connect(*args, **kwargs):
+        raise ConnectionRefusedError("test")
+
+    seq = SimpleNamespace(
+        messages=[SimpleNamespace(direction="c2s", payload="x")]
+    )
+
+    async def run():
+        with patch(
+            "janissary.integrations.websocket_learn._connect",
+            new=AsyncMock(side_effect=failing_connect),
+        ):
+            return await _capture_baseline_timing(
+                "ws://test/", seq, n_samples=2,
+                timeout=0.2, quiet_s=0.05,
+            )
+
+    result = asyncio.run(run())
+    assert result == {}, f"expected empty dict, got {result!r}"
+
+
+def test_learn_populates_baseline_rtt():
+    """learn() calls _capture_baseline_timing and stores the result.
+
+    FN-21 verification criterion 2. RED until learn() is wired; the
+    other tests verify the field and helper but not the wiring.
+    """
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, patch
+    from janissary.integrations.websocket_learn import learn
+
+    fake_ws = SimpleNamespace(
+        send=AsyncMock(),
+        recv=AsyncMock(),
+        close=AsyncMock(),
+    )
+
+    async def fake_connect(*args, **kwargs):
+        return fake_ws
+
+    fake_stats = {0: (0.05, 0.005, 3)}
+    fake_field = SimpleNamespace(path="a", message_index=0)
+
+    async def run():
+        with patch(
+            "janissary.integrations.websocket_learn._connect",
+            new=AsyncMock(side_effect=fake_connect),
+        ), patch(
+            "janissary.integrations.websocket_learn._collect_s2c",
+            new=AsyncMock(return_value=["echo"]),
+        ), patch(
+            "janissary.integrations.websocket_learn.detect_wire_format",
+            return_value="json",
+        ), patch(
+            "janissary.integrations.websocket_learn.find_injectable_fields",
+            return_value=[fake_field],
+        ), patch(
+            "janissary.integrations.websocket_learn._capture_baseline_timing",
+            new=AsyncMock(return_value=fake_stats),
+        ):
+            return await learn(
+                "ws://test/", payloads=['{"a":"x"}'],
+                n_samples=3,
+            )
+
+    model = asyncio.run(run())
+    assert model.baseline_rtt == fake_stats, (
+        f"learn() must populate baseline_rtt via _capture_baseline_timing; "
+        f"got {model.baseline_rtt!r}"
+    )

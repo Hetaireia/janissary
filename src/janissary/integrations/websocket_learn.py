@@ -279,6 +279,87 @@ async def _collect_s2c_with_timing(
     return out, first_s
 
 
+def _rtt_stats(samples: list[float]) -> tuple[float, float, int]:
+    """Return (mean, population_stddev, n) for a list of RTT samples.
+
+    Empty list -> (0.0, 0.0, 0). Single sample -> (mean, 0.0, 1).
+    Population stddev (not sample stddev): we treat the samples as the
+    complete set, not a subset drawn from a larger population. This
+    makes the stddev the honest "spread of what we observed" and avoids
+    the small-sample bias that sample-stddev would introduce at n=2.
+    """
+    import statistics
+    n = len(samples)
+    if n == 0:
+        return (0.0, 0.0, 0)
+    if n == 1:
+        return (samples[0], 0.0, 1)
+    return (statistics.mean(samples), statistics.pstdev(samples), n)
+
+
+async def _capture_baseline_timing(
+    url: str,
+    sequence,
+    n_samples: int,
+    timeout: float = 10.0,
+    quiet_s: float = 1.0,
+    origin: str | None = None,
+    headers: dict | None = None,
+) -> dict[int, tuple[float, float, int]]:
+    """Sample per-message-index round-trip times against the baseline.
+
+    For each c2s message in sequence, replays all preceding c2s messages
+    plus the target c2s message on a fresh connection, then measures
+    elapsed seconds until the first s2c frame. Repeats n_samples times.
+    A single connection is reused across samples for efficiency; each
+    probe cycle resets send state naturally because the c2s send is the
+    timing trigger.
+
+    Returns {message_index: (mean_s, pstdev_s, n)}. Indices with no
+    successful sample are omitted. Returns {} on connect failure so the
+    caller can fall back to no-timing behavior.
+
+    FN-21 gap 4: this is the source of LearnedModel.baseline_rtt that
+    gap 3's caller guard will consume.
+    """
+    try:
+        ws = await _connect(url, timeout=timeout, origin=origin, headers=headers)
+    except Exception:
+        return {}
+
+    samples_by_index: dict[int, list[float]] = {}
+    try:
+        c2s_indices = [
+            i for i, m in enumerate(sequence.messages)
+            if m.direction == "c2s"
+        ]
+        for idx in c2s_indices:
+            samples_by_index[idx] = []
+
+        for _ in range(n_samples):
+            for idx in c2s_indices:
+                try:
+                    for pre in sequence.messages[:idx + 1]:
+                        if pre.direction == "c2s":
+                            await ws.send(pre.payload)
+                    _, first_s = await _collect_s2c_with_timing(
+                        ws, quiet_s=quiet_s, total_budget_s=timeout
+                    )
+                    if first_s is not None:
+                        samples_by_index[idx].append(first_s)
+                except Exception:
+                    continue
+    finally:
+        with contextlib.suppress(Exception):
+            await ws.close()
+
+    result: dict[int, tuple[float, float, int]] = {}
+    for idx, samples in samples_by_index.items():
+        if samples:
+            result[idx] = _rtt_stats(samples)
+    return result
+
+
 async def learn(
     url: str,
     payloads: list[str],
@@ -287,6 +368,7 @@ async def learn(
     headers: dict | None = None,
     passive_window_s: float = 1.5,
     response_quiet_s: float = 1.0,
+    n_samples: int = 3,
 ) -> LearnedModel:
     """Learn a target's WebSocket message structure.
 
@@ -359,11 +441,22 @@ async def learn(
     if not fields:
         notes_list.append("no_injectable_fields_found")
 
+    baseline_rtt: dict[int, tuple[float, float, int]] = {}
+    try:
+        baseline_rtt = await _capture_baseline_timing(
+            url, sequence, n_samples=n_samples,
+            timeout=timeout, quiet_s=response_quiet_s,
+            origin=origin, headers=headers,
+        )
+    except Exception:
+        pass
+
     return LearnedModel(
         wire_format=wire_format,
         baseline_sequence=sequence,
         injectable_fields=fields,
         notes=tuple(notes_list),
+        baseline_rtt=baseline_rtt,
     )
 
 

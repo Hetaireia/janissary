@@ -189,6 +189,7 @@ class LearnedModel:
     baseline_sequence: MessageSequence
     injectable_fields: list[InjectableField] = field(default_factory=list)
     notes: tuple[str, ...] = ()
+    baseline_rtt: dict[int, tuple[float, float, int]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
