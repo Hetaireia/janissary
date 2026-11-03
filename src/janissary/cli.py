@@ -345,6 +345,14 @@ def cmd_scan(args: argparse.Namespace) -> int:
         apply_to_session(auth_session, auth_cfg)
 
     collaborator_client = None
+    _collab_url = getattr(args, "collaborator", None)
+    _use_interactsh = getattr(args, "interactsh", False)
+    if _collab_url and _use_interactsh:
+        print(
+            "[!] --collaborator and --interactsh are mutually exclusive",
+            file=sys.stderr,
+        )
+        return 64
     if getattr(args, "collaborator", None):
         from janissary.integrations.collaborator import (
             CollaboratorClient,
@@ -358,6 +366,19 @@ def cmd_scan(args: argparse.Namespace) -> int:
             )
         except CollaboratorError as exc:
             print(f"[!] --collaborator: {exc}", file=sys.stderr)
+            return 64
+    elif _use_interactsh:
+        from janissary.integrations.collaborator import CollaboratorError
+        from janissary.integrations.interactsh import InteractshClient
+
+        try:
+            collaborator_client = InteractshClient(
+                server=getattr(args, "interactsh_server", None),
+                token=getattr(args, "interactsh_token", None),
+                timeout=args.timeout,
+            )
+        except CollaboratorError as exc:
+            print(f"[!] --interactsh: {exc}", file=sys.stderr)
             return 64
 
     _json_template = None
@@ -1447,6 +1468,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="URL",
         help="Burp-compatible collaborator URL for SSRF OOB detection.",
+    )
+    scan.add_argument(
+        "--interactsh",
+        action="store_true",
+        default=False,
+        help="Enable OOB via Interactsh (native; requires janissary[oob]).",
+    )
+    scan.add_argument(
+        "--interactsh-server",
+        default=None,
+        metavar="URL",
+        help="Self-hosted Interactsh server (default: public rotation).",
+    )
+    scan.add_argument(
+        "--interactsh-token",
+        default=None,
+        metavar="TOKEN",
+        help="Auth token for self-hosted Interactsh server.",
     )
     scan.add_argument(
         "--ssrf-timeout",
