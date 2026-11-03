@@ -1162,8 +1162,50 @@ the preceding "If pursued" section for the required work.
 
 ## FN-20 — Host-header ACL bypass is undetected as a distinct finding class
 
-**Status: FILED 2026-11-03. New feature. Not a bug — the scanner's
-differential model catches the delta but does not name it.**
+**Status: SHIPPED 2026-11-03.** Subcommand at `9c15fd3`; scan
+wiring at `334d970`. All five verification criteria met, with
+the one known limitation noted below.
+
+Originally filed 2026-11-03:
+
+> **Status: FILED 2026-11-03. New feature. Not a bug — the scanner's
+> differential model catches the delta but does not name it.**
+
+### Verification criteria as met (2026-11-03)
+
+- **Criterion 1 (feasibility, `requests` honors manual Host):**
+  Proven via standalone probe before any code: server saw
+  `test.example.com:443`, `test.example.com.`, `evil.example` -
+  all preserved through `requests.Session.get(..., headers={'Host': ...})`.
+- **Criterion 2 (correct bypass on vulnerable target):**
+  `test_bypass_detected_on_vulnerable_target` plus end-to-end
+  smoke via `janissary scan --host-bypass` against a live HTTP
+  server returning 403 for `Host: 127.0.0.1` and 200 for the
+  bypass variants. Result: 2 findings, `finding_count: 2` in JSON.
+- **Criterion 3 (no false positives on correct target):**
+  `test_no_false_positive_on_correct_target`.
+- **Criterion 4 (finding class):** `test_finding_shape` asserts
+  `category=host_header`, `severity=high`,
+  `finding_type=host_header_acl_bypass`; JSON smoke confirmed
+  `class=host_header`.
+- **Criterion 5 (no non-listener-equivalent port variants):**
+  `test_variant_hosts_enumeration` asserts no `:443` in HTTP
+  variants, empty list for ported host.
+
+### Known limitations (deferred, not filed as new FN)
+
+- **`scan --host-bypass` has no `--baseline-host` override.** The
+  standalone `janissary host-bypass` subcommand does. For targets
+  where the URL host is the blocked host (typical), the derived
+  baseline is correct. For IP-vs-domain targets where the blocked
+  name differs from the URL host, the scan-flag path can't specify
+  an override. Small enough to pick up opportunistically; not
+  blocking.
+- **Only two variants are probed:** `:80`/`:443` explicit port and
+  trailing-dot FQDN. Case variants, whitespace, userinfo (`@`),
+  and null-byte injection are not probed. These cover the
+  documented bypasses from the source disclosure; additional
+  variants would each need listener-equivalence analysis.
 
 ### What it is
 
