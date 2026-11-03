@@ -248,6 +248,37 @@ async def _collect_s2c(
     return out
 
 
+async def _collect_s2c_with_timing(
+    ws,
+    quiet_s: float,
+    total_budget_s: float,
+) -> tuple[list[str], float | None]:
+    """Collect s2c frames and report elapsed seconds to first frame.
+
+    Same loop as _collect_s2c, but also returns the elapsed time from
+    function entry to the first successful recv() (perf_counter-based).
+    Returns (frames, first_frame_elapsed_s); first_frame_elapsed_s is
+    None if no frame arrived before timeout. Used by probe() to capture
+    per-probe response time (FN-21 gap 2).
+    """
+    out: list[str] = []
+    start = time.perf_counter()
+    first_s: float | None = None
+    while True:
+        remaining = total_budget_s - (time.perf_counter() - start)
+        if remaining <= 0:
+            break
+        wait_for = min(quiet_s, remaining)
+        try:
+            frame = await asyncio.wait_for(ws.recv(), timeout=wait_for)
+        except asyncio.TimeoutError:
+            break
+        if first_s is None:
+            first_s = time.perf_counter() - start
+        out.append(_decode_frame(frame))
+    return out, first_s
+
+
 async def learn(
     url: str,
     payloads: list[str],
@@ -484,7 +515,7 @@ async def probe(
                         error_note=f"send_failed: {type(exc).__name__}",
                     ))
                     continue
-                s2c_frames = await _collect_s2c(
+                s2c_frames, first_frame_s = await _collect_s2c_with_timing(
                     ws, quiet_s=response_quiet_s, total_budget_s=timeout
                 )
                 results.append(ProbeResult(
@@ -497,6 +528,7 @@ async def probe(
                     mutated_payload=mutated,
                     response_frames=tuple(s2c_frames),
                     sent_ok=True,
+                    response_time=first_frame_s,
                 ))
             finally:
                 with contextlib.suppress(Exception):
