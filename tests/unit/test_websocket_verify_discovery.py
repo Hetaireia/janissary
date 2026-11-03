@@ -51,6 +51,7 @@ def _probe(
     sent_ok: bool = True,
     category: str = "sqli",
     payload_value: str = "'",
+    response_time: float | None = None,
 ) -> ProbeResult:
     return ProbeResult(
         field_path="a",
@@ -62,6 +63,7 @@ def _probe(
         mutated_payload=json.dumps({"a": payload_value}),
         response_frames=response_frames,
         sent_ok=sent_ok,
+        response_time=response_time,
     )
 
 
@@ -635,4 +637,121 @@ def test_learn_populates_baseline_rtt():
     assert model.baseline_rtt == fake_stats, (
         f"learn() must populate baseline_rtt via _capture_baseline_timing; "
         f"got {model.baseline_rtt!r}"
+    )
+# --- FN-21 gaps 1+3+5: timing delta classification + caller guard + no_delta ---
+
+
+def test_timing_differs_none_probe_time():
+    """Probe with response_time=None cannot differ (no measurement)."""
+    from janissary.integrations.websocket_learn import _timing_differs
+
+    p = _probe(response_frames=(), payload_value="x", response_time=None)
+    assert _timing_differs(p, baseline_mean=0.1, baseline_stddev=0.02) is False
+
+
+def test_timing_differs_within_noise():
+    """Small delta within noise does not fire timing_delta."""
+    from janissary.integrations.websocket_learn import _timing_differs
+
+    # 0.2s vs 0.1s mean, 0.05s std -> z=2.0, delta=0.1s. Both below thresholds.
+    p = _probe(response_frames=(), payload_value="x", response_time=0.2)
+    assert _timing_differs(p, baseline_mean=0.1, baseline_stddev=0.05) is False
+
+
+def test_timing_differs_significant():
+    """Large statistical AND absolute delta fires timing_delta."""
+    from janissary.integrations.websocket_learn import _timing_differs
+
+    # 2.0s vs 0.1s mean, 0.05s std -> z=38, delta=1.9s. Both above thresholds.
+    p = _probe(response_frames=(), payload_value="x", response_time=2.0)
+    assert _timing_differs(p, baseline_mean=0.1, baseline_stddev=0.05) is True
+
+
+def test_timing_differs_faster_response():
+    """Probe faster than baseline is NOT a delta (only slower is signal)."""
+    from janissary.integrations.websocket_learn import _timing_differs
+
+    # 0.05s vs 0.1s mean. Faster, not slower. No signal.
+    p = _probe(response_frames=(), payload_value="x", response_time=0.05)
+    assert _timing_differs(p, baseline_mean=0.1, baseline_stddev=0.05) is False
+
+
+def test_timing_differs_below_absolute_floor():
+    """Huge z-score but small absolute delta does not fire (absolute floor wins)."""
+    from janissary.integrations.websocket_learn import _timing_differs
+
+    # 0.3s vs 0.1s mean, 0.001s std -> z=200 but delta=0.2s < 0.5s floor.
+    p = _probe(response_frames=(), payload_value="x", response_time=0.3)
+    assert _timing_differs(p, baseline_mean=0.1, baseline_stddev=0.001) is False
+
+
+def test_classify_delta_timing_delta():
+    """Same content, timing_differs=True -> timing_delta."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="X")
+    kind = _classify_delta(
+        p, baseline_norm="abc", probe_norm="abc",
+        baseline_frame_count=1, probe_frame_count=1,
+        timing_differs=True,
+    )
+    assert kind == "timing_delta", (
+        f"identical content + timing_differs must be timing_delta; "
+        f"got {kind!r}"
+    )
+
+
+def test_classify_delta_no_delta():
+    """Same content, timing_differs=False -> no_delta (not content_delta)."""
+    from janissary.integrations.websocket_learn import _classify_delta
+
+    p = _probe(response_frames=(), payload_value="X")
+    kind = _classify_delta(
+        p, baseline_norm="abc", probe_norm="abc",
+        baseline_frame_count=1, probe_frame_count=1,
+        timing_differs=False,
+    )
+    assert kind == "no_delta", (
+        f"identical content + timing_differs=False must be no_delta; "
+        f"got {kind!r}"
+    )
+
+
+def test_verify_emits_timing_delta_candidate():
+    """verify() emits a candidate when timing_delta fires on identical content.
+
+    FN-21 verification criterion 3 (integration). RED until verify() is
+    wired: today the content guard blocks classification, so no candidate.
+    """
+    from janissary.protocols.websocket import (
+        LearnedModel, MessageSequence, WebSocketMessage, ProbeResult,
+    )
+
+    seq = MessageSequence(messages=[
+        WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
+        WebSocketMessage(direction="s2c", payload='{"a":"orig"}'),
+    ])
+    model = LearnedModel(
+        wire_format="json",
+        baseline_sequence=seq,
+        injectable_fields=[],
+        baseline_rtt={0: (0.1, 0.02, 5)},
+    )
+    p = ProbeResult(
+        field_path="a", message_index=0, payload_name="sqli_quote",
+        payload_value="'", category="sqli",
+        original_payload='{"a":"orig"}',
+        mutated_payload='{"a":"\'"}',
+        response_frames=('{"a":"orig"}',),  # identical content
+        sent_ok=True,
+        response_time=2.0,  # 20x baseline mean, well above thresholds
+    )
+    from janissary.integrations.websocket_learn import verify
+
+    candidates = verify([p], model, url="ws://test/socket")
+    assert len(candidates) == 1, (
+        f"timing_delta should emit exactly 1 candidate; got {len(candidates)}"
+    )
+    assert "timing_delta" in candidates[0].detail, (
+        f"detail must carry timing_delta; got {candidates[0].detail!r}"
     )

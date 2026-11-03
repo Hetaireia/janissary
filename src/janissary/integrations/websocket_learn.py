@@ -659,12 +659,46 @@ def _seq_from_s2c_frames(frames: tuple[str, ...]) -> MessageSequence:
     )
 
 
+TIMING_DELTA_MIN_Z = 3.0
+TIMING_DELTA_MIN_ABSOLUTE_S = 0.5
+
+
+def _timing_differs(
+    probe: ProbeResult,
+    baseline_mean: float,
+    baseline_stddev: float,
+) -> bool:
+    """True when the probe was measurably slower than baseline.
+
+    Two thresholds must both be satisfied:
+    - absolute: probe slower by at least TIMING_DELTA_MIN_ABSOLUTE_S
+    - statistical: delta / baseline_stddev >= TIMING_DELTA_MIN_Z (if stddev > 0)
+
+    Never fires for probes that are faster than baseline (delta < 0).
+    Never fires when response_time is None (no measurement taken).
+
+    Consumed by verify()'s guard: a probe with identical content but
+    statistically significant slower response can be a blind-injection
+    candidate even though the response body is unchanged.
+    """
+    if probe.response_time is None:
+        return False
+    delta = probe.response_time - baseline_mean
+    if delta < TIMING_DELTA_MIN_ABSOLUTE_S:
+        return False
+    if baseline_stddev > 0:
+        if delta / baseline_stddev < TIMING_DELTA_MIN_Z:
+            return False
+    return True
+
+
 def _classify_delta(
     probe: ProbeResult,
     baseline_norm: str,
     probe_norm: str,
     baseline_frame_count: int = 0,
     probe_frame_count: int = 0,
+    timing_differs: bool = False,
 ) -> str:
     """Classify how probe_norm differs from baseline_norm.
 
@@ -687,7 +721,11 @@ def _classify_delta(
         return "frame_count_delta"
     if len(baseline_norm) != len(probe_norm):
         return "length_delta"
-    return "content_delta"
+    if baseline_norm != probe_norm:
+        return "content_delta"
+    if timing_differs:
+        return "timing_delta"
+    return "no_delta"
 
 
 def _probe_to_candidate(
@@ -757,11 +795,21 @@ def verify(
         baseline_norm = normalizer.normalize(baseline_seq).body
         probe_norm = normalizer.normalize(probe_seq).body
 
-        if baseline_norm != probe_norm:
+        baseline_rtt = model.baseline_rtt.get(p.message_index)
+        timing_differs = False
+        if baseline_rtt is not None:
+            mean, stddev, _n = baseline_rtt
+            timing_differs = _timing_differs(p, mean, stddev)
+
+        if baseline_norm != probe_norm or timing_differs:
             delta_kind = _classify_delta(
                 p, baseline_norm, probe_norm,
                 len(baseline_frames), len(p.response_frames),
+                timing_differs=timing_differs,
             )
-            candidates.append(_probe_to_candidate(p, url, delta_kind))
+            # delta_kind cannot be "no_delta" here given the guard above,
+            # but the check is defensive against future _classify_delta changes.
+            if delta_kind != "no_delta":
+                candidates.append(_probe_to_candidate(p, url, delta_kind))
 
     return candidates
