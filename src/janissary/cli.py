@@ -251,6 +251,30 @@ def _merge_ws_into_scan(summary, ws_summary):
     return summary
 
 
+def _merge_host_bypass_into_scan(summary, hb_summary):
+    """Merge Host-header ACL bypass findings into a completed HTTP scan summary.
+
+    Mirrors _merge_ws_into_scan. Host-bypass findings already carry
+    _engine_emitted=True (via Scanner._candidate_to_scan_finding), so
+    they pass the asserting list's append check when merged.
+
+    See docs/PHASE-6-PLAN.md FN-20.
+    """
+    for f in hb_summary.findings:
+        summary.findings.append(f)
+        summary.finding_count += 1
+    summary.total_requests += hb_summary.total_requests
+    if hb_summary.scan_incomplete and not summary.scan_incomplete:
+        summary.scan_incomplete = True
+        if not summary.abort_reason:
+            summary.abort_reason = (
+                hb_summary.abort_reason or "host-bypass scan incomplete"
+            )
+    if hb_summary.aborted and not summary.aborted:
+        summary.aborted = True
+    return summary
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -417,6 +441,17 @@ def cmd_scan(args: argparse.Namespace) -> int:
         if not args.quiet and ws_summary.findings:
             print(
                 f"[*] WebSocket: {len(ws_summary.findings)} finding(s) "
+                f"(see --json / --jsonl / --export for detail)"
+            )
+
+    if getattr(args, "host_bypass", False) and not summary.aborted:
+        if not args.quiet:
+            print("[*] Host-header ACL bypass probe...")
+        hb_summary = scanner.scan_host_bypass()
+        summary = _merge_host_bypass_into_scan(summary, hb_summary)
+        if not args.quiet and hb_summary.findings:
+            print(
+                f"[*] Host-bypass: {len(hb_summary.findings)} finding(s) "
                 f"(see --json / --jsonl / --export for detail)"
             )
 
@@ -1446,6 +1481,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="Newline-delimited payload file for WebSocket discovery "
              "(required with --ws). Lines starting with # and blank lines are skipped.",
+    )
+    scan.add_argument(
+        "--host-bypass",
+        action="store_true",
+        help="also probe for Host-header ACL bypass (FN-20)",
     )
     scan.add_argument(
         "--no-waf",

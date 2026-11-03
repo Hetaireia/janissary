@@ -239,3 +239,102 @@ def test_host_bypass_subcommand_clean_when_no_findings(capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "no Host-header ACL bypass" in out
+
+# --- scan wiring tests (FN-20 part 2) ---
+
+
+def _minimal_candidate():
+    from janissary.verification import CandidateFinding
+    return CandidateFinding(
+        param="Host",
+        payload_name="trailing_dot",
+        payload_value="app.local.",
+        category="host_header",
+        severity="high",
+        finding_type="host_header_acl_bypass",
+        detail="test bypass",
+        response_status=200,
+        response_length=0,
+        url="http://example.com/",
+        method="GET",
+    )
+
+
+def _empty_scan_summary():
+    from janissary.engine.scanner import ScanSummary
+    return ScanSummary(target="http://example.com/", params=["x"], method="GET")
+
+
+def _scanner_for_wiring():
+    from janissary.engine.scanner import Scanner
+    return Scanner(target="http://example.com/", params=["x"])
+
+
+def test_candidate_to_scan_finding_passes_engine_emitted_invariant():
+    """Converted finding must pass the asserting list's append check.
+
+    If _engine_emitted isn't set (or can't be set on a frozen dataclass),
+    appending to ScanSummary.findings raises AssertionError here.
+    """
+    scanner = _scanner_for_wiring()
+    c = _minimal_candidate()
+    f = scanner._candidate_to_scan_finding(c)
+    summary = _empty_scan_summary()
+    # This append is the assertion: _VerifiedFindingsList checks _engine_emitted
+    summary.findings.append(f)
+    assert summary.findings[0].finding_type == "host_header_acl_bypass"
+
+
+def test_scan_host_bypass_returns_populated_summary():
+    """scan_host_bypass converts candidates into a ScanSummary."""
+    from unittest.mock import patch
+
+    scanner = _scanner_for_wiring()
+    c = _minimal_candidate()
+    with patch(
+        "janissary.integrations.host_bypass.test_host_bypass",
+        return_value=[c],
+    ):
+        summary = scanner.scan_host_bypass()
+    assert summary.finding_count == 1
+    assert len(summary.findings) == 1
+    assert summary.findings[0].finding_type == "host_header_acl_bypass"
+    assert summary.method == "HOST-BYPASS"
+    assert summary.total_requests == 3
+
+
+def test_scan_host_bypass_clean_summary():
+    """No bypass detected -> empty summary, finding_count 0."""
+    from unittest.mock import patch
+
+    scanner = _scanner_for_wiring()
+    with patch(
+        "janissary.integrations.host_bypass.test_host_bypass",
+        return_value=[],
+    ):
+        summary = scanner.scan_host_bypass()
+    assert summary.finding_count == 0
+    assert len(summary.findings) == 0
+    assert summary.scan_incomplete is False
+
+
+def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
+    """`scan -u URL --host-bypass` calls Scanner.scan_host_bypass."""
+    import sys
+    from unittest.mock import patch
+    from janissary.cli import main
+
+    argv = ["janissary", "scan", "-u", "http://example.com/",
+            "--host-bypass", "--quiet"]
+    with patch.object(sys, "argv", argv):
+        with patch("janissary.cli.Scanner") as MockScanner:
+            inst = MockScanner.return_value
+            inst.scan.return_value = _empty_scan_summary()
+            inst.scan_host_bypass.return_value = _empty_scan_summary()
+            try:
+                rc = main()
+            except SystemExit as exc:
+                rc = exc.code
+
+    assert rc == 0, f"expected rc=0, got {rc}"
+    inst.scan_host_bypass.assert_called_once()
