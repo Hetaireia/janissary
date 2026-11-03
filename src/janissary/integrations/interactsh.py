@@ -36,8 +36,11 @@ try:
     from cryptography.hazmat.primitives.ciphers import (
         Cipher as _Cipher,
         algorithms as _algorithms,
-        modes as _modes,
     )
+    try:
+        from cryptography.hazmat.decrepit.ciphers.modes import CFB as _CFB
+    except ImportError:  # cryptography < 43
+        from cryptography.hazmat.primitives.ciphers.modes import CFB as _CFB
     _CRYPTO_AVAILABLE = True
 except ImportError:  # pragma: no cover -- tested via test_requires_crypto
     _CRYPTO_AVAILABLE = False
@@ -244,7 +247,7 @@ class InteractshClient:
         try:
             raw = base64.b64decode(entry_b64)
             iv, ct = raw[:16], raw[16:]
-            decryptor = _Cipher(_algorithms.AES(aes_key), _modes.CFB(iv)).decryptor()
+            decryptor = _Cipher(_algorithms.AES(aes_key), _CFB(iv)).decryptor()
             plaintext = decryptor.update(ct) + decryptor.finalize()
             parsed = json.loads(plaintext)
             return parsed if isinstance(parsed, dict) else None
