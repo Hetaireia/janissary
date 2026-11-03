@@ -447,7 +447,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "host_bypass", False) and not summary.aborted:
         if not args.quiet:
             print("[*] Host-header ACL bypass probe...")
-        hb_summary = scanner.scan_host_bypass()
+        hb_summary = scanner.scan_host_bypass(baseline_host=args.baseline_host)
         summary = _merge_host_bypass_into_scan(summary, hb_summary)
         if not args.quiet and hb_summary.findings:
             print(
@@ -1486,6 +1486,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--host-bypass",
         action="store_true",
         help="also probe for Host-header ACL bypass (FN-20)",
+    )
+    scan.add_argument(
+        "--baseline-host",
+        default=None,
+        metavar="VAL",
+        help=("baseline Host header for --host-bypass; if absent, "
+              "derived from the URL"),
     )
     scan.add_argument(
         "--no-waf",
