@@ -837,6 +837,63 @@ class Scanner:
         return summary
 
 
+
+    def _candidate_to_scan_finding(self, c) -> ScanFinding:
+        """Convert a CandidateFinding from an integration module to ScanFinding.
+
+        Sets the Phase 0.1 _engine_emitted attribute so the finding can be
+        appended to ScanSummary.findings (the asserting list at
+        scanner.py:290 checks it on append/extend).
+        """
+        f = ScanFinding(
+            param=c.param,
+            payload_name=c.payload_name,
+            payload_value=c.payload_value,
+            category=c.category,
+            severity=c.severity,
+            finding_type=c.finding_type,
+            detail=c.detail,
+            response_status=c.response_status,
+            response_length=c.response_length,
+            url=getattr(c, "url", ""),
+            method=getattr(c, "method", "GET"),
+        )
+        f._engine_emitted = True
+        return f
+
+    def scan_host_bypass(self, baseline_host: str | None = None) -> ScanSummary:
+        """Run Host-header ACL bypass detection against self.target.
+
+        See docs/PHASE-6-PLAN.md FN-20 for detection logic and
+        verification criteria.
+        """
+        from janissary.integrations.host_bypass import test_host_bypass
+
+        summary = ScanSummary(
+            target=self.target,
+            params=["Host"],
+            method="HOST-BYPASS",
+        )
+        try:
+            candidates = test_host_bypass(
+                self.target,
+                baseline_host=baseline_host,
+                timeout=self.timeout,
+            )
+        except Exception as exc:
+            summary.scan_incomplete = True
+            summary.abort_reason = f"host-bypass failed: {type(exc).__name__}"
+            return summary
+
+        # Nominal request count: 1 baseline + up to 2 variants.
+        summary.total_requests = 3
+
+        for c in candidates:
+            f = self._candidate_to_scan_finding(c)
+            summary.findings.append(f)
+            summary.finding_count += 1
+
+        return summary
     def scan_graphql(
         self,
         include_probes: bool = True,
