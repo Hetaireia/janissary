@@ -1,6 +1,8 @@
 # ADR-014 — gRPC/Protobuf dependency selection (FN-17)
 
-**Status:** Proposed (2026-11-03)
+**Status:** Accepted (2026-11-03) - Option 1 (grpcio + google.protobuf).
+Accepted as policy for FN-17 when implemented; `pyproject.toml` is
+unchanged. A future reversal requires ADR-015 superseding this one.
 **Depends on:** nothing — this decision is a precondition for FN-17, not a consequence of any prior ADR
 **Blocks:** FN-17 (Phase 2.3) implementation. Named as a precondition at
 `PHASE-6-PLAN.md:882-883`: *"The infrastructure decision (Protobuf
