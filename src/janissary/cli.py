@@ -1331,6 +1331,35 @@ class _ArgumentParser(argparse.ArgumentParser):
         self.exit(64, f"{self.prog}: error: {message}\n")
 
 
+
+def cmd_host_bypass(args: argparse.Namespace) -> int:
+    from janissary.integrations.host_bypass import test_host_bypass
+
+    try:
+        findings = test_host_bypass(
+            args.url,
+            baseline_host=args.baseline_host,
+            timeout=args.timeout,
+        )
+    except Exception as exc:
+        print(f"[!] host-bypass failed: {exc}", file=sys.stderr)
+        return 2
+
+    if not findings:
+        print(f"[*] no Host-header ACL bypass detected on {args.url}")
+        return 0
+
+    for f in findings:
+        print(
+            f"[+] {f.severity.upper()} {f.finding_type} on {f.url} "
+            f"(variant={f.payload_name}, Host={f.payload_value!r}, "
+            f"status={f.response_status})"
+        )
+        print(f"    {f.detail}")
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = _ArgumentParser(
         prog="janissary",
@@ -1339,6 +1368,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"janissary {__version__}")
 
     sub = p.add_subparsers(dest="command")
+
+    # -- host-bypass -----------------------------------------------
+    hb = sub.add_parser(
+        "host-bypass", help="probe Host-header ACL bypass (FN-20)"
+    )
+    hb.add_argument("-u", "--url", required=True, help="target URL")
+    hb.add_argument(
+        "--baseline-host",
+        default=None,
+        help="Host header to send as baseline (default: derived from URL)",
+    )
+    hb.add_argument(
+        "--timeout",
+        type=float,
+        default=5.0,
+        help="request timeout in seconds (default 5)",
+    )
+    hb.set_defaults(func=cmd_host_bypass)
 
     # -- scan -----------------------------------------------------
     scan = sub.add_parser("scan", help="scan an HTTP endpoint")
