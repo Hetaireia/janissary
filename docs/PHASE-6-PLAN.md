@@ -1339,9 +1339,23 @@ Total ~6-8 hours of work, distributed across 1-2 sessions.
 
 ## FN-21 — WS timing delta requires five coordinated changes, not one branch
 
-**Status: FILED 2026-11-03. Scoping note. Supersedes the "smaller
-alternative" framing of the FN-16 follow-up scoping note
-(`PHASE-6-PLAN.md:1122-1161`).**
+**Status: SHIPPED 2026-11-04.** Five gaps closed across four commits:
+gap 2 (`fcb5c24` probe-path timing capture), gap 4 (`b7e2110` baseline
+RTT sampling), gaps 1+3+5 (`1ce596d` classifier branch, caller guard,
+and `no_delta` fallthrough). Preceded by a scoping amendment
+(`855443f`) naming `_collect_s2c` as the modification point.
+
+All five gaps now implemented. `_classify_delta` emits `timing_delta`
+when identical content is followed by a statistically significant
+slower response. `verify()`'s guard checks both content and timing.
+`no_delta` return makes the identical-content-identical-timing case
+honest rather than mislabelled as `content_delta`.
+
+Originally filed 2026-11-03:
+
+> **Status: FILED 2026-11-03. Scoping note. Supersedes the "smaller
+> alternative" framing of the FN-16 follow-up scoping note
+> (`PHASE-6-PLAN.md:1122-1161`).**
 
 ### What it is
 
