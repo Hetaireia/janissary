@@ -6,6 +6,7 @@ Proves JANISSARY's precision on **real applications**, not just OWASP Benchmark.
 
 - **DVWA** — Damn Vulnerable Web Application (SQLi, XSS, traversal)
 - **OWASP Juice Shop** — modern Node.js target (SQLi, XSS)
+- **OWASP WebGoat** — scaffolded, not yet scored (see `apps/webgoat/README.md`)
 
 ## How it works
 
