@@ -281,7 +281,8 @@
     },
     "M36a": {
       "label": "ADR series 016-021 (Phase 0 Foundation)",
-      "proposed": "04-DEC-2026"
+      "proposed": "04-DEC-2026",
+      "delivered": "2026-11-05"
     },
     "M37": {
       "label": "heuristic/signatures.py + registry",
