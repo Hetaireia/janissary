@@ -105,18 +105,7 @@ jobs:
         run: |
           if [ -f janissary.sarif ]; then
             echo "--- findings by severity ---"
-            python - <<'PY'
-import json
-with open("janissary.sarif", encoding="utf-8") as f:
-    d = json.load(f)
-from collections import Counter
-c = Counter()
-for run in d.get("runs", []):
-    for r in run.get("results", []):
-        sev = (r.get("level") or "warning").lower()
-        c[sev] += 1
-print(dict(c) or "(no findings)")
-PY
+            python -c "import json; from collections import Counter; d = json.load(open('janissary.sarif')); c = Counter((r.get('level') or 'warning').lower() for run in d.get('runs', []) for r in run.get('results', [])); print(dict(c) if c else '(no findings)')"
           else
             echo "(no SARIF produced)"
           fi
