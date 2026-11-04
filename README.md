@@ -409,12 +409,12 @@ Being explicit about scope is part of being honest about precision:
 ## Known Limitations
 *Honesty over assumptions. These are actively tracked, known issues.*
 
-- **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to report false positives (e.g., `/wp-admin/`). Future work requires moving beyond status codes to content-length and body-signature differentials.
-- **HTTP 401 Abort Behavior (Issue #2):** A 401 response currently aborts the scan instead of reporting an `auth_required` state. Future work will capture 401/403, continue safe checks, and report the auth state cleanly.
+- **SPA Catch-All False Positives (Issue #1):** Applications that return HTTP 200 for arbitrary routes (like SPAs) can cause the admin-panel check to produce false-positive candidates (e.g., `/wp-admin/`). As of Phase 0.2b these are marked `unproven` in human output so they can be triaged separately from verified findings. The detection heuristic itself remains status-code-based; moving to content-length and body-signature differentials is still future work.
+- **Mid-scan auth expiry (ADR-010):** Two consecutive 401 responses *when auth is configured* abort the scan with `scan_incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth_required` output state -- the abort reason string is the only signal.
 - **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
 - **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
-- **SSRF payload scope (7.5.0):** Five OOB-detectable payloads ship today. Three additional payloads that require response-body inspection - ``metadata_http``, ``metadata_v6``, ``file`` - are deferred to a future response-body detection path.
-- **No IDOR detection yet.** Insecure Direct Object Reference is not in 7.5.0. It is planned for 7.6.0.
+- **SSRF payload scope:** Five OOB-detectable payloads ship today (`ssrf_http`, `ssrf_https`, `ssrf_gopher`, `ssrf_dict`, `ssrf_dns_only`). Three additional payloads that require response-body inspection -- `metadata_http`, `metadata_v6`, `file` -- are deferred to a future response-body detection path.
+- **No IDOR detection yet.** Insecure Direct Object Reference is an open gap with no committed delivery date. Scope and priority are tracked in the roadmap; do not rely on IDOR findings from JANISSARY in its current state.
 
 ## License
 
