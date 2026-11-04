@@ -238,5 +238,19 @@
         "password": "JnsTrackc!123"
       }
     }
+  },
+  "webgoat": {
+    "base_url": "http://127.0.0.1:8889",
+    "healthcheck": "/WebGoat/login",
+    "image_digest": null,
+    "security_level": null,
+    "excluded": true,
+    "trial_class": [],
+    "safe_endpoints": [
+      "/WebGoat/login"
+    ],
+    "known_vulnerable": [],
+    "login": null,
+    "notes": "Documented only. Activation checklist in apps/webgoat/README.md."
   }
 }

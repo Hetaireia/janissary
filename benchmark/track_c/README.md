@@ -16,6 +16,11 @@ Proves JANISSARY's precision on **real applications**, not just OWASP Benchmark.
    `cases.csv`, writes `runs/<timestamp>-<app>/score.json` with TP / FP / FN
    and precision / recall / F1.
 
+## Per-app documentation
+
+`apps/` holds one subdirectory per documented target, with a README
+describing what each tests and how to start it. See `apps/README.md`.
+
 ## Why this matters
 
 OWASP Benchmark reports F1 0.921 with 0 FP. Real targets expose things the
