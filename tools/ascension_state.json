@@ -287,7 +287,8 @@
     },
     "M37": {
       "label": "heuristic/signatures.py + registry",
-      "proposed": "31-JAN-2027"
+      "proposed": "31-JAN-2027",
+      "delivered": "2026-11-05"
     },
     "M38": {
       "label": "heuristic/engine.py + --heuristic CLI flag",
