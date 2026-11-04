@@ -1,0 +1,133 @@
+name: Janissary Self-Scan
+
+# Dogfood JANISSARY: scan OWASP Juice Shop behind no WAF, upload SARIF to
+# GitHub code scanning, and gate on exit codes (0 = clean, 1 = findings
+# present; both mean "scan ran"). Fails on 2 (abort) or 64 (usage).
+#
+# This is M20 (GitHub Action for CI integration). It deliberately runs
+# Juice Shop over DVWA: no /setup.php database bootstrap needed, and
+# the benchmark harness already targets it (benchmark/track_c).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/janissary/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/janissary-selfscan.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/janissary/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/janissary-selfscan.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # required for upload-sarif
+
+concurrency:
+  group: janissary-selfscan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selfscan:
+    name: Self-scan Juice Shop (SARIF upload)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Terms-of-Use gate: `scan` is in GATED_COMMANDS; non-TTY runs exit 64
+      # unless acceptance is recorded. This is the documented env-var path.
+      JANISSARY_ACCEPT_TERMS: "1"
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          allow-prereleases: true
+          cache: pip
+
+      - name: Install JANISSARY
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Start Juice Shop
+        run: |
+          docker run -d --rm --name juice-shop \
+            -p 127.0.0.1:3000:3000 \
+            bkimminich/juice-shop:v17.1.1
+          echo "[*] waiting for Juice Shop on :3000 (up to 120s)"
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3000/rest/admin/application-version \
+                 > /dev/null; then
+              echo "[+] Juice Shop is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[!] Juice Shop did not become ready in 120s" >&2
+          docker logs juice-shop || true
+          exit 1
+
+      - name: Run JANISSARY scan (SARIF export)
+        id: scan
+        run: |
+          set +e
+          janissary scan \
+            -u "http://127.0.0.1:3000/rest/products/search?q=test" \
+            -p q \
+            --export janissary.sarif \
+            --quiet
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          # 0 = no findings, 1 = findings present; both mean the scan ran.
+          if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
+            echo "[!] JANISSARY scan aborted with exit $code" >&2
+            exit "$code"
+          fi
+          if [ ! -s janissary.sarif ]; then
+            echo "[!] janissary.sarif was not produced" >&2
+            exit 2
+          fi
+          echo "[+] scan exit=$code, SARIF produced"
+
+      - name: Show SARIF summary
+        if: always()
+        run: |
+          if [ -f janissary.sarif ]; then
+            echo "--- findings by severity ---"
+            python - <<'PY'
+import json
+with open("janissary.sarif", encoding="utf-8") as f:
+    d = json.load(f)
+from collections import Counter
+c = Counter()
+for run in d.get("runs", []):
+    for r in run.get("results", []):
+        sev = (r.get("level") or "warning").lower()
+        c[sev] += 1
+print(dict(c) or "(no findings)")
+PY
+          else
+            echo "(no SARIF produced)"
+          fi
+
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('janissary.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: janissary.sarif
+          category: janissary-selfscan
+
+      - name: Tear down Juice Shop
+        if: always()
+        run: docker stop juice-shop || true
