@@ -149,11 +149,7 @@
     "M17": {
       "label": "Real-target corpus (DVWA, Juice Shop, WebGoat)",
       "proposed": "20-DEC-2026",
-      "probe": {
-        "kind": "dir_has_children",
-        "path": "benchmark/track_c/apps",
-        "min": 3
-      }
+      "delivered": "2026-11-04"
     },
     "M18": {
       "label": "Negative-results reporting",
