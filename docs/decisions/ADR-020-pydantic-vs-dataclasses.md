@@ -42,6 +42,83 @@ Verified 2026-11-04:
 - The heuristic signature list will be *static configuration*, read at
   scan start, not runtime user input requiring schema validation
 
+
+## Decisions
+
+### D1. Heuristic signatures are frozen dataclasses with __post_init__ validation
+
+`HeuristicSignature` is a `@dataclass(frozen=True)`. Fields:
+
+- `id: str` -- e.g., `"HEUR-001"`
+- `category: str` -- e.g., `"sqli:error_leak"`
+- `target_layer: str` -- `"body"`, `"headers"`, or `"both"`
+- `patterns: tuple[str, ...]` -- tuple, not list, for immutability
+- `base_confidence: float = 0.450`
+
+```python
+from dataclasses import dataclass
+import re
+
+
+@dataclass(frozen=True)
+class HeuristicSignature:
+    id: str
+    category: str
+    target_layer: str
+    patterns: tuple[str, ...]
+    base_confidence: float = 0.450
+
+    def __post_init__(self) -> None:
+        # Eager regex compilation -- raises SyntaxError on malformed
+        # pattern at construction time, matching pydantic behavior.
+        for p in self.patterns:
+            re.compile(p)
+
+        # Range gate -- pydantic would enforce this via
+        # Field(ge=0.0, lt=1.0). Two lines close the same gap.
+        if not (0.0 <= self.base_confidence < 1.0):
+            raise ValueError(
+                f"HeuristicSignature({self.id!r}): "
+                f"base_confidence must be in [0.0, 1.0); "
+                f"got {self.base_confidence}"
+            )
+```
+
+Defaults set at definition. Validation runs at construction.
+Frozen gives immutability for free (attempting to assign a field
+raises `FrozenInstanceError`, matching pydantic behavior).
+
+### D2. The registry is a module-level constant, not a JSON/YAML file
+
+`HEURISTIC_SIGNATURES: tuple[HeuristicSignature, ...]` is defined in
+`heuristic/signatures.py` as a literal constant. It ships with the
+package. Users who want custom signatures construct their own tuple
+of `HeuristicSignature` instances and pass it to the engine.
+
+Rationale: signatures change with detection capability, not with
+customer configuration. They belong in version control, tested at
+build time, not at scan time. Bundling them as data would require a
+loader and schema validator (where pydantic earns its keep -- but
+only if we are loading untrusted data, which we are not).
+
+### D3. The three layers that close pydantic validation surface
+
+Pydantic validates in five domains. Each is covered without the
+dependency:
+
+| Domain | Pydantic mechanism | Dataclass equivalent | Coverage |
+|---|---|---|---|
+| **Type checking** | `Field(...)` | `@dataclass` + `mypy` in CI | **Equivalent** |
+| **Malformed regex** | `Field(..., regex=...)` | `re.compile()` in `__post_init__` (D1) | **Equivalent** |
+| **Value range** | `Field(ge=..., le=...)` | `if not (lo <= x <= hi): raise` in `__post_init__` (D1) | **Equivalent** |
+| **Required vs default** | `Field(...)` vs `Field(default=...)` | dataclass with/without default | **Equivalent** |
+| **Immutability** | `ConfigDict(frozen=True)` | `@dataclass(frozen=True)` | **Equivalent** |
+
+No pydantic capability relevant to a static signature registry
+remains unimplemented after D1. The gap is zero for this use case.
+The trade-off becomes "10-15 MB dependency for zero incremental
+validation."
+
 ### D4. Pydantic is the right tool at a different boundary
 
 The correct use of pydantic is:
