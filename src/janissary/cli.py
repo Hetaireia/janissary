@@ -102,6 +102,18 @@ def _print_summary(summary: ScanSummary) -> None:
     group_n = len(summary.groups)
     plural = "" if group_n == 1 else "s"
     print(f"  Findings:        {summary.finding_count} in {group_n} group{plural}")
+    # negative-results reporting: a clean scan must be distinguishable from a
+    # scan that never ran. Emit an explicit positive confirmation so CI logs
+    # and human readers see "ran, clean" not "silent exit 0".
+    if (
+        summary.finding_count == 0
+        and not summary.aborted
+        and not summary.scan_incomplete
+    ):
+        print(
+            f"  Negative result: no findings after "
+            f"{summary.total_requests} request(s); target responded normally."
+        )
 
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
