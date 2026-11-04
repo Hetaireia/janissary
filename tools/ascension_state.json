@@ -188,10 +188,7 @@
     "M20": {
       "label": "GitHub Action for CI integration",
       "proposed": "28-JAN-2027",
-      "probe": {
-        "kind": "glob_exists",
-        "pattern": ".github/workflows/*janissary*.yml,.github/workflows/*scan*.yml"
-      }
+      "delivered": "2026-11-04"
     },
     "M21": {
       "label": "10 G2 reviews",
