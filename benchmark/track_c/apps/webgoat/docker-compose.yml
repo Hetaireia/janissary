@@ -1,0 +1,20 @@
+# WebGoat - Track C target (documented, activation pending)
+# Start with:
+#   docker compose -f benchmark/track_c/apps/webgoat/docker-compose.yml up -d
+#
+# Host port 8889 is chosen to avoid a collision with the ModSecurity CRS
+# reverse proxy used by docker-compose.waf.yml (which binds :8080).
+services:
+  webgoat:
+    image: webgoat/webgoat:latest
+    container_name: janissary-trackc-webgoat
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8889:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/WebGoat/login || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+    environment:
+      - TZ=UTC
