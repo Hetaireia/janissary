@@ -118,6 +118,28 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("cmdi_env_id", "FOO=id", "cmdi", "critical"),
 ]
 
+
+# Response-body markers for SSRF payloads that expect content in the
+# target's response (not OOB via collaborator). Keyed by payload name;
+# value is a list of substrings where any single match triggers emission.
+# ADR-012 D2 note: metadata_http/metadata_v6/file were deferred to a
+# response-body path; this dict is that path.
+SSRF_BODY_MARKERS: dict[str, list[str]] = {
+    "ssrf_mailhog_canary": ["MailHog", "mailhog"],
+    "ssrf_metadata_aws": [
+        "ami-id", "ami-launch-index", "instance-id", "placement/",
+    ],
+    "ssrf_metadata_aws_v6": [
+        "ami-id", "ami-launch-index", "instance-id", "placement/",
+    ],
+    "ssrf_metadata_gcp": [
+        "project/project-id", "instance/zone", "service-accounts/",
+    ],
+    "ssrf_metadata_azure": [
+        "vmId", "subscriptionId", "resourceGroupName",
+    ],
+}
+
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
