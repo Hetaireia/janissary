@@ -116,7 +116,7 @@ def test_asdict_round_trip():
         "id": sig.id,
         "category": sig.category,
         "target_layer": sig.target_layer,
-        "patterns": list(sig.patterns),
+        "patterns": sig.patterns,
         "base_confidence": sig.base_confidence,
     }
     rebuilt = HeuristicSignature(
