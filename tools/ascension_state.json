@@ -144,16 +144,7 @@
     "M15": {
       "label": "Finding replay / Janissary explain",
       "proposed": "29-NOV-2026",
-      "probe": {
-        "kind": "grep_any",
-        "patterns": [
-          "replay"
-        ],
-        "paths": [
-          "src/janissary/cli.py",
-          "cli.py"
-        ]
-      }
+      "delivered": "2026-11-04"
     },
     "M17": {
       "label": "Real-target corpus (DVWA, Juice Shop, WebGoat)",
