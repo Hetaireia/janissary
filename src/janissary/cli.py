@@ -487,6 +487,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
                 json.dump(payload, fh, indent=2)
         elif ext == "sarif":
             _write_sarif(summary, args.export)
+        elif ext == "html":
+            from janissary.reporting.html_report import write_html_report
+            write_html_report(payload, args.export)
+        elif ext == "pdf":
+            from janissary.reporting.pdf_report import write_pdf_report
+            write_pdf_report(payload, args.export)
         else:
             with open(args.export, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, indent=2)
@@ -1630,7 +1636,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
     )
     scan.add_argument(
-        "--export", default=None, help="write results to a .json or .sarif file"
+        "--export", default=None, help="write results to a .json, .sarif, .html, or .pdf file"
     )
     scan.add_argument("--quiet", action="store_true")
     scan.add_argument(
