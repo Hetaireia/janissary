@@ -172,18 +172,7 @@
     "M19": {
       "label": "Report output: SARIF, HTML, PDF",
       "proposed": "18-JAN-2027",
-      "probe": {
-        "kind": "grep_all",
-        "patterns": [
-          "sarif",
-          "html",
-          "pdf"
-        ],
-        "paths": [
-          "src/janissary/cli.py",
-          "cli.py"
-        ]
-      }
+      "delivered": "2026-11-04"
     },
     "M20": {
       "label": "GitHub Action for CI integration",
