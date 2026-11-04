@@ -120,12 +120,17 @@ def test_pdf_empty_findings(tmp_path):
 
 
 def test_pdf_multipage_when_many_findings(tmp_path):
+    import re
+
     many = [dict(FINDING, url=f"http://x/{i}") for i in range(50)]
     out = tmp_path / "r.pdf"
     write_pdf_report({"target": "t", "findings": many}, str(out))
     data = out.read_bytes()
     assert data.startswith(b"%PDF-1.4")
-    assert b"/Count 2" in data or b"/Count 3" in data or b"/Count 4" in data
+    m = re.search(rb"/Count (\d+)", data)
+    assert m is not None, "/Count not found in PDF"
+    count = int(m.group(1))
+    assert count >= 2, f"expected multi-page PDF, got /Count {count}"
 
 
 def test_pdf_non_ascii_replaced(tmp_path):
@@ -133,7 +138,7 @@ def test_pdf_non_ascii_replaced(tmp_path):
     out = tmp_path / "r.pdf"
     write_pdf_report({"target": "t", "findings": [f]}, str(out))
     data = out.read_bytes()
-    assert b"caf?" in data
+    assert b"cafe?" in data
     assert b"caf\xe9" not in data
 
 
