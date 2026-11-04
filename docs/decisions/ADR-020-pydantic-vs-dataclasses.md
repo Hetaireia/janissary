@@ -41,6 +41,7 @@ Verified 2026-11-04:
   and runs in CI (see `.github/workflows/ci.yml`)
 - The heuristic signature list will be *static configuration*, read at
   scan start, not runtime user input requiring schema validation
+
 ### D4. Pydantic is the right tool at a different boundary
 
 The correct use of pydantic is:
