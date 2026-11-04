@@ -1416,6 +1416,69 @@ def cmd_host_bypass(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_explain(args: argparse.Namespace) -> int:
+    from janissary.replay import (
+        ReplayError,
+        format_explanation,
+        load_findings,
+        replay_finding,
+    )
+
+    try:
+        findings = load_findings(args.path)
+    except ReplayError as exc:
+        print(f"[!] explain: {exc}", file=sys.stderr)
+        return 64
+
+    if args.finding_id:
+        selected = [f for f in findings if str(f.get("id")) == args.finding_id]
+        if not selected:
+            print(
+                f"[!] explain: no finding with id {args.finding_id!r}",
+                file=sys.stderr,
+            )
+            return 64
+        findings = selected
+
+    if not findings:
+        print("[!] explain: no findings in file", file=sys.stderr)
+        return 64
+
+    if args.replay:
+        if len(findings) != 1:
+            print(
+                f"[!] explain: --replay requires exactly one finding; "
+                f"file has {len(findings)}. Use --id to select one.",
+                file=sys.stderr,
+            )
+            return 64
+        from janissary.legal import require_acceptance
+        require_acceptance("scan")
+        f = findings[0]
+        print(format_explanation(f))
+        print()
+        print("--- replay ---")
+        try:
+            result = replay_finding(f, timeout=args.timeout)
+        except ReplayError as exc:
+            print(f"[!] replay failed: {exc}", file=sys.stderr)
+            return 2
+        verdict = "MATCH" if result["match"] else "CHANGED"
+        print(
+            f"[*] {verdict}: status {result['status']} "
+            f"({result['length']} bytes, {result['elapsed']:.3f}s)"
+        )
+        print()
+        print(result["raw_response"] or "")
+        return 0
+
+    for i, f in enumerate(findings):
+        if i:
+            print()
+        print(format_explanation(f))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = _ArgumentParser(
         prog="janissary",
@@ -1442,6 +1505,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="request timeout in seconds (default 5)",
     )
     hb.set_defaults(func=cmd_host_bypass)
+
+    # -- explain --------------------------------------------------
+    ex = sub.add_parser(
+        "explain",
+        help="explain a finding (and optionally replay its raw request)",
+    )
+    ex.add_argument("path", help="JSONL or JSON file containing findings")
+    ex.add_argument(
+        "--id",
+        dest="finding_id",
+        default=None,
+        help="explain only the finding with this id",
+    )
+    ex.add_argument(
+        "--replay",
+        action="store_true",
+        help="re-send the finding's raw_request and print the fresh response",
+    )
+    ex.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="replay request timeout in seconds (default 10)",
+    )
+    ex.set_defaults(func=cmd_explain)
 
     # -- scan -----------------------------------------------------
     scan = sub.add_parser("scan", help="scan an HTTP endpoint")
