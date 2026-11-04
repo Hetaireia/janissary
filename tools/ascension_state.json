@@ -67,6 +67,24 @@
         "M29",
         "M30"
       ]
+    },
+    {
+      "name": "Phase 7 - Future State Implementation",
+      "milestones": [
+        "M36a",
+        "M37",
+        "M38",
+        "M39",
+        "M40",
+        "M41",
+        "M42",
+        "M43",
+        "M44",
+        "M45",
+        "M46",
+        "M47",
+        "M48"
+      ]
     }
   ],
   "milestones": {
@@ -260,6 +278,58 @@
         "kind": "file_exists",
         "path": "docs/TROUBLESHOOTING.md"
       }
+    },
+    "M36a": {
+      "label": "ADR series 016-021 (Phase 0 Foundation)",
+      "proposed": "04-DEC-2026"
+    },
+    "M37": {
+      "label": "heuristic/signatures.py + registry",
+      "proposed": "31-JAN-2027"
+    },
+    "M38": {
+      "label": "heuristic/engine.py + --heuristic CLI flag",
+      "proposed": "28-FEB-2027"
+    },
+    "M39": {
+      "label": "SSRF cloud metadata payloads (4)",
+      "proposed": "15-MAR-2027"
+    },
+    "M40": {
+      "label": "SARIF discovery triage stream",
+      "proposed": "31-MAR-2027"
+    },
+    "M41": {
+      "label": "Tri-session auth (A/B/C)",
+      "proposed": "30-APR-2027"
+    },
+    "M42": {
+      "label": "IDOR candidate probe (triage stream)",
+      "proposed": "31-MAY-2027"
+    },
+    "M43": {
+      "label": "crAPI end-to-end validation",
+      "proposed": "30-JUN-2027"
+    },
+    "M44": {
+      "label": "janissary-crawl repo (standalone)",
+      "proposed": "15-AUG-2027"
+    },
+    "M45": {
+      "label": "Crawl output -> scan pipeline integration",
+      "proposed": "15-SEP-2027"
+    },
+    "M46": {
+      "label": "janissary ui local server",
+      "proposed": "31-OCT-2027"
+    },
+    "M47": {
+      "label": "Local UI: Verified + Discovery tabs",
+      "proposed": "30-NOV-2027"
+    },
+    "M48": {
+      "label": "Gate 4 evidence collection (LOIs, demand)",
+      "proposed": "31-DEC-2027"
     }
   }
 }
