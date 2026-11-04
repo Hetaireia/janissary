@@ -43,9 +43,10 @@ def test_clean_scan_reports_correct_request_count(capsys):
 
 
 def test_scan_with_findings_does_not_print_negative_result(capsys):
-    _print_summary(
-        _fake_summary(finding_count=1, findings=[MagicMock()])
-    )
+    # finding_count > 0 exercises the guard. Use empty findings list: a bare
+    # MagicMock as a finding would crash the downstream severity-grouping
+    # loop (f.severity is a MagicMock, not a string).
+    _print_summary(_fake_summary(finding_count=1))
     out = capsys.readouterr().out
     assert "Negative result" not in out
     assert "Findings:        1" in out
