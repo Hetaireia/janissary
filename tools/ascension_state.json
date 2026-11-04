@@ -103,11 +103,7 @@
     "M7": {
       "label": "demo.gif regenerated from a live scan",
       "proposed": "30-NOV-2026",
-      "probe": {
-        "kind": "git_commits_touching",
-        "pattern": "**/demo*.gif",
-        "since": "2026-10-13"
-      }
+      "delivered": "2026-11-04"
     },
     "M8": {
       "label": "PyPI + Docker + fresh-venv install verify",
