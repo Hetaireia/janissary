@@ -398,7 +398,7 @@ Being explicit about scope is part of being honest about precision:
 
 - **Not a crawler.** You point it at a URL and parameters. It scans those. A crawler is on the roadmap but not here.
 - **Not an enterprise platform.** No SSO, no RBAC, no scheduled scans, no support SLA.
-- **Not a full OWASP Top 10 scanner yet.** It ships SQLi, XSS, SSRF, and partial traversal. IDOR is 7.6.0. JWT and prototype pollution are 7.7.0.
+- **Not a full OWASP Top 10 scanner yet.** It ships SQLi, XSS, SSRF, and partial traversal today. IDOR, JWT, and prototype pollution are not implemented and have no committed delivery date -- see the Known Limitations section below for the honest current state of each gap.
 - **Not a replacement for Burp.** It is complementary. Findings carry raw HTTP/1.1 so you can paste them into Repeater and finish the job.
 
 ---
