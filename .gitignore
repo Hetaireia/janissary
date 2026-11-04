@@ -155,3 +155,8 @@ renders/
 
 audit_out/
 janissary_audit.tgz
+
+# Future roadmap confidentiality bifurcation (see docs/FUTURE-STATE-PLAN.md Part 7)
+# When Gate 2 or Gate 4 fires, move gate thresholds to docs/internal/GATES.md
+# This directory is gitignored to prevent accidental public exposure.
+docs/internal/
