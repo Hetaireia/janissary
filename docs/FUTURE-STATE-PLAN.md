@@ -288,5 +288,35 @@ This document is the strategic core. Changes to the phased plan require:
 
 Questions about specific decisions route to their governing ADR. Questions about the overall plan route to this document.
 
+
+### Roadmap confidentiality (trigger-activated)
+
+This plan is published publicly as long as it aids adoption,
+contributor recruitment, and enterprise procurement. At the
+moment Gate 2 (first paying customer) OR Gate 4 (SaaS decision)
+fires, the following bifurcation takes effect automatically:
+
+1. Create `docs/internal/` (gitignored via `.gitignore` entry
+   `docs/internal/`).
+2. Move the following content from this file into
+   `docs/internal/GATES.md` (private):
+   - Part 3 gate thresholds ("3 named users", "5,000 MAU",
+     "1 LOI" etc.)
+   - Part 5 milestone mapping business rows (M21-M30)
+   - Any named enterprise reference (LOIs, contracts)
+3. Keep this file public with phase structure and ADR references
+   intact; replace the specific numbers with "see internal
+   gates doc" in the affected sections.
+4. Update README Roadmap section to add: "Internal gate
+   thresholds are redacted per FUTURE-STATE-PLAN Part 7."
+5. Update `tools/ascension_state.json` M49 with a `delivered`
+   date and reference to this section.
+
+**Trigger activation is manual** (no cron can detect "a named
+enterprise asked"). The M49 milestone on the dashboard is the
+durable reminder: any maintainer planning Gate 2 or Gate 4
+work sees M49 pending and reads this section before touching
+the sensitive parts.
+
 **Approved by:** Hetaireia, 2026-11-04
 **Implementation begins:** Phase 0 (ADRs 016-021) following Command A/B/C/D above

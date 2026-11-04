@@ -436,6 +436,8 @@ Two near-term direction items are captured as ADRs:
 Milestone tracking: `docs/FUTURE-STATE-PLAN.md` (Part 3) defines
 the phased plan and the gates between phases. Current status is
 visible in `JANISSARY-ASCENSION.md` (generated dashboard).
+Internal gate thresholds are redacted at Gate 2 or Gate 4 per
+`docs/FUTURE-STATE-PLAN.md` Part 7; the public plan remains public.
 
 ---
 

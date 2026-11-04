@@ -83,7 +83,8 @@
         "M45",
         "M46",
         "M47",
-        "M48"
+        "M48",
+        "M49"
       ]
     }
   ],
@@ -332,6 +333,10 @@
     "M48": {
       "label": "Gate 4 evidence collection (LOIs, demand)",
       "proposed": "31-DEC-2027"
+    },
+    "M49": {
+      "label": "Gate 2/Gate 4 roadmap bifurcation (see FUTURE-STATE-PLAN Part 7)",
+      "proposed": "2028-03-31"
     }
   }
 }
