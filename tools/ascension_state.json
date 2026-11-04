@@ -154,16 +154,7 @@
     "M18": {
       "label": "Negative-results reporting",
       "proposed": "03-JAN-2027",
-      "probe": {
-        "kind": "grep_any",
-        "patterns": [
-          "negative"
-        ],
-        "paths": [
-          "src/janissary/cli.py",
-          "cli.py"
-        ]
-      }
+      "delivered": "2026-11-04"
     },
     "M19": {
       "label": "Report output: SARIF, HTML, PDF",
