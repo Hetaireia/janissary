@@ -1,6 +1,6 @@
 # Phase 6 - Scope Decision
 
-Status: **unresolved** (decision required from maintainer)
+Status: **resolved** (2026-11-04) - see `docs/FUTURE-STATE-PLAN.md` for the accepted strategic direction. The three candidates below (A: integration arms, B: new app category, C: discovery) are subsumed by that plan: Candidate A maps to M39-M40 + M46-M48, Candidate B maps to the corpus work already delivered (M17), Candidate C maps to M44-M45 (Discovery Expansion).
 Entry point: b144be9, v7.10.2, 667/667 tests, corpus tp=11 fp=0 fn=0 tn=24 f1=1.0
 
 ## Purpose
