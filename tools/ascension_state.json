@@ -293,7 +293,8 @@
     },
     "M39": {
       "label": "SSRF cloud metadata payloads (4)",
-      "proposed": "15-MAR-2027"
+      "proposed": "15-MAR-2027",
+      "delivered": "2026-11-04"
     },
     "M40": {
       "label": "SARIF discovery triage stream",
