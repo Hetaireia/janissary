@@ -407,6 +407,7 @@ class Scanner:
         baseline_value: str = "",
         normalizer: "BaselineNormalizer | None" = None,
         collect_observations: bool = False,
+        auth_sessions: list | None = None,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -429,6 +430,10 @@ class Scanner:
         self.detect_waf = detect_waf
         self._collect_observations = collect_observations
         self._observations: list[Observation] = []
+        self._session_rotator = None
+        if auth_sessions:
+            from janissary.engine.session_rotator import SessionRotator
+            self._session_rotator = SessionRotator(auth_sessions)
         self.inject_in = inject_in.lower()
         if self.inject_in not in {
             "auto",
@@ -1030,6 +1035,36 @@ class Scanner:
 
         return summary
 
+    def _try_rotate_on_401(self, r, param, value, summary):
+        """Rotate session on 401 and retry once (ADR-023 D6).
+
+        Returns the (possibly updated) response. If no rotator is
+        active, returns r unchanged. If rotation is available but
+        retry still fails, returns the retry response (or the
+        original r if retry raised) so the ADR-010 counter sees
+        the failure.
+        """
+        if r.status_code != 401 or self._session_rotator is None:
+            return r
+        if not self._session_rotator.can_rotate():
+            return r
+        new_spec = self._session_rotator.rotate()
+        if new_spec is None:
+            return r
+        from janissary.auth import AuthConfig, apply_to_session
+        apply_to_session(
+            self.session,
+            AuthConfig(cookie=new_spec.cookie, bearer=new_spec.bearer),
+        )
+        try:
+            retry = self._paced_request(self.target, param, value)
+            summary.total_requests += 1
+        except requests.RequestException:
+            return r
+        if retry is not None:
+            return retry
+        return r
+
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
             target=self.target,
@@ -1111,10 +1146,10 @@ class Scanner:
                 if r is None:
                     continue
 
-                # ADR-010: detect mid-scan auth expiry. Fires only
-                # when auth was configured and two consecutive 401s
-                # arrive. Reset on any non-401 so isolated 401s
-                # (CDN rate limit, session-rotation race) do not abort.
+                # ADR-010 + ADR-023: detect mid-scan auth expiry. When tri-session
+                # rotation is active, rotate on 401 and retry once before counting
+                # the 401. Single-session behaviour is byte-for-byte ADR-010.
+                r = self._try_rotate_on_401(r, param, value, summary)
                 if r.status_code == 401:
                     self._consecutive_401s += 1
                 else:
@@ -1122,11 +1157,20 @@ class Scanner:
                 if self.auth_configured and self._consecutive_401s >= 2:
                     summary.aborted = True
                     summary.scan_incomplete = True
-                    summary.abort_reason = (
-                        f"auth expired: {self._consecutive_401s} "
-                        f"consecutive HTTP 401 responses "
-                        f"(param={param}, last payload={name})"
-                    )
+                    if self._session_rotator is not None:
+                        summary.abort_reason = (
+                            f"auth expired: {self._consecutive_401s} "
+                            f"consecutive HTTP 401 responses after rotation; "
+                            f"{self._session_rotator.attempted_count}/"
+                            f"{self._session_rotator.total} sessions attempted "
+                            f"(param={param}, last payload={name})"
+                        )
+                    else:
+                        summary.abort_reason = (
+                            f"auth expired: {self._consecutive_401s} "
+                            f"consecutive HTTP 401 responses "
+                            f"(param={param}, last payload={name})"
+                        )
                     break
 
                 snapshot = ResponseSnapshot.from_response(r, normalizer=self.normalizer)
