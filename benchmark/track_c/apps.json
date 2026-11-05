@@ -237,7 +237,8 @@
         "email": "jns-trackc@example.com",
         "password": "JnsTrackc!123"
       }
-    }
+    },
+    "verify_url": "/identity/api/v2/user/dashboard"
   },
   "webgoat": {
     "base_url": "http://127.0.0.1:8889",

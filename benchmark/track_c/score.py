@@ -26,6 +26,7 @@ CLASS_MAP = {
     "xss": {"xss", "xss:reflected", "xss:stored", "xss:dom", "xss:reflection"},
     "cmdi": {"cmdi", "cmdi:command_injection", "cmdi:cmd_injection"},
     "traversal": {"traversal", "pathtraver", "pathtraver:path_traversal", "pathtraver:file_inclusion", "traversal:path_traversal"},
+    "ssrf": {"ssrf", "ssrf:oob", "ssrf:response", "ssrf:blind", "ssrf:metadata"},
 }
 
 
