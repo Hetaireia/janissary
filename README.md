@@ -46,7 +46,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 | **New in 7.7.0** | SSRF response-body oracle, JSON-body inject mode, crAPI (app 7) in corpus |
 | **New in 7.6.0** | LFI content oracle, blind SQLi oracle, deep/absolute traversal payloads |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
-| **Benchmark (OWASP)** | **F1 0.977** supported-classes (recall 0.955) / **0.921** all DAST-applicable (recall 0.854); **0.906 ± 0.002** unassisted (n=3) — Precision 1.000 (0 FP, n=3) |
+| **Benchmark (OWASP)** | **F1 0.921** all DAST-applicable (recall 0.854) / **0.977** supported-classes (recall 0.955, derived from same measurement — see ADR-027 D8 amended); **0.906 ± 0.002** unassisted (n=3) — Precision 1.000 (0 FP, n=3) |
 | **Detection classes** | SQLi, XSS, SSRF, traversal (partial support; recall 0.075 -- see Known Limitations and ADR-027), cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
