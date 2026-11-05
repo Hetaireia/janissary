@@ -304,3 +304,61 @@ is a separate ADR for bug-bounty targets.
 - `README.md` -- detection class claims (D9 corrects)
 - External strategy doc review noted in `docs/HANDOVER-2026-11-05.md`
   section 6 (Scope note, 2026-11-05)
+
+## Fixup 2026-11-05 -- D4 refinement, D5/D6 deferral
+
+Implementation probe (2026-11-05) surfaced three corrections before code landed:
+
+### D4 correction: capture payload alongside snapshot
+
+The original D4 said "capture first 2xx traversal response." Probe of
+`scanner.py:1799-1811` shows the existence oracle hardcodes
+`payload_exists="../../../etc/passwd"` while accepting
+`snapshot_exists=traversal_snap`. If we broaden traversal_snap without
+recording which payload produced it, we create a false-negative class:
+
+    Scenario: /etc/passwd returns 200 SPA-index (catch-all)
+              win.ini returns 200 real content
+    Wrong D4: traversal_snap = SPA-index from /etc/passwd;
+              noexist probe uses /etc/passwd_noexist_nonce;
+              both return SPA-index; oracle: no fire (FN)
+
+Corrected D4: capture BOTH `traversal_snap` and
+`traversal_snap_payload` on first 2xx traversal response. Oracle
+derives `noexist_path` from the captured payload:
+
+    if traversal_snap is not None and traversal_snap_payload is not None:
+        noexist_path = traversal_snap_payload + "_janissary_noexist_" + nonce
+        oracle = check_pathtraver_oracle(
+            snapshot_exists=traversal_snap,
+            payload_exists=traversal_snap_payload,
+            payload_noexist=noexist_path,
+            ...)
+
+Also requires parallel `traversal_snap_payload = None` at every
+`traversal_snap = None` init/reset site (both, since parameter loops
+reset per-parameter).
+
+### D5 deferred to ADR-028
+
+Proposed `/etc/hostname` signature (`[a-z0-9][a-z0-9-]{2,62}$` with
+`re.M`) matches any 3-63 char line -- including innocuous page text --
+and would introduce FPs where the oracle currently has none. `/proc/
+self/cmdline` and `boot.ini` are safer but not urgent. Full D5 lands
+in ADR-028 with FP analysis against a real corpus, not theory.
+
+### D6 deferred to ADR-028
+
+Probe confirms no `--verbose` flag exists on Scanner; `_say()` is
+unconditionally on stderr. Implementing D6 requires CLI flag + Scanner
+init + threading through the payload loop -- a multi-file change
+outside ADR-027 scope. ADR-028 will scope it properly.
+
+### Revised D12 sequencing
+
+This session ships: D3 (4 payloads) + D4 (corrected snap capture) +
+D9 (README:50 + handover fix). D5, D6, D7 (verification) remain in
+ADR-027 pending next session. D7 verification still requires Docker.
+ADR-027 status stays "Proposed" until D7 confirms the R improvement.
+
+
