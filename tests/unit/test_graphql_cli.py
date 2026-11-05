@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from janissary.cli import _merge_graphql_into_scan, cmd_scan
 from janissary.engine.scanner import ScanFinding, ScanSummary
+import contextlib
 
 
 def _scan_finding(**kw) -> ScanFinding:
@@ -124,10 +125,8 @@ def test_graphql_flag_registered_in_scan_subparser():
             inst = MockScanner.return_value
             inst.scan.return_value = _summary([])
             inst.scan_graphql.return_value = _summary([])
-            try:
+            with contextlib.suppress(SystemExit):
                 main()
-            except SystemExit:
-                pass
     # If argparse rejected --graphql, main would have raised SystemExit(2)
     # before Scanner was instantiated.
     assert MockScanner.called, "--graphql was rejected by argparse"
@@ -162,10 +161,8 @@ def test_cmd_scan_calls_scan_graphql_when_flag_set():
         inst.scan_graphql.return_value = gql_summary
         with patch("janissary.cli.scope_from_args") as mock_scope:
             mock_scope.return_value.require = MagicMock()
-            try:
+            with contextlib.suppress(SystemExit):
                 cmd_scan(args)
-            except SystemExit:
-                pass
     inst.scan_graphql.assert_called_once()
     call_kwargs = inst.scan_graphql.call_args.kwargs
     assert call_kwargs.get("include_probes") is True
@@ -198,8 +195,6 @@ def test_cmd_scan_does_not_call_scan_graphql_when_flag_absent():
         inst.scan.return_value = _summary([])
         with patch("janissary.cli.scope_from_args") as mock_scope:
             mock_scope.return_value.require = MagicMock()
-            try:
+            with contextlib.suppress(SystemExit):
                 cmd_scan(args)
-            except SystemExit:
-                pass
     inst.scan_graphql.assert_not_called()

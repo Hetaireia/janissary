@@ -22,6 +22,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from graphql import build_schema, graphql_sync
+import contextlib
 
 SCHEMA = build_schema(
     """
@@ -137,10 +138,8 @@ def main():
     args = ap.parse_args()
     server = HTTPServer((args.host, args.port), Handler)
     print(f"listening on http://{args.host}:{args.port}/graphql", flush=True)
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         server.serve_forever()
-    except KeyboardInterrupt:
-        pass
 
 
 if __name__ == "__main__":

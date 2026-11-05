@@ -3,6 +3,7 @@ import unittest.mock as _m
 
 import janissary.attack.nuclei as _nuclei_mod
 import janissary.cli as cli
+import contextlib
 
 
 class _FakeRunner:
@@ -18,7 +19,7 @@ class _FakeRunner:
 def test_nuclei_path_reaches_runner():
     _FakeRunner.seen = {}
     with _m.patch.object(_nuclei_mod, "NucleiRunner", _FakeRunner):
-        try:
+        with contextlib.suppress(Exception, SystemExit):
             cli.main(
                 [
                     "attack",
@@ -31,8 +32,6 @@ def test_nuclei_path_reaches_runner():
                     r"C:\fake\nuclei.exe",
                 ]
             )
-        except (Exception, SystemExit):
-            pass
     assert _FakeRunner.seen.get("nuclei_path") == r"C:\fake\nuclei.exe", (
         _FakeRunner.seen
     )
