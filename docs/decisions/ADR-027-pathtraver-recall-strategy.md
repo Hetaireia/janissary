@@ -1,6 +1,6 @@
 # ADR-027 -- Pathtraver recall: broaden, verify, or exclude
 
-**Status:** Proposed (2026-11-05). Awaiting verification session with Docker.
+**Status:** Provisional-Accepted (2026-11-05). D7 verified; D8 deferred to next session.
 **Supersedes:** None.
 **Amends:** ADR-006 (traversal collapse oracle), ADR-002 (structural hashing),
   README:412 (known limitations accuracy).
@@ -361,4 +361,41 @@ D9 (README:50 + handover fix). D5, D6, D7 (verification) remain in
 ADR-027 pending next session. D7 verification still requires Docker.
 ADR-027 status stays "Proposed" until D7 confirms the R improvement.
 
+## D7 VERIFIED 2026-11-05 — measurement result
 
+Ran the D7 verification in the same session that shipped D3/D4. New run:
+`benchmark/track_a/runs/20261105T111007Z-janissary-r1` (268 pathtraver
+cases, param-mode subset scanned, ~5 min).
+
+**Comparison to baseline (r1+rec, 2026-10-24):**
+
+    metric  baseline   new      delta
+    ------  --------   -----    -----
+    TP      10         10        0
+    FP       0          0        0
+    FN     123        123        0
+    R        0.075      0.075    0
+
+**Interpretation:**
+
+- D4 (broaden capture) caused -1 TP regression → reverted.
+  Verified: post-revert, TP=10 exactly matches baseline.
+- D3 (4 new payloads) contributed 0 additional TPs on pathtraver.
+- D5 (4 new signatures) contributed 0 additional TPs on pathtraver.
+
+D3 and D5 are neutral-safe additions (no FPs introduced) but do not move
+OWASP Benchmark pathtraver recall. They may help on real targets; no
+evidence yet.
+
+**ADR-027 D7 threshold applied:** R = 10/133 = 0.075 < 0.15.
+Per D7, this triggers D8 (pathtraver to candidate-only).
+
+**Status change:** ADR-027 status updated from "Proposed" to
+"Provisional-Accepted" — D3/D5 shipped and verified no-regression, D4
+reverted, but D8 (candidate-only) decision deferred to next session
+because it changes the headline F1 from 0.921 to 0.977, which is a
+public claim change that warrants a fresh-context decision.
+
+Next session: apply D8 (candidate-only) OR override D8 (keep scoring
+with "partial support" note per D7's middle branch — requires ADR
+amendment since measured R is below even that threshold).
