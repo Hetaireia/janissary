@@ -66,7 +66,7 @@ class GraphQLDiscoveryModule:
         Profile observations (introspection, batching, suggestions) are
         always included — they are free.
 
-        Probes (``depth_probe``, ``alias_probe``) are each 2–4 HTTP
+        Probes (``depth_probe``, ``alias_probe``) are each 2-4 HTTP
         requests and are included when ``include_probes=True`` (default).
 
         Argument fuzzing is opt-in via ``include_fuzz=True``. It fires
@@ -141,7 +141,7 @@ class GraphQLDiscoveryModule:
         top_field, recursive_field = _derive_depth_path(self.profile.schema or {})
         if top_field and recursive_field:
             depth_field_desc = f"{top_field}.{recursive_field}"
-            depth, refusal = depth_probe(
+            depth, _refusal = depth_probe(
                 self.client,
                 field_name=recursive_field,
                 path=top_field,

@@ -1,13 +1,14 @@
 # JANISSARY-FN-5
 import contextlib
 import unittest.mock as _m
+from typing import ClassVar
 
 import janissary.attack.nuclei as _nuclei_mod
 import janissary.cli as cli
 
 
 class _FakeRunner:
-    seen = {}
+    seen: ClassVar[dict] = {}
 
     def __init__(self, *a, **kw):
         _FakeRunner.seen = dict(kw)

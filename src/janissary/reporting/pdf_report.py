@@ -133,7 +133,9 @@ def _emit_pdf(pages) -> bytes:
         f"2 0 obj\n<< /Type /Pages /Kids [{kids}] /Count {n} >>\nendobj\n".encode()
     )
 
-    for page_id, content_id, page_lines in zip(page_ids, content_ids, pages):
+    for page_id, content_id, page_lines in zip(
+        page_ids, content_ids, pages, strict=False
+    ):
         objects.append(
             (
                 f"{page_id} 0 obj\n"

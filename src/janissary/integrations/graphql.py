@@ -578,7 +578,7 @@ def _derive_suggestion_probe(schema: dict) -> str | None:
             continue
         if t.get("name") != query_type_name:
             continue
-        for field in t.get("fields") or []:
+        for field in t.get("fields") or []:  # noqa: F402
             if not isinstance(field, dict):
                 continue
             fname = field.get("name")

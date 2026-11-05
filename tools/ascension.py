@@ -83,7 +83,7 @@ def evaluate(probe):
             "--",
             probe["pattern"],
         )
-        lines = [l for l in out.splitlines() if l]
+        lines = [line for line in out.splitlines() if line]
         return lines[0][:10] if lines else None
     if kind == "file_newer_than":
         since = probe["since"]

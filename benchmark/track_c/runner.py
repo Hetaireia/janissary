@@ -81,7 +81,7 @@ def login(cfg: dict) -> requests.Session:
         try:
             resp = r.json()
         except Exception as e:
-            raise SystemExit(f"login response not JSON: {e}")
+            raise SystemExit(f"login response not JSON: {e}") from e
         jwt_field = login_cfg["capture_jwt_from_json"]
         jwt = resp.get(jwt_field)
         if not jwt:
@@ -282,7 +282,7 @@ def main() -> None:
             with open(args.sessions_file, encoding="utf-8") as _sf:
                 _sessions = json.load(_sf)
         except (OSError, json.JSONDecodeError) as _e:
-            raise SystemExit(f"--sessions-file parse error: {_e}")
+            raise SystemExit(f"--sessions-file parse error: {_e}") from _e
         if not isinstance(_sessions, list) or len(_sessions) < 2:
             raise SystemExit("--sessions-file must be a JSON array of >= 2 sessions")
         sessions_count = len(_sessions)
