@@ -312,7 +312,8 @@
     },
     "M42": {
       "label": "IDOR candidate probe (triage stream)",
-      "proposed": "31-MAY-2027"
+      "proposed": "31-MAY-2027",
+      "delivered": "2026-11-05"
     },
     "M43": {
       "label": "crAPI end-to-end validation",
