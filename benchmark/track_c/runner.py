@@ -165,7 +165,7 @@ def _dedupe_jsonl(path: Path) -> int:
     return dropped
 
 
-def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, idx: int) -> dict:
+def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, idx: int, sessions_file: str | None = None, sessions_count: int | None = None) -> dict:
     base = cfg["base_url"]
     url = base + case["path"]
     cmd = [
@@ -185,11 +185,14 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, i
         cmd += ["--inject-in", case["inject_in"]]
     if case.get("baseline_value"):
         cmd += ["--baseline-value", case["baseline_value"]]
-    if hasattr(session, "_jns_bearer") and session._jns_bearer:
-        cmd += ["--bearer", session._jns_bearer]
-    if session.cookies:
-        cookie_hdr = "; ".join(f"{c.name}={c.value}" for c in session.cookies)
-        cmd += ["--cookie", cookie_hdr]
+    if sessions_file:
+        cmd += ["--sessions", sessions_file]
+    else:
+        if hasattr(session, "_jns_bearer") and session._jns_bearer:
+            cmd += ["--bearer", session._jns_bearer]
+        if session.cookies:
+            cookie_hdr = "; ".join(f"{c.name}={c.value}" for c in session.cookies)
+            cmd += ["--cookie", cookie_hdr]
     out = out_dir / f"{idx:03d}-{case['vuln_class']}.jsonl"
     err = out_dir / f"{idx:03d}-{case['vuln_class']}.stderr"
     record = {
@@ -226,17 +229,37 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, i
     except subprocess.TimeoutExpired:
         print(f"  {case['method']} {case['path']} ({case['vuln_class']}) -> TIMEOUT")
         record.update(exit=-1, aborted=False)
+    if sessions_file:
+        record["sessions_used"] = sessions_count
     return record
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--app", required=True)  # validated against apps.json below
+    ap.add_argument(
+        "--sessions-file",
+        default=None,
+        help="Path to sessions JSON for scanner tri-session rotation (ADR-026)",
+    )
     args = ap.parse_args()
 
     apps = load_apps()
     if args.app not in apps:
         raise SystemExit(f"unknown app: {args.app}")
+    if args.sessions_file:
+        if not Path(args.sessions_file).is_file():
+            raise SystemExit(f"--sessions-file not found: {args.sessions_file}")
+        try:
+            with open(args.sessions_file, encoding="utf-8") as _sf:
+                _sessions = json.load(_sf)
+        except (OSError, json.JSONDecodeError) as _e:
+            raise SystemExit(f"--sessions-file parse error: {_e}")
+        if not isinstance(_sessions, list) or len(_sessions) < 2:
+            raise SystemExit("--sessions-file must be a JSON array of >= 2 sessions")
+        sessions_count = len(_sessions)
+    else:
+        sessions_count = None
     cfg = apps[args.app]
     cases = load_cases(args.app)
     if not cases:
@@ -253,7 +276,7 @@ def main() -> None:
 
     records = []
     for idx, c in enumerate(cases):
-        records.append(scan_case(cfg, session, c, out_dir, idx))
+        records.append(scan_case(cfg, session, c, out_dir, idx, sessions_file=args.sessions_file, sessions_count=sessions_count))
 
     (out_dir / "manifest.json").write_text(json.dumps({
         "app": args.app,

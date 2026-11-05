@@ -238,7 +238,24 @@
         "password": "JnsTrackc!123"
       }
     },
-    "verify_url": "/identity/api/v2/user/dashboard"
+    "login_alt": {
+    "url": "/identity/api/auth/login",
+    "capture_jwt_from_json": "token",
+    "pre_register": {
+      "url": "/identity/api/auth/signup",
+      "json": {
+        "name": "JNS TrackC Alt",
+        "email": "jns-trackc-alt@example.com",
+        "number": "+15550003333",
+        "password": "JnsTrackcAlt!456"
+      }
+    },
+    "data": {
+      "email": "jns-trackc-alt@example.com",
+      "password": "JnsTrackcAlt!456"
+    }
+  },
+  "verify_url": "/identity/api/v2/user/dashboard"
   },
   "webgoat": {
     "base_url": "http://127.0.0.1:8889",
