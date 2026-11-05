@@ -109,6 +109,15 @@ def add_auth_flags(parser) -> None:
         help="Bearer token; sets 'Authorization: Bearer TOKEN' on every request.",
     )
     parser.add_argument(
+        "--sessions",
+        default=None,
+        metavar="PATH",
+        help=(
+            "JSON file with 2+ sessions for 401-triggered rotation (ADR-023). "
+            "Array of {cookie, bearer} objects. Mutually exclusive with --cookie/--bearer."
+        ),
+    )
+    parser.add_argument(
         "--redact-auth",
         action="store_true",
         help=(
@@ -120,6 +129,9 @@ def add_auth_flags(parser) -> None:
 
 
 def auth_from_args(args) -> AuthConfig:
+    sessions_path = getattr(args, "sessions", None)
+    if sessions_path:
+        return AuthConfig(sessions=load_sessions_file(sessions_path))
     return AuthConfig(
         cookie=getattr(args, "cookie", None),
         bearer=getattr(args, "bearer", None),
