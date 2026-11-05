@@ -63,7 +63,7 @@ def test_verified_findings_list_accepts_engine_emitted_finding():
 
 def test_verified_findings_list_rejects_raw_scan_finding():
     lst = _VerifiedFindingsList()
-    with pytest.raises(AssertionError, match="Phase 0.1 invariant"):
+    with pytest.raises(AssertionError, match=r"Phase 0\.1 invariant"):
         lst.append(_raw_scan_finding())
     assert len(lst) == 0
 
@@ -72,7 +72,7 @@ def test_verified_findings_list_extend_rejects_raw_finding():
     lst = _VerifiedFindingsList()
     good = _engine_emitted_finding()
     raw = _raw_scan_finding()
-    with pytest.raises(AssertionError, match="Phase 0.1 invariant"):
+    with pytest.raises(AssertionError, match=r"Phase 0\.1 invariant"):
         lst.extend([good, raw])
 
 

@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import janissary.agent.adapters as A
 import janissary.engine.scanner as S
 
@@ -27,7 +29,7 @@ class _FakeScanFinding:
 class _FakeSummary:
     aborted = False
     abort_reason = ""
-    findings = [_FakeScanFinding()]
+    findings: ClassVar[list] = [_FakeScanFinding()]
 
 
 def test_scan_adapter_is_registered():

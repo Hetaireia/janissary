@@ -509,7 +509,7 @@ class Scanner:
             raise ValueError(f"invalid inject_in: {inject_in!r}")
         if self.inject_in == "json-body" and not self.json_template:
             raise ValueError("inject_in='json-body' requires json_template")
-        if self.inject_in == "path":
+        if self.inject_in == "path":  # noqa: SIM102
             if not any(f"{{{p}}}" in self.target for p in self.params):
                 raise ValueError(
                     "inject_in='path' requires a {param} placeholder in URL"

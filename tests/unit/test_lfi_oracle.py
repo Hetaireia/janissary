@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from janissary.detection import Baseline, ResponseSnapshot
 from janissary.detection.lfi_oracle import check_lfi_content_oracle
@@ -104,8 +105,6 @@ def test_empty_body_no_emit():
 
 
 # --- ADR-028 D8: 4 new signatures + verbose flag ---
-
-from types import SimpleNamespace
 
 
 def _baseline_028(bodies):

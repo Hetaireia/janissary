@@ -17,8 +17,10 @@ from .analyzer import (
     check_sqli_quote_oracle,
     check_trustbound_oracle,
     check_weakrand_oracle,
-    check_xpath_error_oracle,
     normalize_body,
+)
+from .analyzer import (
+    check_xpath_error_oracle as check_xpath_error_oracle,
 )
 
 __all__ = [
