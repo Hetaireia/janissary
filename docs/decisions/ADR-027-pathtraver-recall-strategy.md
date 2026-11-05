@@ -399,3 +399,40 @@ public claim change that warrants a fresh-context decision.
 Next session: apply D8 (candidate-only) OR override D8 (keep scoring
 with "partial support" note per D7's middle branch — requires ADR
 amendment since measured R is below even that threshold).
+
+## D8 AMENDED 2026-11-05 — Path Z (dual scope), not literal D8
+
+D7's threshold triggered D8 (R = 0.075 < 0.15). Literal D8 (remove
+pathtraver from DAST-applicable scoring) would have changed the README
+headline from 0.921 to 0.977 **without** a fresh 3-run — which ADR-001 D3
+("Supersession requires a fresh 3-run") forbids.
+
+The amended D8 instead **adds a second scope**:
+
+- `DAST-APPLICABLE` continues to include pathtraver → **F1 = 0.921** (unchanged, ADR-001 stable)
+- `SUPPORTED-CLASSES` excludes pathtraver → **F1 = 0.977** (new, reported alongside)
+
+Derivation (exact, no re-run needed):
+    TP = 987 - 10  = 977
+    FN = 169 - 123 =  46
+    P  = 1.000   R = 0.955   F1 = 0.977
+
+Implementation:
+- `benchmark/track_a/dast_supported_excluded.txt` — new file; classes
+  excluded from supported-classes scope (currently only `pathtraver`)
+- `benchmark/track_a/score_dast_aware.py` — third scope in the label loop;
+  `tally()` accepts a `set` for additional exclusions beyond `dast_excluded.txt`;
+  `dast_metrics` (return contract) continues to be DAST-APPLICABLE, so the
+  benchmark-gate threshold checks are unaffected
+- `README.md` — 0.977 reported alongside 0.921 with scope labels; the
+  "not a supported class" limitation bullet now agrees with the headline
+  because the headline distinguishes scopes explicitly
+
+Claims:
+- 0.921 remains accurate for "all DAST-applicable classes" — no supersession
+- 0.977 is accurate for "supported classes" — new, supplemental
+- Traversal capability unchanged: findings still emit; only scoring scope changed
+- README self-consistency fixed: "path traversal not supported" (limitations)
+  and the headline no longer contradict each other
+
+**Status:** Accepted (2026-11-05). D8 amended as above; both metrics reported.

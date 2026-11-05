@@ -1,0 +1,5 @@
+# Categories excluded from the SUPPORTED-CLASSES scoring scope.
+# Each is DAST-applicable but has measured recall below ADR-027 D7's
+# 0.15 threshold on OWASP Benchmark. Findings still emit; scoring
+# excludes them per ADR-027 D8 (amended 2026-11-05, Path Z).
+pathtraver
