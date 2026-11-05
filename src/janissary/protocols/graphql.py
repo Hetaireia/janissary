@@ -126,7 +126,7 @@ class GraphQLNormalizer:
                 length=base.length,
                 status=status,
                 headers=base.headers,
-                stripped=("body:non_json_fallback",) + base.stripped,
+                stripped=("body:non_json_fallback", *base.stripped),
             )
 
         # JSON path: strip extensions, strip timings, sort keys.

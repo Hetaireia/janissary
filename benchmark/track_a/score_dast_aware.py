@@ -122,9 +122,8 @@ def score(run_dir, cases_csv, label="full"):
         ("SUPPORTED-CLASSES", load_supported_excluded()),
     ]:
         TP, FP, FN, TN, P, R, F1, per_cat = tally(filt)
-        if filt:
-            if label == "DAST-APPLICABLE":
-                dast_metrics = (TP, FP, FN, TN, P, R, F1)
+        if filt and label == "DAST-APPLICABLE":
+            dast_metrics = (TP, FP, FN, TN, P, R, F1)
         print(f"=== {label} ===")
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")

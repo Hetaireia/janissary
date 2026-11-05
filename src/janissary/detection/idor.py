@@ -73,10 +73,7 @@ def is_idor_testable_url(url: str) -> bool:
         qs = parse_qs(parsed.query, keep_blank_values=False)
     except ValueError:
         return False
-    for name in qs:
-        if name.lower() in ID_PARAM_NAMES:
-            return True
-    return False
+    return any(name.lower() in ID_PARAM_NAMES for name in qs)
 
 
 def is_idor_candidate(a: Observation, b_status: int, b_body: str) -> bool:
@@ -101,6 +98,4 @@ def is_idor_candidate(a: Observation, b_status: int, b_body: str) -> bool:
     a_len = len(a_body)
     b_len = len(b_body_norm)
     delta = abs(a_len - b_len)
-    if delta / max(a_len, b_len) <= 0.05:
-        return True
-    return False
+    return delta / max(a_len, b_len) <= 0.05
