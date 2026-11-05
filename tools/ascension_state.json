@@ -317,7 +317,8 @@
     },
     "M43": {
       "label": "crAPI end-to-end validation",
-      "proposed": "30-JUN-2027"
+      "proposed": "30-JUN-2027",
+      "delivered": "2026-11-05"
     },
     "M44": {
       "label": "janissary-crawl repo (standalone)",
