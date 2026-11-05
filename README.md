@@ -398,7 +398,7 @@ Being explicit about scope is part of being honest about precision:
 
 - **Not a crawler.** You point it at a URL and parameters. It scans those. A crawler is conditional on ADR-021 triggers (named enterprise demand or 3+ user asks) and is not present in the current release.
 - **Not an enterprise platform.** No SSO, no RBAC, no scheduled scans, no support SLA.
-- **Not a full OWASP Top 10 scanner yet.** It ships SQLi, XSS, SSRF, and partial traversal today. IDOR, JWT, and prototype pollution are not implemented and have no committed delivery date -- see the Known Limitations section below for the honest current state of each gap.
+- **Not a full OWASP Top 10 scanner yet.** It ships SQLi, XSS, SSRF, and partial traversal today. JWT and prototype pollution are not implemented and have no committed delivery date -- see the Known Limitations section below for the honest current state of each gap.
 - **Not a replacement for Burp.** It is complementary. Findings carry raw HTTP/1.1 so you can paste them into Repeater and finish the job.
 
 ---
@@ -414,7 +414,7 @@ Being explicit about scope is part of being honest about precision:
 - **Framework-Specific SQLi:** Payloads are now expanded to handle parenthesized SQL queries (Juice Shop), but ORM-specific edge cases remain a constant target for improvement.
 - **Path traversal recall 0.049-0.308.** Not a supported detection class in 7.x. Documented in ``docs/pathtraver.md`` as a property of the benchmark target, not a scanner gap.
 - **SSRF payload scope:** Nine payloads ship today. Five OOB via collaborator (`ssrf_http`, `ssrf_https`, `ssrf_gopher`, `ssrf_dict`, `ssrf_dns_only`) and four cloud-metadata via response-body markers (`ssrf_metadata_aws`, `ssrf_metadata_aws_v6`, `ssrf_metadata_gcp`, `ssrf_metadata_azure`). The `file://` payload remains deferred to a future local-file oracle path.
-- **No IDOR detection yet.** Insecure Direct Object Reference is an open gap. It is planned for Phase 2 (M42, proposed May 2027) per `docs/FUTURE-STATE-PLAN.md`; do not rely on IDOR findings from JANISSARY in its current state.
+- **IDOR candidate detection ships in M42.** Insecure Direct Object Reference candidates are surfaced as unproven findings via `--idor` (requires two identities). These are cross-identity probes, not full exploitation; manual triage is required. See `docs/decisions/ADR-024-idor-candidate-probe.md` for the v1 predicate and limitations.
 
 ## Roadmap
 
