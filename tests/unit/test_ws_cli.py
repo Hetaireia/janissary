@@ -1,11 +1,11 @@
 """Tests for --ws / --ws-payloads CLI wiring and _merge_ws_into_scan (FN-16)."""
 
+import contextlib
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 from janissary.cli import _load_ws_payloads, _merge_ws_into_scan, cmd_scan
 from janissary.engine.scanner import ScanFinding, ScanSummary
-import contextlib
 
 
 def _ws_finding(**kw) -> ScanFinding:

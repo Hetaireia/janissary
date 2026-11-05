@@ -18,11 +18,11 @@ Deliberately:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from graphql import build_schema, graphql_sync
-import contextlib
 
 SCHEMA = build_schema(
     """

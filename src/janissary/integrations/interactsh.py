@@ -16,6 +16,7 @@ Interface parity with `CollaboratorClient` (ADR-015 D2) so
 from __future__ import annotations
 
 import base64
+import contextlib
 import json
 import secrets
 import string
@@ -28,7 +29,6 @@ from janissary.integrations.collaborator import (
     SsrfHit,
     SsrfPayload,
 )
-import contextlib
 
 try:
     from cryptography.hazmat.primitives import hashes, serialization
