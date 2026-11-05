@@ -232,7 +232,7 @@ User-facing vocabulary: verified findings vs discovery candidates. Internal ADR/
 | ADR-020 | Pydantic vs dataclasses | 0 |
 | ADR-021 | Crawler placement | 0 |
 | ADR-022 | Tri-session auth model | 2 |
-| ADR-023 | IDOR candidate generation rules | 2 |
+| ADR-024 | IDOR candidate generation rules | 2 |
 | ADR-024 | Local UI vs SaaS split | 4 |
 
 ### Milestone mapping
