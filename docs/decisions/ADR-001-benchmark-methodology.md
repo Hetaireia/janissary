@@ -70,3 +70,35 @@ Rationale for the split: PR feedback must be fast (seconds, not minutes) and det
 - `benchmark/track_a/score_dast_aware.py` — reference implementation
 - `.github/workflows/benchmark-gate.yml` — CI gate (PR)
 - `README.md` — benchmark section (user-facing summary)
+
+## Addendum — 2026-11-06 — L65 interpretation: NARROW
+
+The L65 consequence bullet reads: "Any future change to the corpus
+(adding/removing cases), the exclusion set, or the protocol itself is an
+ADR-level change, not an amendment."
+
+**Decision: NARROW.** "The exclusion set" refers to `dast_excluded.txt`
+specifically — the singular file defining the DAST-applicable scope when
+this ADR was written. A separately named exclusion file for a derived
+supplemental scope (`dast_supported_excluded.txt`) is a new scope, not a
+change to the exclusion set, and is amendment-eligible under L62-63
+("amendment-style addenda ... for detailed findings").
+
+Grounds:
+- L64 anchors headline stability to 0.921. The headline scope is defined by
+  `dast_excluded.txt`; untouched, so the headline is unchanged and L64 is
+  satisfied without a new 3-run.
+- L62-63 authorizes addenda for detailed findings, incl. per-category
+  breakdowns. A per-category-filtered supplemental is exactly that.
+- The definite article refers to the file in existence at ADR-writing time;
+  not a generic classifier for any excluding file.
+
+The WIDE reading would demand a fresh 3-run to re-measure committed data —
+process without verification. WIDE's concern (a second number displacing the
+headline) is met by guardrails: 0.921 first everywhere; 0.977 labeled
+supplemental; supplemental list versioned and per-category; changes to it
+amendment-level; promoting 0.977 to headline or replacing 0.921 ADR-level;
+changes to `dast_excluded.txt`, corpus, protocol, or the 0.921 measurement
+ADR-level + fresh 3-run.
+
+Recorded in BENCHMARK.md Amendment 27 and ADR-027 D8 (Path Z).

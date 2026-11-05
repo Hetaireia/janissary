@@ -1877,3 +1877,41 @@ From repo root, with juice-shop running on 127.0.0.1:3000:
     python benchmark/track_c/score.py --app juice-shop --run benchmark/track_c/runs/<timestamp>-juice-shop
 
 Expected: 4 cases, tp=2, fn=0, f1=1.0.
+
+### Amendment 27 — 2026-11-06 — Dual-scope benchmark reporting (ADR-027 D8, Path Z)
+
+**Scope:** none. Corpus, protocol, and `dast_excluded.txt` unchanged.
+ADR-001 L64 headline — DAST-applicable F1 0.921 — preserved as shipped.
+
+**Decision (ADR-027 D8, Path Z).** Pathtraver scoring is reported under two
+explicitly labeled scopes:
+
+| Scope | F1 | TP | FP | FN | TN | P | R |
+|---|---|---|---|---|---|---|---|
+| DAST-applicable (ADR-001 headline) | 0.921 | 987 | 0 | 169 | 1102 | 1.000 | 0.854 |
+| Supported-classes (supplemental) | 0.977 | 977 | 0 | 46 | 1102 | 1.000 | 0.955 |
+
+DAST-applicable includes pathtraver; supported-classes excludes
+`pathtraver-{00,01,02,03}`. **Both derive from the same committed r1+rec
+measurement**; no regeneration, no fresh 3-run. The supplemental is a
+filtered projection, not independent, and does not supersede 0.921.
+
+**Rationale.** Pathtraver recall 0.075 (10/133; per-category F1 0.049-0.308),
+previously a limitation while inside the 0.921 headline — a README
+contradiction. Path Z labels both without amending ADR-001 or rewriting
+history. Capability unchanged; only scoring scope differs.
+
+**Governance (ADR-001 L65 NARROW, 2026-11-06).** "The exclusion set" is
+`dast_excluded.txt`; `dast_supported_excluded.txt` is a new scope,
+amendment-eligible under L62-63. Guardrails: 0.921 first; 0.977 labeled
+supplemental; list versioned and per-category; changes to it amendment-level;
+promoting 0.977 or replacing 0.921 ADR-level; changes to `dast_excluded.txt`,
+corpus, protocol, or 0.921 measurement ADR-level + fresh 3-run.
+
+**Gate.** `--min-f1 0.92 --max-fp 0` reads DAST-applicable (0.921), `8c0dc26`.
+
+**Files.** `dast_excluded.txt` (unchanged); `dast_supported_excluded.txt`
+(new); `score_dast_aware.py` (`8c0dc26`); `README.md` (`781ca9f`).
+
+**Does not claim.** No recall improvement (0.075); no supersession of 0.921;
+no gate-scope change; no independent measurement of 0.977.
