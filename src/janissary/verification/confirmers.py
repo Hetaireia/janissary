@@ -194,3 +194,31 @@ class HeuristicConfirmer:
                 unproven=True,
             )
         return None
+
+
+class IdorConfirmer:
+    """Mark IDOR candidates as unproven (M42, ADR-024 D2).
+
+    Track B variant for IDOR. IDOR candidates are fundamentally
+    unverifiable from response alone; "unproven" is the correct
+    terminal state. Manual triage is by design.
+
+    Recognizes discovery_reason="idor:*". Does nothing for other
+    candidates (returns None, falls through to AnalyzerImplicitConfirmer).
+
+    Placed after HeuristicConfirmer, before AnalyzerImplicitConfirmer.
+    Order matters: AnalyzerImplicitConfirmer always confirms, so any
+    prefix-matching confirmer must precede it.
+    """
+
+    name = "idor"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        reason = candidate.discovery_reason or ""
+        if reason.startswith("idor:"):
+            return Confirmation(
+                confirmed=True,
+                reason=reason,
+                unproven=True,
+            )
+        return None

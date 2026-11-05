@@ -52,7 +52,7 @@ from janissary.integrations.graphql import GraphQLClient, detect
 from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
 from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
 from janissary.integrations.websocket_learn import learn
-from janissary.verification.confirmers import HeuristicConfirmer
+from janissary.verification.confirmers import HeuristicConfirmer, IdorConfirmer
 from janissary.verification import (
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
@@ -303,7 +303,7 @@ def _ws_url_from_target(target: str) -> str:
     return target
 
 
-_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), WebSocketReconConfirmer(), GraphQLReconConfirmer(), HeuristicConfirmer(), AnalyzerImplicitConfirmer()])
+_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), WebSocketReconConfirmer(), GraphQLReconConfirmer(), HeuristicConfirmer(), IdorConfirmer(), AnalyzerImplicitConfirmer()])
 
 
 class _VerifiedFindingsList(list):
