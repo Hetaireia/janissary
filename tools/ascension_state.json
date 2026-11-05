@@ -302,7 +302,8 @@
     },
     "M40": {
       "label": "SARIF discovery triage stream",
-      "proposed": "31-MAR-2027"
+      "proposed": "31-MAR-2027",
+      "delivered": "2026-11-05"
     },
     "M41": {
       "label": "Tri-session auth (A/B/C)",
