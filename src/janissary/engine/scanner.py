@@ -47,6 +47,7 @@ from janissary.recon import (
 )
 
 from janissary.protocols import BaselineNormalizer, HTTPNormalizer
+from janissary.heuristic.types import Observation
 from janissary.integrations.graphql import GraphQLClient, detect
 from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
 from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
@@ -405,6 +406,7 @@ class Scanner:
         json_template: dict | None = None,
         baseline_value: str = "",
         normalizer: "BaselineNormalizer | None" = None,
+        collect_observations: bool = False,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -425,6 +427,8 @@ class Scanner:
         self._consecutive_401s: int = 0
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
+        self._collect_observations = collect_observations
+        self._observations: list[Observation] = []
         self.inject_in = inject_in.lower()
         if self.inject_in not in {
             "auto",
@@ -470,6 +474,10 @@ class Scanner:
         self._pacer: AdaptivePacer | None = None
 
     # ---------------------------------------------------------------
+
+    def get_observations(self) -> list[Observation]:
+        """Return a defensive copy of collected observations."""
+        return list(self._observations)
 
     def _headers(self) -> dict:
         headers = {
@@ -1101,6 +1109,20 @@ class Scanner:
                     break
 
                 snapshot = ResponseSnapshot.from_response(r, normalizer=self.normalizer)
+
+                if self._collect_observations and len(self._observations) < 1000:
+                    self._observations.append(
+                        Observation(
+                            url=(getattr(getattr(r, "request", None), "url", None) or self.target),
+                            body=(r.text or ""),
+                            headers=dict(r.headers or {}),
+                            method=self.method,
+                            response_status=r.status_code,
+                            payload_name=name,
+                            payload_value=value,
+                            param=param,
+                        )
+                    )
 
                 # Collapse oracle (ADR-006, Phase 1.3d): fires when a
                 # payload response structurally collapses from the armed
