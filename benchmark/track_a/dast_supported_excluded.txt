@@ -2,4 +2,11 @@
 # Each is DAST-applicable but has measured recall below ADR-027 D7's
 # 0.15 threshold on OWASP Benchmark. Findings still emit; scoring
 # excludes them per ADR-027 D8 (amended 2026-11-05, Path Z).
-pathtraver
+#
+# Format: full per-category names, matching dast_excluded.txt convention.
+# The 4 pathtraver sub-categories together comprise the "path traversal"
+# class. TP 10 + FN 123 across these 4 = the 0.075 measured recall.
+pathtraver-00
+pathtraver-01
+pathtraver-02
+pathtraver-03
