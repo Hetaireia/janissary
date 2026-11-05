@@ -37,6 +37,7 @@ try:
         Cipher as _Cipher,
         algorithms as _algorithms,
     )
+
     try:
         from cryptography.hazmat.decrepit.ciphers.modes import CFB as _CFB
     except ImportError:  # cryptography < 43
@@ -128,8 +129,7 @@ class InteractshClient:
         )
         self._secret_key_b64 = base64.b64encode(secrets.token_bytes(32)).decode()
         self._correlation_id = "".join(
-            secrets.choice(string.ascii_lowercase + string.digits)
-            for _ in range(20)
+            secrets.choice(string.ascii_lowercase + string.digits) for _ in range(20)
         )
         body = {
             "public-key": base64.b64encode(pub_pem).decode(),
@@ -141,9 +141,7 @@ class InteractshClient:
             headers["Authorization"] = self.token
         url = f"{base_url}/register"
         try:
-            r = self.session.post(
-                url, json=body, headers=headers, timeout=self.timeout
-            )
+            r = self.session.post(url, json=body, headers=headers, timeout=self.timeout)
         except requests.RequestException as exc:
             raise CollaboratorError(f"interactsh register failed: {exc}") from exc
         if r.status_code != 200:

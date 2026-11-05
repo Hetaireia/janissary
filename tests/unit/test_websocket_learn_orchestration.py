@@ -2,6 +2,7 @@
 
 Uses the same in-process websockets.serve pattern as test_websocket.py.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -114,7 +115,8 @@ def test_learn_passive_window_captures_server_greeting():
     assert model.baseline_sequence.messages[0].direction == "s2c"
     assert model.baseline_sequence.messages[0].payload == '{"type":"greeting"}'
     c2s_indices = [
-        i for i, m in enumerate(model.baseline_sequence.messages)
+        i
+        for i, m in enumerate(model.baseline_sequence.messages)
         if m.direction == "c2s"
     ]
     assert c2s_indices == [1]
@@ -136,8 +138,7 @@ def test_learn_multiple_payloads_multiple_c2s_frames():
 
     model = asyncio.run(run())
     c2s_payloads = [
-        m.payload for m in model.baseline_sequence.messages
-        if m.direction == "c2s"
+        m.payload for m in model.baseline_sequence.messages if m.direction == "c2s"
     ]
     assert c2s_payloads == ['{"a":1}', '{"b":2}']
     paths = [f.path for f in model.injectable_fields]

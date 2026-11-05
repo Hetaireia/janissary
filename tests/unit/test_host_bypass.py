@@ -28,6 +28,7 @@ class _CorrectServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         from urllib.parse import urlparse
+
         host = self.headers.get("Host", "")
         normalized = host.rstrip(".")
         parsed = urlparse("//" + normalized)
@@ -166,10 +167,14 @@ def test_host_bypass_subcommand_invokes_helper(capsys):
         return []
 
     argv = [
-        "janissary", "host-bypass",
-        "-u", "http://example.com/",
-        "--baseline-host", "foo.example",
-        "--timeout", "2.5",
+        "janissary",
+        "host-bypass",
+        "-u",
+        "http://example.com/",
+        "--baseline-host",
+        "foo.example",
+        "--timeout",
+        "2.5",
     ]
     with patch.object(sys, "argv", argv):
         with patch(
@@ -240,11 +245,13 @@ def test_host_bypass_subcommand_clean_when_no_findings(capsys):
     out = capsys.readouterr().out
     assert "no Host-header ACL bypass" in out
 
+
 # --- scan wiring tests (FN-20 part 2) ---
 
 
 def _minimal_candidate():
     from janissary.verification import CandidateFinding
+
     return CandidateFinding(
         param="Host",
         payload_name="trailing_dot",
@@ -262,11 +269,13 @@ def _minimal_candidate():
 
 def _empty_scan_summary():
     from janissary.engine.scanner import ScanSummary
+
     return ScanSummary(target="http://example.com/", params=["x"], method="GET")
 
 
 def _scanner_for_wiring():
     from janissary.engine.scanner import Scanner
+
     return Scanner(target="http://example.com/", params=["x"])
 
 
@@ -324,8 +333,14 @@ def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
     from unittest.mock import patch
     from janissary.cli import main
 
-    argv = ["janissary", "scan", "-u", "http://example.com/",
-            "--host-bypass", "--quiet"]
+    argv = [
+        "janissary",
+        "scan",
+        "-u",
+        "http://example.com/",
+        "--host-bypass",
+        "--quiet",
+    ]
     with patch.object(sys, "argv", argv):
         with patch("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value
@@ -338,6 +353,8 @@ def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
 
     assert rc == 0, f"expected rc=0, got {rc}"
     inst.scan_host_bypass.assert_called_once()
+
+
 # --- FN-20 follow-up: --baseline-host on scan ---
 
 
@@ -346,10 +363,16 @@ def test_scan_baseline_host_flag_registered():
     from janissary.cli import build_parser
 
     p = build_parser()
-    args = p.parse_args([
-        "scan", "-u", "http://example.com/",
-        "--host-bypass", "--baseline-host", "app.local",
-    ])
+    args = p.parse_args(
+        [
+            "scan",
+            "-u",
+            "http://example.com/",
+            "--host-bypass",
+            "--baseline-host",
+            "app.local",
+        ]
+    )
     assert args.host_bypass is True
     assert args.baseline_host == "app.local"
 
@@ -359,9 +382,14 @@ def test_scan_baseline_host_defaults_none():
     from janissary.cli import build_parser
 
     p = build_parser()
-    args = p.parse_args([
-        "scan", "-u", "http://example.com/", "--host-bypass",
-    ])
+    args = p.parse_args(
+        [
+            "scan",
+            "-u",
+            "http://example.com/",
+            "--host-bypass",
+        ]
+    )
     assert args.baseline_host is None
 
 
@@ -374,8 +402,15 @@ def test_scan_passes_baseline_host_to_scanner():
 
     empty = ScanSummary(target="http://example.com/", params=["x"], method="GET")
     argv = [
-        "janissary", "scan", "-u", "http://example.com/",
-        "--host-bypass", "--baseline-host", "app.local", "--quiet", "--no-waf",
+        "janissary",
+        "scan",
+        "-u",
+        "http://example.com/",
+        "--host-bypass",
+        "--baseline-host",
+        "app.local",
+        "--quiet",
+        "--no-waf",
     ]
     with patch.object(sys, "argv", argv):
         with patch("janissary.cli.Scanner") as MockScanner:

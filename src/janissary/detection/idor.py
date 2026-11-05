@@ -14,6 +14,7 @@ similarity via exact match or length-within-5%. Semantic diffing
 (B sees A's PII replaced with B's PII) requires entity recognition
 and is out of scope.
 """
+
 from __future__ import annotations
 
 import re
@@ -23,11 +24,22 @@ from janissary.heuristic.types import Observation
 
 
 #: Query parameter names that commonly carry object references (D5).
-ID_PARAM_NAMES: frozenset[str] = frozenset({
-    "id", "uid", "user_id", "account_id", "order_id", "resource_id",
-    "object_id", "doc_id", "file_id", "invoice_id", "customer_id",
-    "tenant_id",
-})
+ID_PARAM_NAMES: frozenset[str] = frozenset(
+    {
+        "id",
+        "uid",
+        "user_id",
+        "account_id",
+        "order_id",
+        "resource_id",
+        "object_id",
+        "doc_id",
+        "file_id",
+        "invoice_id",
+        "customer_id",
+        "tenant_id",
+    }
+)
 
 
 _NUMERIC_SEG = re.compile(r"/\d+(?:/|$)")
@@ -68,9 +80,7 @@ def is_idor_testable_url(url: str) -> bool:
     return False
 
 
-def is_idor_candidate(
-    a: Observation, b_status: int, b_body: str
-) -> bool:
+def is_idor_candidate(a: Observation, b_status: int, b_body: str) -> bool:
     """True if A and B both got 2xx and bodies look like the same resource.
 
     v1 predicate (ADR-024 D6):

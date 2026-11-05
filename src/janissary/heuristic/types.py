@@ -1,4 +1,5 @@
 """Shared types for the heuristic (Track B) engine."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

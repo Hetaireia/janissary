@@ -129,7 +129,9 @@ def test_hostname_strict_in_body_emits():
 
 
 def test_os_release_emits():
-    body = 'NAME="Ubuntu"' + chr(10) + 'PRETTY_NAME="Ubuntu 22.04"' + chr(10) + "ID=ubuntu"
+    body = (
+        'NAME="Ubuntu"' + chr(10) + 'PRETTY_NAME="Ubuntu 22.04"' + chr(10) + "ID=ubuntu"
+    )
     result = _run_lfi_028(body)
     assert len(result) == 1
     assert "os_release" in result[0]["signatures"]
@@ -175,6 +177,7 @@ def test_multiple_signatures_emit_all():
 
 def test_verbose_flag_default_false():
     from janissary.cli import build_parser
+
     parser = build_parser()
     args = parser.parse_args(["scan", "--url", "http://x/"])
     assert args.verbose is False

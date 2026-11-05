@@ -22,6 +22,8 @@ FAMILY_OF = {
 
 EXCLUDE_FILE = Path("benchmark/track_a/dast_excluded.txt")
 SUPPORTED_EXCLUDE_FILE = Path("benchmark/track_a/dast_supported_excluded.txt")
+
+
 def load_excluded():
     if not EXCLUDE_FILE.exists():
         return set()
@@ -46,6 +48,7 @@ def load_supported_excluded():
         for line in SUPPORTED_EXCLUDE_FILE.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.startswith("#")
     }
+
 
 def score(run_dir, cases_csv, label="full"):
     with open(cases_csv, encoding="utf-8", newline="") as fh:
@@ -113,7 +116,11 @@ def score(run_dir, cases_csv, label="full"):
     print()
 
     dast_metrics = None
-    for label, filt in [("FULL CORPUS", False), ("DAST-APPLICABLE", True), ("SUPPORTED-CLASSES", load_supported_excluded())]:
+    for label, filt in [
+        ("FULL CORPUS", False),
+        ("DAST-APPLICABLE", True),
+        ("SUPPORTED-CLASSES", load_supported_excluded()),
+    ]:
         TP, FP, FN, TN, P, R, F1, per_cat = tally(filt)
         if filt:
             if label == "DAST-APPLICABLE":
@@ -122,7 +129,6 @@ def score(run_dir, cases_csv, label="full"):
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")
         print()
-
 
     # per-category for DAST-applicable only
     _, _, _, _, _, _, _, per_cat = tally(True)

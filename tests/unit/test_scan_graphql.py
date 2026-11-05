@@ -1,4 +1,5 @@
 """Tests for Scanner.scan_graphql() (Phase 2.1 + FN-15 part 3b)."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest

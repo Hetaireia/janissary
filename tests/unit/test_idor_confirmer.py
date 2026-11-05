@@ -1,4 +1,5 @@
 """Tests for IdorConfirmer + _ENGINE registration (M42, ADR-024 D2)."""
+
 from __future__ import annotations
 
 from janissary.engine.scanner import _ENGINE

@@ -1,4 +1,5 @@
 """Integration tests for Scanner.run_idor (M42, ADR-024 D4-D7)."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch

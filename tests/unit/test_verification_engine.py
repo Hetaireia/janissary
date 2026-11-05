@@ -5,6 +5,7 @@ list. These tests pin the promotion and rejection contract so that
 subsequent emission-site rewires and confirmer additions have a stable
 target.
 """
+
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -179,6 +180,7 @@ def test_verify_uses_first_non_none_confirmer_result():
     result = engine.verify(_sample_candidate())
     assert isinstance(result, VerifiedFinding)
     assert result.verification_reason == "matched_pattern"
+
 
 class _UnprovenConfirmer:
     name = "unproven"

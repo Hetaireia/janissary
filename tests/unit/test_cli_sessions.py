@@ -1,4 +1,5 @@
 """cmd_scan validation for --sessions (M41, ADR-023 D4)."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

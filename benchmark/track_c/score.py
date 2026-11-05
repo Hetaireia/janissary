@@ -7,6 +7,7 @@ See SCHEMA.md for the trial model. Summary:
 - safe=true trials expect no findings; any finding on them is FP.
 - Findings are matched to trials by URL path (last-segment).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -21,11 +22,24 @@ RUNS = HERE / "runs"
 # Fallback map for backwards compatibility with v1 cases.csv (no
 # expected_finding_class column). Preferred path is the column.
 CLASS_MAP = {
-    "sqli": {"sqli", "sqli:sql_injection", "sqli:error", "sqli:union", "sqli:time_based", "sqli:reflection"},
+    "sqli": {
+        "sqli",
+        "sqli:sql_injection",
+        "sqli:error",
+        "sqli:union",
+        "sqli:time_based",
+        "sqli:reflection",
+    },
     "sqli_blind": {"sqli", "sqli:sql_injection", "sqli:blind", "sqli:time_based"},
     "xss": {"xss", "xss:reflected", "xss:stored", "xss:dom", "xss:reflection"},
     "cmdi": {"cmdi", "cmdi:command_injection", "cmdi:cmd_injection"},
-    "traversal": {"traversal", "pathtraver", "pathtraver:path_traversal", "pathtraver:file_inclusion", "traversal:path_traversal"},
+    "traversal": {
+        "traversal",
+        "pathtraver",
+        "pathtraver:path_traversal",
+        "pathtraver:file_inclusion",
+        "traversal:path_traversal",
+    },
     "ssrf": {"ssrf", "ssrf:oob", "ssrf:response", "ssrf:blind", "ssrf:metadata"},
 }
 
@@ -38,7 +52,7 @@ def load_cases(app: str) -> list[dict]:
 def collect_findings(run_dir: Path) -> list[dict]:
     findings = []
     for jl in run_dir.glob("*.jsonl"):
-        case_class = jl.stem.split('-', 1)[1] if '-' in jl.stem else jl.stem
+        case_class = jl.stem.split("-", 1)[1] if "-" in jl.stem else jl.stem
         for line in jl.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
@@ -71,7 +85,9 @@ def load_exit_codes(run_dir: Path) -> dict[str, dict]:
 
 
 def category_of(f: dict) -> str:
-    return f.get("class") or f.get("category") or f.get("rule_id") or f.get("ruleId") or ""
+    return (
+        f.get("class") or f.get("category") or f.get("rule_id") or f.get("ruleId") or ""
+    )
 
 
 def finding_path(f: dict) -> str:
@@ -100,6 +116,7 @@ def _placeholder_path_match(fp: str, cp: str) -> bool:
     /users/v1/name1/email (exactly one segment per placeholder).
     """
     import re as _re
+
     pat = _re.escape(cp)
     pat = _re.sub(r"\\\{[^}]+\\\}", "[^/?#]+", pat)
     return _re.search(pat + r"($|[?#])", fp) is not None
@@ -145,21 +162,30 @@ def main() -> None:
 
         # Priority 1: literal path match (preserves existing behavior
         # for non-placeholder cases).
-        literal = [c for c in cases if "{" not in case_path(c) and finding_matches_case(f, c)]
+        literal = [
+            c for c in cases if "{" not in case_path(c) and finding_matches_case(f, c)
+        ]
         if literal:
-            strict = [c for c in literal if is_safe_case(c) or f_class in expected_classes(c)]
-            for c in (strict or literal):
+            strict = [
+                c for c in literal if is_safe_case(c) or f_class in expected_classes(c)
+            ]
+            for c in strict or literal:
                 by_case.setdefault(id(c), []).append(f)
             continue
 
         # Priority 2: placeholder path match (Phase 1c path-param cases).
         placeholder = [
-            c for c in cases
+            c
+            for c in cases
             if "{" in case_path(c) and _placeholder_path_match(fp, case_path(c))
         ]
         if placeholder:
-            strict = [c for c in placeholder if is_safe_case(c) or f_class in expected_classes(c)]
-            for c in (strict or placeholder):
+            strict = [
+                c
+                for c in placeholder
+                if is_safe_case(c) or f_class in expected_classes(c)
+            ]
+            for c in strict or placeholder:
                 by_case.setdefault(id(c), []).append(f)
             continue
 
@@ -191,14 +217,16 @@ def main() -> None:
             else:
                 fn += 1
                 outcome = "FN"
-        per_case.append({
-            "path": c["path"],
-            "safe": is_safe,
-            "expected": sorted(expected_classes(c)) if not is_safe else [],
-            "findings": len(cf),
-            "outcome": outcome,
-            "aborted": False,
-        })
+        per_case.append(
+            {
+                "path": c["path"],
+                "safe": is_safe,
+                "expected": sorted(expected_classes(c)) if not is_safe else [],
+                "findings": len(cf),
+                "outcome": outcome,
+                "aborted": False,
+            }
+        )
 
     for i, c in enumerate(cases):
         k = str(c["path"]) + "|" + str(c["method"]) + "|" + str(c["param"])
@@ -229,7 +257,11 @@ def main() -> None:
         "safe_cases": fp + tn,
         "findings": len(findings),
         "unmatched_findings": unmatched_findings,
-        "tp": tp, "fp": fp, "fn": fn, "tn": tn, "aborts": aborts,
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "tn": tn,
+        "aborts": aborts,
         "precision": round(P, 4),
         "recall": round(R, 4),
         "f1": round(F1, 4),
@@ -237,11 +269,26 @@ def main() -> None:
         "per_case": per_case,
     }
     (run_dir / "score.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-    summary = {k: out[k] for k in (
-        "app", "cases", "vuln_cases", "safe_cases", "findings",
-        "unmatched_findings", "tp", "fp", "fn", "tn", "aborts",
-        "precision", "recall", "f1", "fp_rate_safe",
-    )}
+    summary = {
+        k: out[k]
+        for k in (
+            "app",
+            "cases",
+            "vuln_cases",
+            "safe_cases",
+            "findings",
+            "unmatched_findings",
+            "tp",
+            "fp",
+            "fn",
+            "tn",
+            "aborts",
+            "precision",
+            "recall",
+            "f1",
+            "fp_rate_safe",
+        )
+    }
     print(json.dumps(summary, indent=2))
 
 

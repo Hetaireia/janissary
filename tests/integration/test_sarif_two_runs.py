@@ -12,6 +12,7 @@ heuristic signature IDs). Verified-track heuristic findings do NOT
 carry signals (they would only reach the verified track if promoted
 by the engine — signals field is not preserved through promotion).
 """
+
 from __future__ import annotations
 
 import json
@@ -89,13 +90,18 @@ def test_verified_only_summary_emits_two_runs(tmp_path):
 
 
 def test_discovery_only_summary_emits_two_runs(tmp_path):
-    doc = _read(tmp_path, _summary(_finding(
-        verification_status="unproven",
-        verification_reason="heuristic:HEUR-001",
-        category="sqli:error_leak",
-        finding_type="heuristic_sqli_error_leak",
-        severity="low",
-    )))
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            )
+        ),
+    )
     assert len(doc["runs"]) == 2
 
 
@@ -113,20 +119,26 @@ def test_run_track_labels(tmp_path):
 
 
 def test_mixed_summary_partitioned_by_status(tmp_path):
-    doc = _read(tmp_path, _summary(
-        _finding(verification_status="verified", finding_type="db_error"),
-        _finding(
-            verification_status="unproven",
-            verification_reason="heuristic:HEUR-001",
-            category="sqli:error_leak",
-            finding_type="heuristic_sqli_error_leak",
-            severity="low",
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(verification_status="verified", finding_type="db_error"),
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            ),
         ),
-    ))
+    )
     assert len(doc["runs"][0]["results"]) == 1
     assert len(doc["runs"][1]["results"]) == 1
     assert doc["runs"][0]["results"][0]["ruleId"] == "sqli:db_error"
-    assert doc["runs"][1]["results"][0]["ruleId"] == "sqli:error_leak:heuristic_sqli_error_leak"
+    assert (
+        doc["runs"][1]["results"][0]["ruleId"]
+        == "sqli:error_leak:heuristic_sqli_error_leak"
+    )
 
 
 # --- partialFingerprints (ADR-019 D2) ---------------------------------
@@ -140,13 +152,18 @@ def test_verified_track_has_verification_status_fingerprint(tmp_path):
 
 
 def test_discovery_track_has_unproven_fingerprint(tmp_path):
-    doc = _read(tmp_path, _summary(_finding(
-        verification_status="unproven",
-        verification_reason="heuristic:HEUR-001",
-        category="sqli:error_leak",
-        finding_type="heuristic_sqli_error_leak",
-        severity="low",
-    )))
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            )
+        ),
+    )
     fps = doc["runs"][1]["results"][0]["partialFingerprints"]
     assert "finding/v1" in fps
     assert fps["verification_status/v1"] == "unproven"
@@ -156,25 +173,35 @@ def test_discovery_track_has_unproven_fingerprint(tmp_path):
 
 
 def test_signals_present_on_heuristic_finding(tmp_path):
-    doc = _read(tmp_path, _summary(_finding(
-        verification_status="unproven",
-        verification_reason="heuristic:HEUR-001",
-        category="sqli:error_leak",
-        finding_type="heuristic_sqli_error_leak",
-        severity="low",
-    )))
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            )
+        ),
+    )
     props = doc["runs"][1]["results"][0]["properties"]
     assert props["signals"] == ["HEUR-001"]
 
 
 def test_signals_multi_parsed(tmp_path):
-    doc = _read(tmp_path, _summary(_finding(
-        verification_status="unproven",
-        verification_reason="heuristic:HEUR-001+HEUR-002",
-        category="sqli:error_leak",
-        finding_type="heuristic_sqli_error_leak",
-        severity="low",
-    )))
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001+HEUR-002",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            )
+        ),
+    )
     props = doc["runs"][1]["results"][0]["properties"]
     assert props["signals"] == ["HEUR-001", "HEUR-002"]
 
@@ -182,11 +209,16 @@ def test_signals_multi_parsed(tmp_path):
 def test_signals_absent_on_non_heuristic_unproven(tmp_path):
     # A Track A finding with unproven status (e.g. corroborator) routes
     # to discovery but has no heuristic signals.
-    doc = _read(tmp_path, _summary(_finding(
-        verification_status="unproven",
-        verification_reason="corroborator_structural",
-        finding_type="status_change",
-    )))
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(
+                verification_status="unproven",
+                verification_reason="corroborator_structural",
+                finding_type="status_change",
+            )
+        ),
+    )
     props = doc["runs"][1]["results"][0]["properties"]
     assert "signals" not in props
 
@@ -195,16 +227,23 @@ def test_signals_absent_on_non_heuristic_unproven(tmp_path):
 
 
 def test_finding_count_is_per_run_not_total(tmp_path):
-    doc = _read(tmp_path, _summary(
-        _finding(verification_status="verified", finding_type="db_error"),
-        _finding(verification_status="verified", finding_type="db_error", payload_name="p2"),
-        _finding(
-            verification_status="unproven",
-            verification_reason="heuristic:HEUR-001",
-            category="sqli:error_leak",
-            finding_type="heuristic_sqli_error_leak",
-            severity="low",
+    doc = _read(
+        tmp_path,
+        _summary(
+            _finding(verification_status="verified", finding_type="db_error"),
+            _finding(
+                verification_status="verified",
+                finding_type="db_error",
+                payload_name="p2",
+            ),
+            _finding(
+                verification_status="unproven",
+                verification_reason="heuristic:HEUR-001",
+                category="sqli:error_leak",
+                finding_type="heuristic_sqli_error_leak",
+                severity="low",
+            ),
         ),
-    ))
+    )
     assert doc["runs"][0]["invocations"][0]["properties"]["findingCount"] == 2
     assert doc["runs"][1]["invocations"][0]["properties"]["findingCount"] == 1

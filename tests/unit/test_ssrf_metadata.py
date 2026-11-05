@@ -25,8 +25,12 @@ def test_metadata_payloads_are_ssrf_category():
 
 def test_metadata_payloads_have_markers():
     """Every metadata payload has at least one body marker defined."""
-    for name in ("ssrf_metadata_aws", "ssrf_metadata_aws_v6",
-                 "ssrf_metadata_gcp", "ssrf_metadata_azure"):
+    for name in (
+        "ssrf_metadata_aws",
+        "ssrf_metadata_aws_v6",
+        "ssrf_metadata_gcp",
+        "ssrf_metadata_azure",
+    ):
         assert name in SSRF_BODY_MARKERS, f"{name} missing from SSRF_BODY_MARKERS"
         assert len(SSRF_BODY_MARKERS[name]) >= 1, f"{name} has no markers"
 
@@ -84,4 +88,6 @@ def test_marker_no_false_positive_on_safe_content():
     """Ordinary page content should not match any metadata markers."""
     response_body = "<html><body>Welcome to example.com</body></html>"
     for name, markers in SSRF_BODY_MARKERS.items():
-        assert not any(m in response_body for m in markers), f"{name} FPs on safe content"
+        assert not any(m in response_body for m in markers), (
+            f"{name} FPs on safe content"
+        )

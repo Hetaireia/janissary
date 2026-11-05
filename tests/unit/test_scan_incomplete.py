@@ -5,6 +5,7 @@ is correct) from "scan started but stopped early" (auth expired mid-scan,
 findings are partial). CI needs the distinction; exit code 2 alone cannot
 express it.
 """
+
 from unittest.mock import MagicMock
 
 from janissary.engine.scanner import ScanSummary
@@ -29,11 +30,14 @@ def test_preflight_abort_does_not_set_scan_incomplete(monkeypatch):
     assert summary.abort_reason == "target unreachable"
     assert summary.scan_incomplete is False
 
+
 def test_scan_incomplete_true_emits_in_json_summary():
     """JSON envelope carries scan_incomplete so CI can gate on it."""
     from janissary.cli import _summary_to_dict
 
-    s = ScanSummary(target="http://x/", params=["q"], method="GET", scan_incomplete=True)
+    s = ScanSummary(
+        target="http://x/", params=["q"], method="GET", scan_incomplete=True
+    )
     d = _summary_to_dict(s)
     assert d["scan_incomplete"] is True
 
@@ -50,7 +54,9 @@ def test_scan_incomplete_prints_incomplete_line(capsys):
     """Human summary prints INCOMPLETE when flag set, not otherwise."""
     from janissary.cli import _print_summary
 
-    s = ScanSummary(target="http://x/", params=["q"], method="GET", scan_incomplete=True)
+    s = ScanSummary(
+        target="http://x/", params=["q"], method="GET", scan_incomplete=True
+    )
     _print_summary(s)
     out = capsys.readouterr().out
     assert "INCOMPLETE" in out

@@ -70,9 +70,7 @@ class AuthConfig:
         return {
             "cookie": REDACTED if self.cookie else None,
             "bearer": REDACTED if self.bearer else None,
-            "sessions": (
-                [REDACTED] * len(self.sessions) if self.sessions else None
-            ),
+            "sessions": ([REDACTED] * len(self.sessions) if self.sessions else None),
         }
 
 
@@ -198,6 +196,7 @@ def redact_raw_http(raw: str | None) -> str | None:
             out_lines.append(line)
     return newline.join(out_lines) + sep + body
 
+
 def load_sessions_file(path: str) -> list[SessionSpec]:
     """Load a tri-session JSON file (ADR-023 D4).
 
@@ -210,9 +209,7 @@ def load_sessions_file(path: str) -> list[SessionSpec]:
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, list):
-        raise ValueError(
-            f"--sessions: expected JSON array, got {type(data).__name__}"
-        )
+        raise ValueError(f"--sessions: expected JSON array, got {type(data).__name__}")
     if len(data) < 2:
         raise ValueError(
             f"--sessions: need at least 2 entries, got {len(data)} "
@@ -221,7 +218,9 @@ def load_sessions_file(path: str) -> list[SessionSpec]:
     out: list[SessionSpec] = []
     for i, item in enumerate(data):
         if not isinstance(item, dict):
-            raise ValueError(f"--sessions[{i}]: expected object, got {type(item).__name__}")
+            raise ValueError(
+                f"--sessions[{i}]: expected object, got {type(item).__name__}"
+            )
         cookie = item.get("cookie")
         bearer = item.get("bearer")
         if cookie is None and bearer is None:

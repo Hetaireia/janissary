@@ -4,6 +4,7 @@ The confirmer marks graphql_* candidates as unproven so the engine
 does not overclaim. It must fire before AnalyzerImplicitConfirmer
 in _ENGINE._confirmers — that ordering is load-bearing.
 """
+
 import pytest
 
 from janissary.engine.scanner import _ENGINE
@@ -102,7 +103,14 @@ def test_engine_confirmer_order_is_load_bearing():
     graphql candidates would be marked verified (overclaim). This test
     pins the order."""
     names = [c.name for c in _ENGINE._confirmers]
-    assert names == ["corroborator", "websocket_recon", "graphql_recon", "heuristic", "idor", "analyzer_implicit"], (
+    assert names == [
+        "corroborator",
+        "websocket_recon",
+        "graphql_recon",
+        "heuristic",
+        "idor",
+        "analyzer_implicit",
+    ], (
         f"confirmer order changed; got {names}. GraphQLReconConfirmer "
         f"must run BEFORE AnalyzerImplicitConfirmer or graphql candidates "
         f"get marked verified instead of unproven."

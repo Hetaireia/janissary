@@ -176,6 +176,7 @@ def test_replay_missing_url_raises():
 
 def test_replay_transport_failure_raises():
     import requests
+
     mock = MagicMock()
     mock.request.side_effect = requests.RequestException("boom")
     with pytest.raises(ReplayError, match="replay request failed"):

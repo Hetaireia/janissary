@@ -13,6 +13,7 @@ Differences driven by protocol:
 
 See docs/PHASE-6-PLAN.md FN-16.
 """
+
 from __future__ import annotations
 
 from janissary.protocols.websocket import LearnedModel

@@ -98,10 +98,10 @@ Do not optimize the number before attempting the fix.
 Add four payloads, all intended to expose cases the current 4 miss:
 
 ```python
-("traversal_win_ini",       "..\\\\..\\\\..\\\\windows\\\\win.ini",  ...)
-("traversal_win_encoded",   "..%5c..%5c..%5cwindows%5cwin.ini",  ...)
-("traversal_passwd_double", "....//....//....//etc/passwd",      ...)
-("traversal_passwd_dot",    "..%252f..%252f..%252fetc%252fpasswd", ...)
+("traversal_win_ini", "..\\\\..\\\\..\\\\windows\\\\win.ini", ...)
+("traversal_win_encoded", "..%5c..%5c..%5cwindows%5cwin.ini", ...)
+("traversal_passwd_double", "....//....//....//etc/passwd", ...)
+("traversal_passwd_dot", "..%252f..%252f..%252fetc%252fpasswd", ...)
 ```
 
 Rationale: `win.ini` is the Windows file-target equivalent of

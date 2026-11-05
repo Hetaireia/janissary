@@ -1,4 +1,5 @@
 """Tests for --ws / --ws-payloads CLI wiring and _merge_ws_into_scan (FN-16)."""
+
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
@@ -77,6 +78,7 @@ def _payload_file(tmp_path, text):
 
 # --- _load_ws_payloads -----------------------------------------------------
 
+
 def test_load_ws_payloads_skips_blanks_and_comments(tmp_path):
     p = _payload_file(tmp_path, "# header\n\nPAY1\n   \n  PAY2  \n# trailing\n")
     assert _load_ws_payloads(p) == ["PAY1", "PAY2"]
@@ -84,9 +86,12 @@ def test_load_ws_payloads_skips_blanks_and_comments(tmp_path):
 
 # --- _merge_ws_into_scan ---------------------------------------------------
 
+
 def test_merge_ws_adds_findings_and_sums_requests():
     s = _summary([], total_requests=10)
-    ws = _summary([_ws_finding(), _ws_finding(finding_type="websocket_b")], total_requests=7)
+    ws = _summary(
+        [_ws_finding(), _ws_finding(finding_type="websocket_b")], total_requests=7
+    )
     _merge_ws_into_scan(s, ws)
     assert len(s.findings) == 2
     assert s.finding_count == 2
@@ -111,14 +116,23 @@ def test_merge_ws_propagates_aborted():
 
 # --- CLI wiring ------------------------------------------------------------
 
+
 def test_ws_flags_registered_in_scan_subparser(tmp_path):
     """Argparse must accept --ws and --ws-payloads on scan."""
     import sys
     from janissary.cli import main
 
     pf = _payload_file(tmp_path, "PAY1\n")
-    argv = ["janissary", "scan", "-u", "http://x/",
-            "--ws", "--ws-payloads", str(pf), "--json"]
+    argv = [
+        "janissary",
+        "scan",
+        "-u",
+        "http://x/",
+        "--ws",
+        "--ws-payloads",
+        str(pf),
+        "--json",
+    ]
     with patch.object(sys, "argv", argv):
         with patch("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value

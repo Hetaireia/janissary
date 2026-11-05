@@ -1,4 +1,5 @@
 """Tests for Scanner.scan_ws() (FN-16 part 6a)."""
+
 import asyncio
 from unittest.mock import patch
 
@@ -18,28 +19,41 @@ def _scanner(target="ws://127.0.0.1:1/socket"):
 
 
 def _model(injectable: bool = True) -> LearnedModel:
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
-        WebSocketMessage(direction="s2c", payload='{"a":"orig"}'),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
+            WebSocketMessage(direction="s2c", payload='{"a":"orig"}'),
+        ]
+    )
     fields = (
-        [InjectableField(message_index=0, path="a", value_kind="string",
-                         original_value="orig")]
-        if injectable else []
+        [
+            InjectableField(
+                message_index=0, path="a", value_kind="string", original_value="orig"
+            )
+        ]
+        if injectable
+        else []
     )
     return LearnedModel(
-        wire_format="json", baseline_sequence=seq, injectable_fields=fields,
+        wire_format="json",
+        baseline_sequence=seq,
+        injectable_fields=fields,
     )
 
 
 def _graphql_style_candidate():
     from janissary.verification import CandidateFinding
+
     return CandidateFinding(
-        param="a", payload_name="sqli_test", payload_value="'",
-        category="websocket", severity="medium",
+        param="a",
+        payload_name="sqli_test",
+        payload_value="'",
+        category="websocket",
+        severity="medium",
         finding_type="websocket_sqli_probe",
         detail="probe on 'a' produced a differing response",
-        url="ws://127.0.0.1:1/socket", method="WS",
+        url="ws://127.0.0.1:1/socket",
+        method="WS",
     )
 
 
@@ -69,7 +83,8 @@ def test_scan_ws_preflight_fail_aborted():
 def test_scan_ws_learn_connect_failed_scan_incomplete():
     async def fake_learn(*args, **kwargs):
         return LearnedModel(
-            wire_format="unknown", baseline_sequence=MessageSequence(),
+            wire_format="unknown",
+            baseline_sequence=MessageSequence(),
             injectable_fields=[],
             notes=("connect_failed: ConnectionRefusedError: nope",),
         )

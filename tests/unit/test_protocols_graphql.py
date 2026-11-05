@@ -1,4 +1,5 @@
 """Tests for GraphQLNormalizer (Phase 0.3 + FN-15)."""
+
 import json
 from unittest.mock import MagicMock
 
@@ -28,7 +29,6 @@ def test_sorts_keys_recursively():
     assert list(parsed.keys()) == ["data"]
     assert list(parsed["data"]["user"].keys()) == ["a", "m", "z"]
     assert list(parsed["data"]["user"]["m"].keys()) == ["b", "y"]
-
 
 
 def test_strips_extensions():

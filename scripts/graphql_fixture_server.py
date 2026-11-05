@@ -14,6 +14,7 @@ Deliberately:
 - user(id) errors on quote injection (fuzz target)
 - secret(key) errors on non-"admin" keys
 """
+
 from __future__ import annotations
 
 import argparse
@@ -47,9 +48,7 @@ SCHEMA = build_schema(
 
 def _resolve_user(root, info, id):
     if "'" in id or '"' in id or "--" in id:
-        raise RuntimeError(
-            'Database error: unterminated quoted string at or near "\'"'
-        )
+        raise RuntimeError('Database error: unterminated quoted string at or near "\'"')
     return {
         "id": id,
         "email": f"user{id}@example.invalid",
@@ -88,9 +87,7 @@ _q.fields["secret"].resolve = _resolve_secret
 def _execute_one(payload):
     query = payload.get("query", "")
     variables = payload.get("variables")
-    result = graphql_sync(
-        SCHEMA, query, root_value=None, variable_values=variables
-    )
+    result = graphql_sync(SCHEMA, query, root_value=None, variable_values=variables)
     body = {}
     if result.data is not None:
         body["data"] = result.data
@@ -123,9 +120,7 @@ class Handler(BaseHTTPRequestHandler):
             body = self.rfile.read(n).decode("utf-8")
             payload = json.loads(body)
         except Exception as e:
-            self._send_json(
-                {"errors": [{"message": f"bad request: {e}"}]}, status=400
-            )
+            self._send_json({"errors": [{"message": f"bad request: {e}"}]}, status=400)
             return
         if isinstance(payload, list):
             self._send_json([_execute_one(p) for p in payload])

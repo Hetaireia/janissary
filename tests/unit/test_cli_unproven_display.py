@@ -5,6 +5,7 @@ the human CLI output — both at the finding line and at the group header
 (if the whole group is unproven). A fully verified finding must not
 carry the marker.
 """
+
 from janissary.cli import _print_summary
 from janissary.engine.grouping import FindingGroup
 from janissary.engine.scanner import ScanFinding, ScanSummary
@@ -65,7 +66,9 @@ def test_verified_finding_has_no_unproven_marker(capsys):
 
 
 def test_unproven_finding_marked_on_line_and_group_header(capsys):
-    f = _base(verification_status="unproven", verification_reason="corroborator_structural")
+    f = _base(
+        verification_status="unproven", verification_reason="corroborator_structural"
+    )
     _print_summary(_summary_with_group([f]))
     out = capsys.readouterr().out
     # Group header marked
@@ -75,8 +78,14 @@ def test_unproven_finding_marked_on_line_and_group_header(capsys):
 
 
 def test_mixed_group_header_unmarked_findings_marked_individually(capsys):
-    verified = _base(verification_status="verified", verification_reason=None, payload_name="p1")
-    unproven = _base(verification_status="unproven", verification_reason="corroborator_structural", payload_name="p2")
+    verified = _base(
+        verification_status="verified", verification_reason=None, payload_name="p1"
+    )
+    unproven = _base(
+        verification_status="unproven",
+        verification_reason="corroborator_structural",
+        payload_name="p2",
+    )
     _print_summary(_summary_with_group([verified, unproven]))
     out = capsys.readouterr().out
     # Group header NOT marked (mixed)
@@ -91,6 +100,7 @@ def test_mixed_group_header_unmarked_findings_marked_individually(capsys):
 
 
 # --- FN-16 follow-up: severity fallback must surface unproven ---------------
+
 
 def _summary_ungrouped(findings: list[ScanFinding]) -> ScanSummary:
     """Summary with findings but no groups (the WS recon case).
@@ -121,9 +131,7 @@ def test_severity_line_shows_unproven_when_findings_not_grouped(capsys):
     _print_summary(_summary_ungrouped(findings))
     out = capsys.readouterr().out
     medium_lines = [ln for ln in out.splitlines() if "MEDIUM" in ln]
-    assert medium_lines, (
-        f"MEDIUM line missing from severity summary; got {out!r}"
-    )
+    assert medium_lines, f"MEDIUM line missing from severity summary; got {out!r}"
     assert any("unproven: 3" in ln for ln in medium_lines), (
         f"severity line must annotate unproven count; got {medium_lines!r}"
     )
@@ -149,9 +157,7 @@ def test_severity_line_mixed_shows_partial_unproven(capsys):
     _print_summary(_summary_ungrouped(findings))
     out = capsys.readouterr().out
     medium_lines = [ln for ln in out.splitlines() if "MEDIUM" in ln]
-    assert medium_lines, (
-        f"MEDIUM line missing from severity summary; got {out!r}"
-    )
+    assert medium_lines, f"MEDIUM line missing from severity summary; got {out!r}"
     assert any("unproven: 1" in ln for ln in medium_lines), (
         f"mixed severity must show partial unproven count; got {medium_lines!r}"
     )

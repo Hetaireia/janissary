@@ -7,6 +7,7 @@ Proves that:
 - Scanner accepts a custom normalizer
 - All 3 scanner.py call sites pass self.normalizer
 """
+
 from unittest.mock import MagicMock
 from pathlib import Path
 
@@ -37,7 +38,9 @@ def test_from_response_with_normalizer_strips_csrf_body():
     snap_wired = ResponseSnapshot.from_response(_r(body), normalizer=HTTPNormalizer())
     # Default may have already stripped via normalize_body; wired must match or strip more
     assert "verysecret123" not in snap_wired.normalized
-    assert "verysecret123" not in snap_default.normalized  # normalize_body catches this shape
+    assert (
+        "verysecret123" not in snap_default.normalized
+    )  # normalize_body catches this shape
     # Fingerprint must be stable regardless of which path was taken
     assert snap_wired.fingerprint == snap_default.fingerprint
 
@@ -60,9 +63,12 @@ def test_scanner_defaults_to_http_normalizer():
 def test_scanner_accepts_custom_normalizer():
     class _Stub:
         protocol_name = "stub"
+
         def normalize(self, response):
             from janissary.protocols import NormalizedResponse
+
             return NormalizedResponse(body="STUB", length=4, status=200)
+
     stub = _Stub()
     s = Scanner(target="http://x/", params=["q"], method="GET", normalizer=stub)
     assert s.normalizer is stub
@@ -72,7 +78,12 @@ def test_scanner_source_wires_normalizer_at_three_sites():
     """Source-level tripwire: removing the wiring in any of the 3 call sites
     must fail this test even though the 700 behavior tests may still pass."""
     src = Path("src/janissary/engine/scanner.py").read_text(encoding="utf-8")
-    n = src.count("from_response(r, normalizer=self.normalizer)")
+    # Collapse all whitespace so the check survives formatter reflows (the
+    # wiring call can be single-line or wrapped across lines — both satisfy
+    # the tripwire). Byte-identical literal counting would break on any
+    # ruff-format pass that wraps a long call.
+    src_norm = "".join(src.split())
+    n = src_norm.count("from_response(r,normalizer=self.normalizer)")
     assert n == 2, f"expected 2 'r' sites wired, found {n}"
-    n2 = src.count("from_response(r2, normalizer=self.normalizer)")
+    n2 = src_norm.count("from_response(r2,normalizer=self.normalizer)")
     assert n2 == 1, f"expected 1 'r2' site wired, found {n2}"

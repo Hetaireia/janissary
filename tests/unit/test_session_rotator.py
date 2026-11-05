@@ -1,4 +1,5 @@
 """Tests for SessionRotator (ADR-023 D2)."""
+
 from __future__ import annotations
 
 import pytest

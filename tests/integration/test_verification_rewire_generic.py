@@ -10,6 +10,7 @@ Pins three properties of the rewire:
    tripwire; a future edit reverting to inline ScanFinding() will fail
    this even if behavior is unchanged).
 """
+
 from pathlib import Path
 
 from janissary.engine.scanner import _ENGINE, _to_scan_finding

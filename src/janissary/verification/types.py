@@ -7,6 +7,7 @@ The engine either promotes a candidate to VerifiedFinding (with status
 
 See docs/ROADMAP.md Phase 0.1 and 0.2(b).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

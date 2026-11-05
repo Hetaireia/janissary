@@ -82,9 +82,8 @@ def check_blind_sqli_oracle(
     true_reflected = bool(true_payload and true_payload in true_body)
     false_reflected = bool(false_payload and false_payload in false_body)
 
-    both_large = (
-        _coherent(true_status, true_body)
-        and _coherent(false_status, false_body)
+    both_large = _coherent(true_status, true_body) and _coherent(
+        false_status, false_body
     )
 
     status_differs = (true_status != false_status) and both_large
@@ -94,9 +93,8 @@ def check_blind_sqli_oracle(
     max_len = max(tl, fl)
     length_delta_pct = abs(tl - fl) / max_len * 100.0 if max_len > 0 else 0.0
     required_delta = LENGTH_DELTA_PCT if both_large else LARGE_LENGTH_DELTA_PCT
-    length_differs = (
-        length_delta_pct > required_delta
-        and not (true_reflected or false_reflected)
+    length_differs = length_delta_pct > required_delta and not (
+        true_reflected or false_reflected
     )
 
     if not (status_differs or length_differs):

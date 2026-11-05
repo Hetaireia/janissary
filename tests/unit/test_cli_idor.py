@@ -1,4 +1,5 @@
 """CLI validation tests for --idor flag (M42, ADR-024 D3)."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace

@@ -60,8 +60,7 @@ class HeuristicSignature:
                 re.compile(pattern)
             except re.error as exc:
                 raise ValueError(
-                    f"invalid regex in signature {self.id!r}: "
-                    f"{pattern!r}: {exc}"
+                    f"invalid regex in signature {self.id!r}: {pattern!r}: {exc}"
                 ) from exc
         if not isinstance(self.base_confidence, float):
             raise ValueError(
@@ -70,8 +69,7 @@ class HeuristicSignature:
             )
         if not (0.0 <= self.base_confidence < 1.0):
             raise ValueError(
-                f"base_confidence must be in [0.0, 1.0), "
-                f"got {self.base_confidence!r}"
+                f"base_confidence must be in [0.0, 1.0), got {self.base_confidence!r}"
             )
 
 

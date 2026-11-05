@@ -140,6 +140,7 @@ class TestAuthFromArgs:
 def test_sessionspec_is_frozen():
     from dataclasses import FrozenInstanceError
     from janissary.auth import SessionSpec
+
     s = SessionSpec(cookie="a=1")
     with pytest.raises(FrozenInstanceError):
         s.cookie = "b=2"
@@ -147,12 +148,14 @@ def test_sessionspec_is_frozen():
 
 def test_sessionspec_headers_cookie_only():
     from janissary.auth import SessionSpec
+
     s = SessionSpec(cookie="x=1; y=2")
     assert s.headers() == {"Cookie": "x=1; y=2"}
 
 
 def test_sessionspec_headers_both():
     from janissary.auth import SessionSpec
+
     s = SessionSpec(cookie="c=1", bearer="tok")
     h = s.headers()
     assert h["Cookie"] == "c=1"
@@ -161,18 +164,21 @@ def test_sessionspec_headers_both():
 
 def test_authconfig_sessions_is_empty_false():
     from janissary.auth import AuthConfig, SessionSpec
+
     a = AuthConfig(sessions=[SessionSpec(cookie="a"), SessionSpec(cookie="b")])
     assert a.is_empty is False
 
 
 def test_authconfig_sessions_headers_from_first():
     from janissary.auth import AuthConfig, SessionSpec
+
     a = AuthConfig(sessions=[SessionSpec(cookie="first"), SessionSpec(cookie="second")])
     assert a.headers() == {"Cookie": "first"}
 
 
 def test_apply_to_session_clears_stale_cookie():
     from janissary.auth import AuthConfig, apply_to_session
+
     s = _FakeSession()
     s.headers["Cookie"] = "stale=1"
     apply_to_session(s, AuthConfig(bearer="tok"))
@@ -182,6 +188,7 @@ def test_apply_to_session_clears_stale_cookie():
 
 def test_apply_to_session_clears_stale_authorization():
     from janissary.auth import AuthConfig, apply_to_session
+
     s = _FakeSession()
     s.headers["Authorization"] = "Bearer old"
     apply_to_session(s, AuthConfig(cookie="new=1"))
@@ -191,7 +198,14 @@ def test_apply_to_session_clears_stale_authorization():
 
 def test_to_dict_sessions_redacted_by_count():
     from janissary.auth import AuthConfig, REDACTED, SessionSpec
-    a = AuthConfig(sessions=[SessionSpec(cookie="x"), SessionSpec(cookie="y"), SessionSpec(cookie="z")])
+
+    a = AuthConfig(
+        sessions=[
+            SessionSpec(cookie="x"),
+            SessionSpec(cookie="y"),
+            SessionSpec(cookie="z"),
+        ]
+    )
     d = a.to_dict()
     assert d["sessions"] == [REDACTED, REDACTED, REDACTED]
 
@@ -199,6 +213,7 @@ def test_to_dict_sessions_redacted_by_count():
 def test_load_sessions_file_ok(tmp_path):
     import json as _json
     from janissary.auth import load_sessions_file
+
     p = tmp_path / "sessions.json"
     p.write_text(_json.dumps([{"cookie": "a=1"}, {"bearer": "tok"}]), encoding="utf-8")
     specs = load_sessions_file(str(p))
@@ -210,6 +225,7 @@ def test_load_sessions_file_ok(tmp_path):
 def test_load_sessions_file_rejects_single_entry(tmp_path):
     import json as _json
     from janissary.auth import load_sessions_file
+
     p = tmp_path / "sessions.json"
     p.write_text(_json.dumps([{"cookie": "a=1"}]), encoding="utf-8")
     with pytest.raises(ValueError, match="at least 2"):
@@ -219,6 +235,7 @@ def test_load_sessions_file_rejects_single_entry(tmp_path):
 def test_load_sessions_file_rejects_non_list(tmp_path):
     import json as _json
     from janissary.auth import load_sessions_file
+
     p = tmp_path / "sessions.json"
     p.write_text(_json.dumps({"cookie": "a"}), encoding="utf-8")
     with pytest.raises(ValueError, match="expected JSON array"):
@@ -231,6 +248,7 @@ def test_load_sessions_file_rejects_non_list(tmp_path):
 def test_add_auth_flags_registers_sessions():
     import argparse
     from janissary.auth import add_auth_flags
+
     p = argparse.ArgumentParser()
     add_auth_flags(p)
     args = p.parse_args([])
@@ -241,6 +259,7 @@ def test_add_auth_flags_registers_sessions():
 def test_add_auth_flags_parses_sessions_path():
     import argparse
     from janissary.auth import add_auth_flags
+
     p = argparse.ArgumentParser()
     add_auth_flags(p)
     args = p.parse_args(["--sessions", "/tmp/s.json"])
@@ -251,6 +270,7 @@ def test_auth_from_args_with_sessions_loads_file(tmp_path):
     import json as _json
     from types import SimpleNamespace
     from janissary.auth import auth_from_args
+
     p = tmp_path / "s.json"
     p.write_text(_json.dumps([{"cookie": "a"}, {"cookie": "b"}]), encoding="utf-8")
     args = SimpleNamespace(sessions=str(p), cookie=None, bearer=None)
@@ -263,6 +283,7 @@ def test_auth_from_args_with_sessions_loads_file(tmp_path):
 def test_auth_from_args_without_sessions_preserves_cookie_bearer():
     from types import SimpleNamespace
     from janissary.auth import auth_from_args
+
     args = SimpleNamespace(sessions=None, cookie="c=1", bearer="tok")
     cfg = auth_from_args(args)
     assert cfg.cookie == "c=1"

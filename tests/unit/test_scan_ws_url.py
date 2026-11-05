@@ -4,6 +4,7 @@ Regression test for FN-16 part 6: preflight() requires an HTTP target
 (uses self._request), while learn() calls websockets.connect() which
 requires ws:// or wss://. scan_ws is the seam that has to reconcile them.
 """
+
 from unittest.mock import MagicMock, patch
 
 from janissary.engine.scanner import Scanner
@@ -22,6 +23,7 @@ def _stub_preflight_ok(scanner):
 def _stub_learn_empty():
     from janissary.integrations.websocket_learn import LearnedModel
     from janissary.integrations.websocket_learn import MessageSequence
+
     return LearnedModel(
         wire_format="unknown",
         baseline_sequence=MessageSequence(),

@@ -11,6 +11,7 @@ engine itself does not contain any vulnerability-specific logic.
 
 See docs/ROADMAP.md Phase 0.1 and 0.2(b).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -56,6 +57,7 @@ class Confirmer(Protocol):
     name: str
 
     def confirm(self, candidate: CandidateFinding) -> Confirmation | None: ...
+
 
 class WebSocketReconConfirmer:
     """Mark WebSocket probe findings as unproven.
@@ -109,6 +111,7 @@ class AnalyzerImplicitConfirmer:
             confirmed=True,
             reason=f"analyzer:{candidate.finding_type or 'unknown'}",
         )
+
 
 class GraphQLReconConfirmer:
     """Mark GraphQL recon findings as unproven.
@@ -168,6 +171,7 @@ class CorroboratorConfirmer:
                 unproven=True,
             )
         return None
+
 
 class HeuristicConfirmer:
     """Mark Track B heuristic candidates as unproven.

@@ -84,6 +84,7 @@ mechanism, not output shape.
 ```python
 class IdorConfirmer:
     name = "idor"
+
     def confirm(self, candidate):
         reason = candidate.discovery_reason or ""
         if reason.startswith("idor:"):
