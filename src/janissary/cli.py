@@ -477,6 +477,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         json_template=_json_template,
         baseline_value=args.baseline_value or "",
         collect_observations=getattr(args, "heuristic", False) or getattr(args, "idor", False),
+        verbose=getattr(args, "verbose", False),
     )
 
     if not args.quiet:
@@ -1784,6 +1785,15 @@ def build_parser() -> argparse.ArgumentParser:
             "Run cross-identity IDOR probe (M42, ADR-024). Requires "
             "2+ identities via --sessions, or --cookie/--cookie-alt, "
             "or --bearer/--bearer-alt."
+        ),
+    )
+    scan.add_argument(
+        "--verbose",
+        action="store_true",
+        help=(
+            "Emit diagnostic messages on stderr (traversal FN diagnosis, "
+            "suppression counters). Does not affect stdout or JSON output. "
+            "--quiet takes precedence if both are set."
         ),
     )
     scan.add_argument("--quiet", action="store_true")
