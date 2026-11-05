@@ -8,16 +8,16 @@ from janissary.verification.types import CandidateFinding, VerifiedFinding
 
 
 def _idor_candidate(**overrides):
-    base = dict(
-        param="q",
-        payload_name="idor",
-        payload_value="http://x/orders/42",
-        category="idor",
-        severity="medium",
-        finding_type="idor_candidate",
-        detail="cross-identity match",
-        discovery_reason="idor:cross_identity_match",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "idor",
+        "payload_value": "http://x/orders/42",
+        "category": "idor",
+        "severity": "medium",
+        "finding_type": "idor_candidate",
+        "detail": "cross-identity match",
+        "discovery_reason": "idor:cross_identity_match",
+    }
     base.update(overrides)
     return CandidateFinding(**base)
 

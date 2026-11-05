@@ -14,33 +14,33 @@ from janissary.verification import (
 
 
 def _graphql_candidate(**kw) -> CandidateFinding:
-    base = dict(
-        param="introspection_query",
-        payload_name="introspection_query",
-        payload_value="__schema introspection",
-        category="graphql",
-        severity="info",
-        finding_type="graphql_introspection_enabled",
-        detail="Schema introspection enabled (42 types exposed)",
-        url="http://x/graphql",
-        method="POST",
-    )
+    base = {
+        "param": "introspection_query",
+        "payload_name": "introspection_query",
+        "payload_value": "__schema introspection",
+        "category": "graphql",
+        "severity": "info",
+        "finding_type": "graphql_introspection_enabled",
+        "detail": "Schema introspection enabled (42 types exposed)",
+        "url": "http://x/graphql",
+        "method": "POST",
+    }
     base.update(kw)
     return CandidateFinding(**base)
 
 
 def _non_graphql_candidate(**kw) -> CandidateFinding:
-    base = dict(
-        param="q",
-        payload_name="sql_single_quote",
-        payload_value="'",
-        category="sqli",
-        severity="high",
-        finding_type="db_error",
-        detail="SQL error observed",
-        url="http://x/",
-        method="GET",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "sql_single_quote",
+        "payload_value": "'",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "db_error",
+        "detail": "SQL error observed",
+        "url": "http://x/",
+        "method": "GET",
+    }
     base.update(kw)
     return CandidateFinding(**base)
 

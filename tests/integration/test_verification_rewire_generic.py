@@ -22,23 +22,23 @@ from janissary.verification import (
 
 
 def _candidate(**overrides) -> CandidateFinding:
-    base = dict(
-        param="id",
-        payload_name="sql_union_select",
-        payload_value="1' UNION SELECT 1,2,3--",
-        category="sqli",
-        severity="high",
-        finding_type="sql_union_rows",
-        detail="Response returned 3 union columns",
-        url="http://example.com/api/users?id=1",
-        method="GET",
-        response_status=200,
-        response_length=512,
-        response_time=0.42,
-        response_content_type="application/json",
-        raw_request="GET /api/users?id=1 HTTP/1.1",
-        raw_response="HTTP/1.1 200 OK",
-    )
+    base = {
+        "param": "id",
+        "payload_name": "sql_union_select",
+        "payload_value": "1' UNION SELECT 1,2,3--",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "sql_union_rows",
+        "detail": "Response returned 3 union columns",
+        "url": "http://example.com/api/users?id=1",
+        "method": "GET",
+        "response_status": 200,
+        "response_length": 512,
+        "response_time": 0.42,
+        "response_content_type": "application/json",
+        "raw_request": "GET /api/users?id=1 HTTP/1.1",
+        "raw_response": "HTTP/1.1 200 OK",
+    }
     base.update(overrides)
     return CandidateFinding(**base)
 

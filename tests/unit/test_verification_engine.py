@@ -21,19 +21,19 @@ from janissary.verification.types import VerificationStatus
 
 
 def _sample_candidate(**overrides) -> CandidateFinding:
-    base = dict(
-        param="id",
-        payload_name="sql_union_select",
-        payload_value="1' UNION SELECT 1,2,3--",
-        category="sqli",
-        severity="high",
-        finding_type="sql_union_rows",
-        detail="Response returned 3 union columns",
-        url="http://example.com/api/users?id=1",
-        method="GET",
-        response_status=200,
-        response_length=512,
-    )
+    base = {
+        "param": "id",
+        "payload_name": "sql_union_select",
+        "payload_value": "1' UNION SELECT 1,2,3--",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "sql_union_rows",
+        "detail": "Response returned 3 union columns",
+        "url": "http://example.com/api/users?id=1",
+        "method": "GET",
+        "response_status": 200,
+        "response_length": 512,
+    }
     base.update(overrides)
     return CandidateFinding(**base)
 

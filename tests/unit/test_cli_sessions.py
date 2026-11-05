@@ -8,13 +8,13 @@ from janissary.cli import cmd_scan
 
 
 def _args(**kw):
-    base = dict(
-        show_version=False,
-        url="http://x/",
-        sessions=None,
-        cookie=None,
-        bearer=None,
-    )
+    base = {
+        "show_version": False,
+        "url": "http://x/",
+        "sessions": None,
+        "cookie": None,
+        "bearer": None,
+    }
     base.update(kw)
     return SimpleNamespace(**base)
 

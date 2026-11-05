@@ -8,7 +8,7 @@ from janissary.verification.types import CandidateFinding
 
 
 def _profile(**kw):
-    base = dict(endpoint="http://x/graphql", reachable=True)
+    base = {"endpoint": "http://x/graphql", "reachable": True}
     base.update(kw)
     return GraphQLProfile(**base)
 

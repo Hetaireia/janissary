@@ -8,30 +8,30 @@ from janissary.verification.types import CandidateFinding, VerifiedFinding
 
 
 def _heuristic_candidate(**overrides):
-    base = dict(
-        param="q",
-        payload_name="heuristic",
-        payload_value="v",
-        category="sqli:error_leak",
-        severity="low",
-        finding_type="heuristic_sqli_error_leak",
-        detail="test",
-        discovery_reason="heuristic:HEUR-001",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "heuristic",
+        "payload_value": "v",
+        "category": "sqli:error_leak",
+        "severity": "low",
+        "finding_type": "heuristic_sqli_error_leak",
+        "detail": "test",
+        "discovery_reason": "heuristic:HEUR-001",
+    }
     base.update(overrides)
     return CandidateFinding(**base)
 
 
 def _track_a_candidate(**overrides):
-    base = dict(
-        param="q",
-        payload_name="sql_q",
-        payload_value="v",
-        category="sqli",
-        severity="high",
-        finding_type="status_change",
-        detail="test",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "sql_q",
+        "payload_value": "v",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "status_change",
+        "detail": "test",
+    }
     base.update(overrides)
     return CandidateFinding(**base)
 
