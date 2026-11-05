@@ -47,7 +47,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 | **New in 7.6.0** | LFI content oracle, blind SQLi oracle, deep/absolute traversal payloads |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
 | **Benchmark (OWASP)** | **F1 0.906 ± 0.002** unassisted (n=3); **0.921** with FN-recovery — Precision 1.000 (0 FP, n=3) — Recall 0.828 ± 0.004 |
-| **Detection classes** | SQLi, XSS, SSRF, traversal, cmdi |
+| **Detection classes** | SQLi, XSS, SSRF, traversal (candidate detection only -- recall under investigation, see ADR-027), cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
 | **Install** | `pip install janissary==7.10.2` |
