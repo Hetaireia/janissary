@@ -168,3 +168,29 @@ class CorroboratorConfirmer:
                 unproven=True,
             )
         return None
+
+class HeuristicConfirmer:
+    """Mark Track B heuristic candidates as unproven.
+
+    ADR-022 D3: Track B (heuristic/engine.py) constructs CandidateFinding
+    with discovery_reason='heuristic:<sig_id>'. This confirmer recognizes
+    that prefix and returns unproven with the discovery_reason preserved.
+
+    Placed before AnalyzerImplicitConfirmer (which unconditionally confirms)
+    so heuristic candidates do not get silently promoted to 'verified'.
+
+    Does nothing for Track A candidates (discovery_reason=None) — returns
+    None, falls through to AnalyzerImplicitConfirmer for Track A behavior.
+    """
+
+    name = "heuristic"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        reason = candidate.discovery_reason or ""
+        if reason.startswith("heuristic:"):
+            return Confirmation(
+                confirmed=True,
+                reason=reason,
+                unproven=True,
+            )
+        return None

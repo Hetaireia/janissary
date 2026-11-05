@@ -84,7 +84,7 @@ def confirm(self, candidate):
     return None
 ```
 
-Placed **last** in the confirmer list, so:
+Placed **before `AnalyzerImplicitConfirmer`** (which unconditionally confirms) in the confirmer list, so:
 
 - If `CorroboratorConfirmer` can promote (differential proves it), Track B's
   candidate gets `verified` -- per ADR-017 D3's "engine decides" contract.
