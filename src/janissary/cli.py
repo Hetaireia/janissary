@@ -439,6 +439,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
         json_template=_json_template,
         baseline_value=args.baseline_value or "",
+        collect_observations=getattr(args, "heuristic", False),
     )
 
     if not args.quiet:
@@ -487,6 +488,20 @@ def cmd_scan(args: argparse.Namespace) -> int:
                 f"[*] Host-bypass: {len(hb_summary.findings)} finding(s) "
                 f"(see --json / --jsonl / --export for detail)"
             )
+
+    if getattr(args, "heuristic", False) and not summary.aborted:
+        if not args.quiet:
+            print("[*] Heuristic discovery...")
+        heuristic_findings = scanner.run_heuristic()
+        if heuristic_findings:
+            for f in heuristic_findings:
+                summary.findings.append(f)
+            summary.finding_count = len(summary.findings)
+            if not args.quiet:
+                print(
+                    f"[*] Heuristic: {len(heuristic_findings)} candidate(s) "
+                    f"(see --json / --jsonl / --export for detail)"
+                )
 
     if not args.quiet:
         _print_summary(summary)
@@ -1649,6 +1664,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     scan.add_argument(
         "--export", default=None, help="write results to a .json, .sarif, .html, or .pdf file"
+    )
+    scan.add_argument(
+        "--heuristic",
+        action="store_true",
+        help=(
+            "Emit heuristic discovery candidates (unproven) alongside "
+            "verified findings (M38, ADR-022)."
+        ),
     )
     scan.add_argument("--quiet", action="store_true")
     scan.add_argument(
