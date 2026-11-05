@@ -15,13 +15,13 @@ from janissary.heuristic.signatures import (
 
 
 def _valid_kwargs(**overrides):
-    base = dict(
-        id="HEUR-TEST",
-        category="test:test",
-        target_layer="body",
-        patterns=(r"foo",),
-        base_confidence=0.450,
-    )
+    base = {
+        "id": "HEUR-TEST",
+        "category": "test:test",
+        "target_layer": "body",
+        "patterns": (r"foo",),
+        "base_confidence": 0.450,
+    }
     base.update(overrides)
     return base
 

@@ -22,16 +22,16 @@ from janissary.verification import CandidateFinding
 
 
 def _candidate(**kw) -> CandidateFinding:
-    base = dict(
-        param="q",
-        payload_name="sql_single_quote",
-        payload_value="'",
-        category="sqli",
-        severity="critical",
-        finding_type="db_error",
-        detail="SQL error observed",
-        url="http://x/a?q='",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "sql_single_quote",
+        "payload_value": "'",
+        "category": "sqli",
+        "severity": "critical",
+        "finding_type": "db_error",
+        "detail": "SQL error observed",
+        "url": "http://x/a?q='",
+    }
     base.update(kw)
     return CandidateFinding(**base)
 

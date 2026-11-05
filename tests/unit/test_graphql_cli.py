@@ -8,17 +8,17 @@ from janissary.engine.scanner import ScanFinding, ScanSummary
 
 
 def _scan_finding(**kw) -> ScanFinding:
-    base = dict(
-        param="q",
-        payload_name="sql_single_quote",
-        payload_value="'",
-        category="sqli",
-        severity="high",
-        finding_type="db_error",
-        detail="SQL error",
-        url="http://x/",
-        method="GET",
-    )
+    base = {
+        "param": "q",
+        "payload_name": "sql_single_quote",
+        "payload_value": "'",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "db_error",
+        "detail": "SQL error",
+        "url": "http://x/",
+        "method": "GET",
+    }
     base.update(kw)
     f = ScanFinding(**base)
     f._engine_emitted = True
@@ -26,19 +26,19 @@ def _scan_finding(**kw) -> ScanFinding:
 
 
 def _graphql_finding(**kw) -> ScanFinding:
-    base = dict(
-        param="introspection_query",
-        payload_name="introspection_query",
-        payload_value="__schema",
-        category="graphql",
-        severity="info",
-        finding_type="graphql_introspection_enabled",
-        detail="Introspection enabled",
-        url="http://x/graphql",
-        method="POST",
-        verification_status="unproven",
-        verification_reason="graphql_recon",
-    )
+    base = {
+        "param": "introspection_query",
+        "payload_name": "introspection_query",
+        "payload_value": "__schema",
+        "category": "graphql",
+        "severity": "info",
+        "finding_type": "graphql_introspection_enabled",
+        "detail": "Introspection enabled",
+        "url": "http://x/graphql",
+        "method": "POST",
+        "verification_status": "unproven",
+        "verification_reason": "graphql_recon",
+    }
     base.update(kw)
     f = ScanFinding(**base)
     f._engine_emitted = True

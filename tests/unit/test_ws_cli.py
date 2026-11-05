@@ -8,19 +8,19 @@ from janissary.engine.scanner import ScanFinding, ScanSummary
 
 
 def _ws_finding(**kw) -> ScanFinding:
-    base = dict(
-        param="message",
-        payload_name="ws_probe",
-        payload_value="ping",
-        category="websocket",
-        severity="info",
-        finding_type="websocket_endpoint_discovered",
-        detail="WebSocket endpoint discovered",
-        url="ws://x/ws",
-        method="GET",
-        verification_status="unproven",
-        verification_reason="websocket_recon",
-    )
+    base = {
+        "param": "message",
+        "payload_name": "ws_probe",
+        "payload_value": "ping",
+        "category": "websocket",
+        "severity": "info",
+        "finding_type": "websocket_endpoint_discovered",
+        "detail": "WebSocket endpoint discovered",
+        "url": "ws://x/ws",
+        "method": "GET",
+        "verification_status": "unproven",
+        "verification_reason": "websocket_recon",
+    }
     base.update(kw)
     f = ScanFinding(**base)
     f._engine_emitted = True
@@ -44,28 +44,28 @@ def _summary(findings=None, **kw):
 
 
 def _args(**kw):
-    base = dict(
-        url="http://x/",
-        params="q",
-        method="GET",
-        timeout=10.0,
-        baseline_count=10,
-        delay=0.0,
-        stealth=False,
-        no_waf=True,
-        inject_in="auto",
-        baseline_value="",
-        json_template=None,
-        quiet=True,
-        export=None,
-        json=True,
-        jsonl=False,
-        show_version=False,
-        proxy=None,
-        graphql=False,
-        ws=False,
-        ws_payloads=None,
-    )
+    base = {
+        "url": "http://x/",
+        "params": "q",
+        "method": "GET",
+        "timeout": 10.0,
+        "baseline_count": 10,
+        "delay": 0.0,
+        "stealth": False,
+        "no_waf": True,
+        "inject_in": "auto",
+        "baseline_value": "",
+        "json_template": None,
+        "quiet": True,
+        "export": None,
+        "json": True,
+        "jsonl": False,
+        "show_version": False,
+        "proxy": None,
+        "graphql": False,
+        "ws": False,
+        "ws_payloads": None,
+    }
     base.update(kw)
     return Namespace(**base)
 

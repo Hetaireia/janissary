@@ -31,7 +31,7 @@ async def _serve(handler):
 
 
 def _fast():
-    return dict(timeout=1.5, response_quiet_s=0.1)
+    return {"timeout": 1.5, "response_quiet_s": 0.1}
 
 
 def _model_with_field(

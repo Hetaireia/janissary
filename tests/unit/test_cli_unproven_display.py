@@ -12,16 +12,16 @@ from janissary.engine.scanner import ScanFinding, ScanSummary
 
 
 def _finding(**kw) -> ScanFinding:
-    base = dict(
-        param="email",
-        payload_name="sql_single_quote",
-        payload_value="'",
-        category="sqli",
-        severity="high",
-        finding_type="status_change",
-        detail="Baseline 401 -> Payload 500",
-        url="http://x/",
-    )
+    base = {
+        "param": "email",
+        "payload_name": "sql_single_quote",
+        "payload_value": "'",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "status_change",
+        "detail": "Baseline 401 -> Payload 500",
+        "url": "http://x/",
+    }
     base.update(kw)
     return ScanFinding(**base)
 
@@ -42,16 +42,16 @@ def _summary_with_group(findings: list[ScanFinding]) -> ScanSummary:
 
 
 def _base(**kw) -> ScanFinding:
-    base = dict(
-        param="email",
-        payload_name="sql_single_quote",
-        payload_value="'",
-        category="sqli",
-        severity="high",
-        finding_type="status_change",
-        detail="Baseline 401 -> Payload 500",
-        url="http://x/",
-    )
+    base = {
+        "param": "email",
+        "payload_name": "sql_single_quote",
+        "payload_value": "'",
+        "category": "sqli",
+        "severity": "high",
+        "finding_type": "status_change",
+        "detail": "Baseline 401 -> Payload 500",
+        "url": "http://x/",
+    }
     base.update(kw)
     f = ScanFinding(**base)
     f._engine_emitted = True

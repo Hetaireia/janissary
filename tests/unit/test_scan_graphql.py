@@ -13,23 +13,23 @@ def _scanner(target="http://x/graphql"):
 
 
 def _reachable_profile(**kw):
-    base = dict(endpoint="http://x/graphql", reachable=True)
+    base = {"endpoint": "http://x/graphql", "reachable": True}
     base.update(kw)
     return GraphQLProfile(**base)
 
 
 def _graphql_candidate(**kw) -> CandidateFinding:
-    base = dict(
-        param="introspection_query",
-        payload_name="introspection_query",
-        payload_value="__schema",
-        category="graphql",
-        severity="info",
-        finding_type="graphql_introspection_enabled",
-        detail="Introspection enabled",
-        url="http://x/graphql",
-        method="POST",
-    )
+    base = {
+        "param": "introspection_query",
+        "payload_name": "introspection_query",
+        "payload_value": "__schema",
+        "category": "graphql",
+        "severity": "info",
+        "finding_type": "graphql_introspection_enabled",
+        "detail": "Introspection enabled",
+        "url": "http://x/graphql",
+        "method": "POST",
+    }
     base.update(kw)
     return CandidateFinding(**base)
 

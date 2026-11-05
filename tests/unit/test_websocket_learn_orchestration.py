@@ -25,7 +25,7 @@ async def _serve(handler):
 
 
 def _fast_kwargs():
-    return dict(timeout=1.5, passive_window_s=0.1, response_quiet_s=0.1)
+    return {"timeout": 1.5, "passive_window_s": 0.1, "response_quiet_s": 0.1}
 
 
 def test_learn_empty_payloads_returns_honest_empty_model():

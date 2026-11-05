@@ -8,18 +8,18 @@ from janissary.cli import _parse_signals, build_parser, cmd_scan
 
 
 def _args(**kw):
-    base = dict(
-        show_version=False,
-        url="http://x/",
-        sessions=None,
-        cookie=None,
-        bearer=None,
-        cookie_alt=None,
-        bearer_alt=None,
-        idor=False,
-        params=None,
-        quiet=True,
-    )
+    base = {
+        "show_version": False,
+        "url": "http://x/",
+        "sessions": None,
+        "cookie": None,
+        "bearer": None,
+        "cookie_alt": None,
+        "bearer_alt": None,
+        "idor": False,
+        "params": None,
+        "quiet": True,
+    }
     base.update(kw)
     return SimpleNamespace(**base)
 
