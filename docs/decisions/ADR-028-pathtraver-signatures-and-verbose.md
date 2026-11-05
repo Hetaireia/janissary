@@ -1,6 +1,6 @@
 # ADR-028 -- Pathtraver signatures + verbose diagnostics (extends ADR-027)
 
-**Status:** Proposed (2026-11-05). Awaiting corpus verification with Docker.
+**Status:** Accepted (2026-11-05). D10 verified: D1/D3/D4/D5/D8 shipped, no regression (10/10 TP preserved).
 **Supersedes:** None.
 **Extends:** ADR-027 (pathtraver recall strategy), ADR-002 (structural hashing).
 **Amends:** ADR-027 fixup (D5 signature set refined; D6 implementation scoped).

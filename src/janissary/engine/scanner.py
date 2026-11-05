@@ -1568,7 +1568,10 @@ class Scanner:
                 # ADR-027 D4: capture first 2xx traversal response for existence
                 # oracle, and record which payload produced it. The noexist probe
                 # is derived from this payload, not hardcoded /etc/passwd.
-                if category == "traversal" and traversal_snap is None and 200 <= r.status_code < 300:
+                # ADR-027 D4 (reverted 2026-11-05 per D7 verification):
+                # capture only from traversal_passwd, as in baseline. Capture broadening
+                # caused -1 TP regression on pathtraver-01 (10->9).
+                if name == "traversal_passwd":
                     traversal_snap = snapshot
                     traversal_snap_payload = value
                     # ADR-028 D5: --verbose explains why this payload didn't contribute
