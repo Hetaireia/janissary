@@ -1,6 +1,6 @@
 # ADR-027 -- Pathtraver recall: broaden, verify, or exclude
 
-**Status:** Provisional-Accepted (2026-11-05). D7 verified; D8 deferred to next session.
+**Status:** Accepted (2026-11-05). D7 verified (R=0.075); D8 amended to dual-scope (see D8 AMENDED section).
 **Supersedes:** None.
 **Amends:** ADR-006 (traversal collapse oracle), ADR-002 (structural hashing),
   README:412 (known limitations accuracy).
