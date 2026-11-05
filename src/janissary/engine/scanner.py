@@ -479,6 +479,27 @@ class Scanner:
         """Return a defensive copy of collected observations."""
         return list(self._observations)
 
+    def run_heuristic(self) -> list[ScanFinding]:
+        """Run heuristic (Track B) engine on collected observations. (M38)
+
+        Per ADR-022 D2: candidates route through _ENGINE.verify() -> _to_scan_finding(),
+        same emission path Track A uses. Requires collect_observations=True,
+        otherwise returns [] (no observations collected).
+        """
+        if not self._observations:
+            return []
+        from janissary.heuristic.engine import HeuristicEngine
+        from janissary.verification.types import VerifiedFinding as _VF
+        engine = HeuristicEngine()
+        matches = engine.match(self._observations)
+        candidates = engine.to_candidates(matches, self._observations)
+        findings: list[ScanFinding] = []
+        for c in candidates:
+            result = _ENGINE.verify(c)
+            if isinstance(result, _VF):
+                findings.append(_to_scan_finding(result))
+        return findings
+
     def _headers(self) -> dict:
         headers = {
             "User-Agent": self._ua,
