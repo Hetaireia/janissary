@@ -307,7 +307,8 @@
     },
     "M41": {
       "label": "Tri-session auth (A/B/C)",
-      "proposed": "30-APR-2027"
+      "proposed": "30-APR-2027",
+      "delivered": "2026-11-05"
     },
     "M42": {
       "label": "IDOR candidate probe (triage stream)",
