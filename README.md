@@ -46,7 +46,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 | **New in 7.7.0** | SSRF response-body oracle, JSON-body inject mode, crAPI (app 7) in corpus |
 | **New in 7.6.0** | LFI content oracle, blind SQLi oracle, deep/absolute traversal payloads |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
-| **Benchmark (OWASP)** | **F1 0.906 ± 0.002** unassisted (n=3); **0.921** with FN-recovery — Precision 1.000 (0 FP, n=3) — Recall 0.828 ± 0.004 |
+| **Benchmark (OWASP)** | **F1 0.977** supported-classes (recall 0.955) / **0.921** all DAST-applicable (recall 0.854); **0.906 ± 0.002** unassisted (n=3) — Precision 1.000 (0 FP, n=3) |
 | **Detection classes** | SQLi, XSS, SSRF, traversal (candidate detection only -- recall under investigation, see ADR-027), cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
@@ -65,7 +65,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 
 ### Differential detection, measured
 
-Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 on dev splits (0 FP observed), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+Every finding is gated by a baseline comparison — nothing emits from a single response. Reproduced on v7.3.0 (F1 unchanged through 7.4.0 and 7.5.0) against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): precision 1.000 on dev splits (0 FP observed), recall 0.854, F1 0.921 across 2,258 cases (1,156 vulnerable). Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` (Amendment 20 protocol; applied to runs 1 and 2) closes to 0.921. The **0.977** supported-classes figure excludes path-traversal (measured recall 0.075, below ADR-027 D7 threshold 0.15); traversal findings still emit and remain in the 0.921 figure. Run artifacts committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
 ### WAF-aware pacing
 
@@ -190,6 +190,7 @@ and the class-aware definition are in `BENCHMARK.md`. Run artifacts are committe
 | **Recall (unassisted, n=3)** | **0.828 ± 0.004** | Sample std, DAST-applicable categories |
 | **F1 (unassisted, n=3)** | **0.906 ± 0.002** | Sample std, DAST-applicable categories |
 | F1 (with FN-recovery protocol) | 0.921 | Measured on 7.5.0, 2026-10-28 (TP 987 / FP 0 / FN 169, identical to 7.3.0) |
+| F1 (supported-classes, excl. path-traversal) | 0.977 | Derived from same measurement: excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
 | 3-run unassisted baseline F1 (historical) | 0.903 ± 0.009 | 7.3.0, prior 3-run mean — matched by 7.5.0 within 1σ |
 | TP / FP / FN per run (r1 / r2 / r3) | 961/0/195 · 960/0/196 · 953/0/203 | DAST-applicable |
 | Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |

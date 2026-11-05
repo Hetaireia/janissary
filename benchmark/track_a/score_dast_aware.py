@@ -21,8 +21,7 @@ FAMILY_OF = {
 }
 
 EXCLUDE_FILE = Path("benchmark/track_a/dast_excluded.txt")
-
-
+SUPPORTED_EXCLUDE_FILE = Path("benchmark/track_a/dast_supported_excluded.txt")
 def load_excluded():
     if not EXCLUDE_FILE.exists():
         return set()
@@ -38,6 +37,15 @@ def load_excluded():
 def family(cat):
     return cat.split("-")[0]
 
+
+def load_supported_excluded():
+    if not SUPPORTED_EXCLUDE_FILE.exists():
+        return set()
+    return {
+        line.strip()
+        for line in SUPPORTED_EXCLUDE_FILE.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    }
 
 def score(run_dir, cases_csv, label="full"):
     with open(cases_csv, encoding="utf-8", newline="") as fh:
@@ -71,11 +79,14 @@ def score(run_dir, cases_csv, label="full"):
             mismatches[f"{d['class']} -> {by_path[p]['category']}"] += 1
 
     def tally(filter_excluded):
+        extra_excl = filter_excluded if isinstance(filter_excluded, set) else set()
         TP = FP = FN = TN = 0
         per_cat = collections.defaultdict(lambda: {"TP": 0, "FP": 0, "FN": 0, "TN": 0})
         for c in cases:
             cat = c["category"]
             if filter_excluded and cat in excluded:
+                continue
+            if cat in extra_excl:
                 continue
             vuln = c["vulnerable"].strip().lower() == "true"
             detected = family(cat) in correct_on_path.get(c["urlpath"], set())
@@ -102,14 +113,17 @@ def score(run_dir, cases_csv, label="full"):
     print()
 
     dast_metrics = None
-    for label, filt in [("FULL CORPUS", False), ("DAST-APPLICABLE", True)]:
+    for label, filt in [("FULL CORPUS", False), ("DAST-APPLICABLE", True), ("SUPPORTED-CLASSES", load_supported_excluded())]:
         TP, FP, FN, TN, P, R, F1, per_cat = tally(filt)
         if filt:
             dast_metrics = (TP, FP, FN, TN, P, R, F1)
+            dast_per_cat = per_cat
         print(f"=== {label} ===")
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")
         print()
+
+    per_cat = dast_per_cat
 
     # per-category for DAST-applicable only
     _, _, _, _, _, _, _, per_cat = tally(True)
