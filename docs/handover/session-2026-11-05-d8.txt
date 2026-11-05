@@ -204,3 +204,139 @@ correctness. Future sessions should carry the discipline: assert on the
 number, not the label. Eight of nine commits were follow-up fixes and doc
 corrections arising from that discipline; the code change to the pathtraver
 oracle's capability was net zero. What changed is the honesty of the claims.
+
+## SESSION EXTENSION (2026-11-05 late / 2026-11-06) -- CI cleanup + all-green
+
+The sections above were written and signed off at HEAD=06ef268. That
+handover said "CI: benchmark-gate PASS, CI workflow FAILING (251 ruff
+violations)". This section documents what changed after that sign-off.
+
+### Why the original handover said CI red
+
+The State of record said: "CI workflow (ci.yml, Ruff + pytest legs):
+FAILING ... 251 ruff check violations across the codebase ... All 5
+Python version legs fail at Ruff check step before pytest runs."
+
+That was accurate. CI had been red for a long time -- red since at least
+8a0c694 (2026-11-05 06:29), and probably much earlier. Every push since
+v7.10.2 (~226 commits) had triggered CI, and every CI run for months
+failed at Ruff check. Because ruff failed first, pytest never ran --
+meaning there were 5 hidden test failures that CI never surfaced.
+
+### What the extension arc did
+
+Applied a disciplined batch-by-batch cleanup. Each commit was verified
+before push: format-clean, ruff-progress-in-expected-direction, tests
+green, gate 0.921 unchanged. The arc:
+
+  Format pass:        ruff format .                (90 files, mechanical)
+  Safe autofix:       ruff check --fix .           (186 -> 67)
+  C408 unsafe-fix:    dict() -> {}                 (67 -> 44 in test setup)
+  SIM105 unsafe-fix:  try/pass -> contextlib.suppress  (44 -> 37)
+  Safe autofix r2:    clear new I001 from SIM105   (37 -> 31)
+  N80x per-file-ignore: confusion-matrix + aliases  (31 -> 9)
+  SIM117 noqa:        nested-with in tests          (9 -> 6 + rollback)
+  Final 14 manual:    per-violation judgment calls (6 -> 0)
+  CI fix 1 (junit):   upload test results artifact  (diagnostic only)
+  CI fix 2 (conftest): terms-gate per-test scope   (5 pytest -> 0)
+  Self-Scan fix:      tolerate GHAS-gated SARIF upload
+
+Three root causes emerged that the original handover could not have known:
+
+1. RUFF (251 violations). Pre-existing debt from months of commits
+   merged without the CI gate staying green. Nothing specific broke --
+   it accumulated. Fixed batch-by-batch, each verified.
+
+2. PYTEST (5 test failures, masked by ruff). All 5 invoke cli.main()
+   to test argparse behavior. The CLI gates network-touching commands
+   behind a Terms-of-Use acceptance check; on fresh Linux runners with
+   no marker file and no TTY, the gate exits 64 before reaching the
+   code under test. Fixed via tests/conftest.py autouse fixture that
+   sets JANISSARY_ACCEPT_TERMS=1 for all tests except test_legal.py
+   (which needs the gate active to test it). Two truths cannot coexist
+   under one global env var -- per-test scope is the correct answer.
+
+3. SELF-SCAN (SARIF upload). Juice Shop starts, scanner runs, SARIF
+   produced, summary printed -- all green. Only the upload-sarif step
+   failed, because it requires GitHub Advanced Security (or public
+   repo). Repo settings can't be changed from inside Actions. Fixed
+   via continue-on-error: true on that step, with an inline comment
+   explaining the precondition and the removal path if GHAS is enabled
+   later. Attempts still happen; failures are logged; workflow succeeds
+   because the scanner's actual purpose succeeded.
+
+### State of record -- updated (post-extension)
+
+HEAD:              eee1225 (origin/main, in sync)
+CI:                ALL THREE WORKFLOWS GREEN
+                   - CI workflow:              success
+                   - Benchmark Gate workflow:  success
+                   - Janissary Self-Scan:      success
+Tests:             1119 passed on Windows local
+                   1089 passed + 19 skipped on Linux (Docker verified)
+Benchmark:         0.921 DAST-applicable (unchanged), 0.977 supported-classes
+Ruff:              0 violations (was 251), format --check clean
+Work tree:         clean
+
+### Discipline lessons (extended)
+
+The original "assert on the number, not the label" rule held up
+through the extension arc and expanded. Each of these was a real
+false-success avoided:
+
+- ruff --fix "succeeded" on SIM105 but left 8 violations unfixed --
+  check was $postCount == 6, caught the failure before commit.
+- gh api /artifacts works; gh run download fails 401; gh run view --log
+  fails 403. Three different auth paths for GitHub -- verify which one
+  works rather than assuming.
+- tests/conftest.py W292 (missing final newline) after WriteAllText --
+  check was `last byte == 0x0A`, caught it in one byte.
+- Docker python:3.14-slim with no JANISSARY_ACCEPT_TERMS=1: 5 failed.
+  With env var: 3 failed. Two failure modes, inverse. Local verify
+  before push saved a CI cycle.
+
+New pattern: complex pipeline commands (Where-Object + ForEach-Object
++ -replace + Where-Object) can silently return empty/0 where the
+underlying state is nonzero. Trust the DIRECT probe (git status --porcelain
+count, ruff --output-format=json length, pytest summary line) over
+transformed pipelines.
+
+### Deferred / newly discovered (not blocking)
+
+1. ADR-001 L65 interpretation -- original handover deferred this. Still
+   deferred. Text points narrow (adding a second exclusion file is new
+   scope, not a change to the existing one), but WIDE reading has force.
+   Needs an explicit decision session.
+
+2. CLI terms-gate testability -- the conftest fixture is the minimal
+   honest fix, but the underlying design couples tests to HOME-dir
+   marker state. A cleaner design would use a session-scoped marker
+   decorator that CLI tests opt into. Not scheduled.
+
+3. Release tag decision -- 226 commits past v7.10.2. This is a real
+   release-worth body of work (CI fully green, all lint clean). v7.11.0
+   or v7.10.3 tagging is a decision for the next session, not this one.
+   Recommendation: v7.11.0 (new behavioral capability is minor; the
+   main deliverable is stability).
+
+4. GitHub Actions auth -- gh auth token is stale for some endpoints
+   (log download, artifact download) but valid for others (api /artifacts
+   listing). The junit-xml artifact upload path works and the artifacts
+   exist; only local download is blocked. If gh auth login is refreshed
+   in a future session, the artifact download path will work.
+
+### What this extension delivered, in one paragraph
+
+Three root causes were surfaced by pushing CI from "Ruff check fails
+so pytest never runs" to "Ruff check passes, pytest fails, Self-Scan
+fails" to "everything green." Each was addressed by a small, verified,
+honest fix with a commit message documenting the reasoning. The
+ruff cleanup was 251 violations across ~9 batches with format, safe
+autofix, unsafe-fix (reviewed), per-file-ignore, and manual edits mixed.
+The pytest fix was 35 lines in tests/conftest.py -- no product code
+change, no test body change, per-test scoping of the terms gate. The
+Self-Scan fix was one YAML line + explanation comment. The arc closed
+at eee1225 with all three GitHub workflows green, verified against
+GitHub not against local mocks. The discipline rule survived intact:
+assert on the number, not the label -- and its companion: local verify
+before push, every time.
