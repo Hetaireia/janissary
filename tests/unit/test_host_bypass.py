@@ -351,7 +351,7 @@ def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
         "--host-bypass",
         "--quiet",
     ]
-    with patch.object(sys, "argv", argv):
+    with patch.object(sys, "argv", argv):  # noqa: SIM117
         with patch("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value
             inst.scan.return_value = _empty_scan_summary()
@@ -423,7 +423,7 @@ def test_scan_passes_baseline_host_to_scanner():
         "--quiet",
         "--no-waf",
     ]
-    with patch.object(sys, "argv", argv):
+    with patch.object(sys, "argv", argv):  # noqa: SIM117
         with patch("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value
             inst.scan.return_value = empty

@@ -120,7 +120,7 @@ def test_graphql_flag_registered_in_scan_subparser():
     from janissary.cli import main
 
     test_argv = ["janissary", "scan", "-u", "http://x/", "--graphql", "--json"]
-    with _p.object(sys, "argv", test_argv):
+    with _p.object(sys, "argv", test_argv):  # noqa: SIM117
         with _p("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value
             inst.scan.return_value = _summary([])

@@ -46,7 +46,7 @@ def test_preflight_failure_aborts():
 def test_unreachable_graphql_marks_scan_incomplete():
     s = _scanner()
     profile = GraphQLProfile(endpoint="http://x/graphql", reachable=False)
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             summary = s.scan_graphql()
     assert summary.aborted is False
@@ -59,7 +59,7 @@ def test_reachable_graphql_produces_findings():
     profile = _reachable_profile(introspection_enabled=True, type_count=42)
     candidates = [_graphql_candidate()]
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
@@ -82,7 +82,7 @@ def test_graphql_findings_marked_unproven_by_engine():
     profile = _reachable_profile()
     candidates = [_graphql_candidate()]
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
@@ -104,7 +104,7 @@ def test_multiple_candidates_produce_multiple_findings():
         _graphql_candidate(finding_type="graphql_suggestions_enabled"),
     ]
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
@@ -127,7 +127,7 @@ def test_include_fuzz_passed_to_discovery_module():
         captured["max_fuzz_targets"] = max_fuzz_targets
         return []
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
@@ -143,7 +143,7 @@ def test_summary_target_and_method():
     s = _scanner(target="http://example.test/graphql")
     profile = _reachable_profile(endpoint="http://example.test/graphql")
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
@@ -158,7 +158,7 @@ def test_empty_candidates_empty_findings():
     s = _scanner()
     profile = _reachable_profile()
 
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.detect", return_value=profile):
             with patch(
                 "janissary.engine.scanner.GraphQLDiscoveryModule.discover",
