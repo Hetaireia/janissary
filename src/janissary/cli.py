@@ -1221,8 +1221,23 @@ class _SarifRunInput:
         self.taxonomies = taxonomies
 
 
-def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
-    """Normalize a ScanSummary into a SARIF run input (ADR-008)."""
+def _parse_signals(reason: str | None) -> list[str]:
+    """Parse 'heuristic:HEUR-001' -> ['HEUR-001']; 'heuristic:X+Y' -> ['X','Y']."""
+    if not reason or not reason.startswith("heuristic:"):
+        return []
+    return reason[len("heuristic:"):].split("+")
+
+
+def _from_scan_summary(
+    summary: ScanSummary,
+    verification_filter: str | None = None,
+) -> _SarifRunInput:
+    """Normalize a ScanSummary into a SARIF run input (ADR-008, ADR-019).
+
+    If verification_filter is "verified" or "unproven", only findings
+    with that verification_status are included. If None, all findings
+    are included (single-run mode, retained for agent-path compat).
+    """
     from janissary.sarif_rules import (
         cwe_taxonomy,
         rule_for,
@@ -1230,9 +1245,14 @@ def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
         security_severity,
     )
 
+    findings = [
+        f for f in summary.findings
+        if verification_filter is None or f.verification_status == verification_filter
+    ]
+
     rule_order: list[tuple[str, str]] = []
     rule_index: dict[str, int] = {}
-    for f in summary.findings:
+    for f in findings:
         rid = f"{f.category}:{f.finding_type}"
         if rid not in rule_index:
             rule_index[rid] = len(rule_order)
@@ -1240,13 +1260,26 @@ def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
     rules = [rule_for(cat, ft).to_sarif() for cat, ft in rule_order]
 
     results: list[dict] = []
-    for f in summary.findings:
+    for f in findings:
         rid = f"{f.category}:{f.finding_type}"
+        signals = _parse_signals(f.verification_reason)
+        props: dict = {
+            "param": f.param,
+            "payload": f.payload_name,
+            "security-severity": f"{security_severity(f.severity):.1f}",
+            "verification_status": f.verification_status,
+            "verification_reason": f.verification_reason,
+        }
+        if signals:
+            props["signals"] = signals
         results.append(
             {
                 "ruleId": rid,
                 "ruleIndex": rule_index[rid],
-                "partialFingerprints": {"finding/v1": f.fingerprint},
+                "partialFingerprints": {
+                    "finding/v1": f.fingerprint,
+                    "verification_status/v1": f.verification_status,
+                },
                 "level": sarif_level(f.severity),
                 "message": {"text": f.detail},
                 "locations": [
@@ -1256,13 +1289,7 @@ def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
                         }
                     }
                 ],
-                "properties": {
-                    "param": f.param,
-                    "payload": f.payload_name,
-                    "security-severity": f"{security_severity(f.severity):.1f}",
-                    "verification_status": f.verification_status,
-                    "verification_reason": f.verification_reason,
-                },
+                "properties": props,
             }
         )
 
@@ -1273,7 +1300,7 @@ def _from_scan_summary(summary: ScanSummary) -> _SarifRunInput:
             "params": list(summary.params),
             "method": summary.method,
             "totalRequests": summary.total_requests,
-            "findingCount": summary.finding_count,
+            "findingCount": len(findings),
         },
     }
     if summary.aborted:
@@ -1367,44 +1394,64 @@ def _from_agent_findings(findings: list) -> _SarifRunInput:
     )
 
 
-def _render_sarif(run_input: _SarifRunInput, path: str) -> None:
-    """Render a normalized SARIF run input to disk."""
+def _render_sarif(
+    runs: list[tuple[_SarifRunInput, str | None]], path: str
+) -> None:
+    """Render normalized SARIF run inputs to disk (ADR-019 D1).
+
+    Each tuple is (run_input, track_label). If track_label is None,
+    the run has no `properties.track` (agent path, backward compat).
+    If non-None, sets `properties.track` per ADR-019 D1.
+    """
     from janissary.sarif_rules import TOOL_NAME, TOOL_URI
+
+    sarif_runs: list[dict] = []
+    for run_input, track in runs:
+        run: dict = {
+            "tool": {
+                "driver": {
+                    "name": TOOL_NAME,
+                    "version": __version__,
+                    "informationUri": TOOL_URI,
+                    "rules": run_input.rules,
+                }
+            },
+            "invocations": [run_input.invocation],
+            "taxonomies": run_input.taxonomies,
+            "results": run_input.results,
+        }
+        if track is not None:
+            run["properties"] = {"track": track}
+        sarif_runs.append(run)
 
     doc = {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
-        "runs": [
-            {
-                "tool": {
-                    "driver": {
-                        "name": TOOL_NAME,
-                        "version": __version__,
-                        "informationUri": TOOL_URI,
-                        "rules": run_input.rules,
-                    }
-                },
-                "invocations": [run_input.invocation],
-                "taxonomies": run_input.taxonomies,
-                "results": run_input.results,
-            }
-        ],
+        "runs": sarif_runs,
     }
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(doc, fh, indent=2)
 
 
 def _write_sarif(source: ScanSummary | list, path: str) -> None:
-    """Emit SARIF 2.1.0 (ADR-008 scan path, ADR-009 agent path)."""
+    """Emit SARIF 2.1.0 (ADR-008 scan path, ADR-009 agent path, ADR-019 D1).
+
+    ScanSummary: two runs (verified, discovery). Both runs always
+    emitted even if empty, per ADR-019 D1.
+    list (agent): single run, no track property (ADR-009 — agent
+    findings have no verification_status field).
+    """
     if isinstance(source, ScanSummary):
-        run_input = _from_scan_summary(source)
+        verified  = _from_scan_summary(source, verification_filter="verified")
+        discovery = _from_scan_summary(source, verification_filter="unproven")
+        runs = [(verified, "verified"), (discovery, "discovery")]
     elif isinstance(source, list):
-        run_input = _from_agent_findings(source)
+        runs = [(_from_agent_findings(source), None)]
     else:
         raise TypeError(
             f"_write_sarif: unsupported source type {type(source).__name__}"
         )
-    _render_sarif(run_input, path)
+    _render_sarif(runs, path)
 
 
 # -------------------------------------------------------------------
