@@ -9,9 +9,13 @@
 
 ## Status
 
-**Active, passing.** First run 2026-10-30 (`20261030T110245Z-crapi`:
-TP=2, FP=0, FN=0, TN=3, F1=1.0). Fresh validation run under ADR-025
-(M43) on 2026-11-05.
+**Active, passing.** M43 validation completed 2026-11-05 with two clean runs:
+
+- `20261030T110245Z-crapi` — TP=2, FP=0, FN=0, TN=3, F1=1.0 (initial)
+- `20261105T055315Z-crapi` — TP=2, FP=0, FN=0, TN=3, F1=1.0 (ADR-025 validation)
+
+Both runs match exactly. See ADR-025 for the scope decision (M43 ships
+single-session validation; tri-session-vs-crAPI deferred to M43.5).
 
 ## What it tests
 

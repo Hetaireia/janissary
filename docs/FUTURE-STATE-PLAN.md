@@ -154,7 +154,7 @@ User-facing vocabulary: verified findings vs discovery candidates. Internal ADR/
 - ADR-010 update — single-session mode keeps abort; tri-session mode rotates
 
 **Gate 2:**
-- [ ] Tri-session auth works against crAPI end-to-end
+- [ ] Tri-session auth works against crAPI end-to-end (deferred to M43.5; M43 ships single-session validation -- see ADR-025)
 - [ ] IDOR candidates don't leak into verified findings
 - [ ] A named external user has found at least one candidate useful against their own target
 
@@ -248,6 +248,7 @@ User-facing vocabulary: verified findings vs discovery candidates. Internal ADR/
 | — | M41 | Tri-session auth |
 | — | M42 | IDOR candidate probe |
 | — | M43 | crAPI end-to-end validation |
+| — | M43.5 | Tri-session auth against crAPI (see ADR-025) |
 | — | M44 | `janissary-crawl` repo |
 | — | M45 | Crawl output -> scan pipeline |
 | — | M46 | `janissary ui` local server |
