@@ -466,6 +466,7 @@ def test_probe_populates_response_time():
     import asyncio
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, patch
+
     from janissary.integrations.websocket_learn import probe
 
     fake_ws = SimpleNamespace(
@@ -573,6 +574,7 @@ def test_capture_baseline_timing_returns_stats():
     import asyncio
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, patch
+
     from janissary.integrations.websocket_learn import _capture_baseline_timing
 
     class TimedWs:
@@ -628,6 +630,7 @@ def test_capture_baseline_timing_handles_connect_failure():
     import asyncio
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, patch
+
     from janissary.integrations.websocket_learn import _capture_baseline_timing
 
     async def failing_connect(*args, **kwargs):
@@ -661,6 +664,7 @@ def test_learn_populates_baseline_rtt():
     import asyncio
     from types import SimpleNamespace
     from unittest.mock import AsyncMock, patch
+
     from janissary.integrations.websocket_learn import learn
 
     fake_ws = SimpleNamespace(
@@ -803,8 +807,8 @@ def test_verify_emits_timing_delta_candidate():
     from janissary.protocols.websocket import (
         LearnedModel,
         MessageSequence,
-        WebSocketMessage,
         ProbeResult,
+        WebSocketMessage,
     )
 
     seq = MessageSequence(

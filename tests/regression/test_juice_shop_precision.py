@@ -35,7 +35,6 @@ import pytest
 
 from janissary.engine.scanner import Scanner
 
-
 JANISSARY_REPO = Path(__file__).parent.parent.parent
 JUICE_LOGIN = (
     JANISSARY_REPO / "benchmark" / "track_c" / "templates" / "juice_login.json"

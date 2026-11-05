@@ -20,11 +20,11 @@ import requests
 
 pytest.importorskip("cryptography")
 
-from janissary.integrations.collaborator import (  # noqa: E402
+from janissary.integrations.collaborator import (
     CollaboratorError,
     SsrfPayload,
 )
-from janissary.integrations.interactsh import (  # noqa: E402
+from janissary.integrations.interactsh import (
     DEFAULT_SERVERS,
     InteractshClient,
 )

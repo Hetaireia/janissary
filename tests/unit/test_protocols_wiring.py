@@ -8,8 +8,8 @@ Proves that:
 - All 3 scanner.py call sites pass self.normalizer
 """
 
-from unittest.mock import MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from janissary.detection.analyzer import ResponseSnapshot, normalize_body
 from janissary.engine.scanner import Scanner

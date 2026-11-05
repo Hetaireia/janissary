@@ -14,7 +14,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-
 #: Valid values for :attr:`HeuristicSignature.target_layer`.
 VALID_TARGET_LAYERS: frozenset[str] = frozenset({"body", "headers", "both"})
 

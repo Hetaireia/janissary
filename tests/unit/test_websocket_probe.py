@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 import websockets
 
 from janissary.integrations.websocket_learn import (
-    WS_PROBE_PAYLOADS,
     probe,
 )
 from janissary.protocols.websocket import (

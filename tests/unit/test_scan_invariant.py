@@ -12,11 +12,11 @@ from pathlib import Path
 import pytest
 
 from janissary.engine.scanner import (
+    _ENGINE,
     ScanFinding,
     ScanSummary,
-    _ENGINE,
-    _VerifiedFindingsList,
     _to_scan_finding,
+    _VerifiedFindingsList,
 )
 from janissary.verification import CandidateFinding
 

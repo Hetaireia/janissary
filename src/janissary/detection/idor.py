@@ -22,7 +22,6 @@ from urllib.parse import parse_qs, urlparse
 
 from janissary.heuristic.types import Observation
 
-
 #: Query parameter names that commonly carry object references (D5).
 ID_PARAM_NAMES: frozenset[str] = frozenset(
     {

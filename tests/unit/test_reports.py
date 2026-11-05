@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from janissary.reporting.html_report import write_html_report
 from janissary.reporting.pdf_report import (
     _escape_pdf_text,
@@ -12,7 +10,6 @@ from janissary.reporting.pdf_report import (
     _wrap,
     write_pdf_report,
 )
-
 
 FINDING = {
     "class": "sqli",

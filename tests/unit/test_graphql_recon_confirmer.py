@@ -5,13 +5,9 @@ does not overclaim. It must fire before AnalyzerImplicitConfirmer
 in _ENGINE._confirmers — that ordering is load-bearing.
 """
 
-import pytest
-
 from janissary.engine.scanner import _ENGINE
 from janissary.verification import (
-    AnalyzerImplicitConfirmer,
     CandidateFinding,
-    CorroboratorConfirmer,
     GraphQLReconConfirmer,
     VerifiedFinding,
 )

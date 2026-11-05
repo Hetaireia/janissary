@@ -15,7 +15,6 @@ from pathlib import Path
 
 from janissary.engine.scanner import _ENGINE, _to_scan_finding
 from janissary.verification import (
-    AnalyzerImplicitConfirmer,
     CandidateFinding,
     VerificationEngine,
     VerifiedFinding,

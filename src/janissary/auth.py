@@ -206,7 +206,7 @@ def load_sessions_file(path: str) -> list[SessionSpec]:
     """
     import json
 
-    with open(path, "r", encoding="utf-8") as fh:
+    with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     if not isinstance(data, list):
         raise ValueError(f"--sessions: expected JSON array, got {type(data).__name__}")

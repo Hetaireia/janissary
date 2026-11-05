@@ -23,9 +23,9 @@ __all__ = [
     "InjectableField",
     "LearnedModel",
     "MessageSequence",
+    "NormalizedResponse",
     "ProbeResult",
     "WebSocketMessage",
     "WebSocketNormalizer",
     "WireFormat",
-    "NormalizedResponse",
 ]

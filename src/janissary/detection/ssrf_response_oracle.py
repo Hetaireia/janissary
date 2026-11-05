@@ -16,8 +16,9 @@ Pure. No I/O.
 
 from __future__ import annotations
 
-from janissary.detection.analyzer import Baseline, ResponseSnapshot
 import urllib.parse
+
+from janissary.detection.analyzer import Baseline, ResponseSnapshot
 
 
 def check_ssrf_response_oracle(

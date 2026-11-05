@@ -23,7 +23,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from graphql import build_schema, graphql_sync
 
-
 SCHEMA = build_schema(
     """
     type Query {

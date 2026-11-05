@@ -1,7 +1,8 @@
 # JANISSARY-FN-5
 import unittest.mock as _m
-import janissary.cli as cli
+
 import janissary.attack.nuclei as _nuclei_mod
+import janissary.cli as cli
 
 
 class _FakeRunner:

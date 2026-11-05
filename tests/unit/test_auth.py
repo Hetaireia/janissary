@@ -139,6 +139,7 @@ class TestAuthFromArgs:
 
 def test_sessionspec_is_frozen():
     from dataclasses import FrozenInstanceError
+
     from janissary.auth import SessionSpec
 
     s = SessionSpec(cookie="a=1")
@@ -197,7 +198,7 @@ def test_apply_to_session_clears_stale_authorization():
 
 
 def test_to_dict_sessions_redacted_by_count():
-    from janissary.auth import AuthConfig, REDACTED, SessionSpec
+    from janissary.auth import REDACTED, AuthConfig, SessionSpec
 
     a = AuthConfig(
         sessions=[
@@ -212,6 +213,7 @@ def test_to_dict_sessions_redacted_by_count():
 
 def test_load_sessions_file_ok(tmp_path):
     import json as _json
+
     from janissary.auth import load_sessions_file
 
     p = tmp_path / "sessions.json"
@@ -224,6 +226,7 @@ def test_load_sessions_file_ok(tmp_path):
 
 def test_load_sessions_file_rejects_single_entry(tmp_path):
     import json as _json
+
     from janissary.auth import load_sessions_file
 
     p = tmp_path / "sessions.json"
@@ -234,6 +237,7 @@ def test_load_sessions_file_rejects_single_entry(tmp_path):
 
 def test_load_sessions_file_rejects_non_list(tmp_path):
     import json as _json
+
     from janissary.auth import load_sessions_file
 
     p = tmp_path / "sessions.json"
@@ -247,6 +251,7 @@ def test_load_sessions_file_rejects_non_list(tmp_path):
 
 def test_add_auth_flags_registers_sessions():
     import argparse
+
     from janissary.auth import add_auth_flags
 
     p = argparse.ArgumentParser()
@@ -258,6 +263,7 @@ def test_add_auth_flags_registers_sessions():
 
 def test_add_auth_flags_parses_sessions_path():
     import argparse
+
     from janissary.auth import add_auth_flags
 
     p = argparse.ArgumentParser()
@@ -269,6 +275,7 @@ def test_add_auth_flags_parses_sessions_path():
 def test_auth_from_args_with_sessions_loads_file(tmp_path):
     import json as _json
     from types import SimpleNamespace
+
     from janissary.auth import auth_from_args
 
     p = tmp_path / "s.json"
@@ -282,6 +289,7 @@ def test_auth_from_args_with_sessions_loads_file(tmp_path):
 
 def test_auth_from_args_without_sessions_preserves_cookie_bearer():
     from types import SimpleNamespace
+
     from janissary.auth import auth_from_args
 
     args = SimpleNamespace(sessions=None, cookie="c=1", bearer="tok")

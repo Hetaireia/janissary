@@ -24,7 +24,6 @@ from .types import (
     VerifiedFinding,
 )
 
-
 VerificationResult = VerifiedFinding | FailedVerification
 
 _EVIDENCE_FIELDS = (

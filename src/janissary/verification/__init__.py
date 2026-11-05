@@ -25,11 +25,11 @@ __all__ = [
     "Confirmation",
     "Confirmer",
     "CorroboratorConfirmer",
-    "GraphQLReconConfirmer",
-    "WebSocketReconConfirmer",
     "FailedVerification",
+    "GraphQLReconConfirmer",
     "VerificationEngine",
     "VerificationResult",
     "VerificationStatus",
     "VerifiedFinding",
+    "WebSocketReconConfirmer",
 ]
