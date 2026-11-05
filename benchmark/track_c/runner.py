@@ -6,6 +6,7 @@ import csv
 import json
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -169,7 +170,7 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, i
     base = cfg["base_url"]
     url = base + case["path"]
     cmd = [
-        "janissary", "scan",
+        sys.executable, "-m", "janissary.cli", "scan",
         "-u", url,
         "-p", case["param"],
         "--method", case["method"],
