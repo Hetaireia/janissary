@@ -89,6 +89,13 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     ("traversal_encoded", "..%2f..%2f..%2fetc%2fpasswd", "traversal", "critical"),
     ("traversal_passwd_deep", "../../../../../etc/passwd", "traversal", "critical"),
     ("traversal_passwd_abs", "/etc/passwd", "traversal", "critical"),
+    # ADR-027 D3: broaden traversal payload coverage. Windows file
+    # target (win.ini) plus structural variants (double-slash, double-
+    # encoded) that exercise different servlet input-filter paths.
+    ("traversal_win_ini", "..\\..\\..\\windows\\win.ini", "traversal", "critical"),
+    ("traversal_win_encoded", "..%5c..%5c..%5cwindows%5cwin.ini", "traversal", "critical"),
+    ("traversal_passwd_double", "....//....//....//etc/passwd", "traversal", "critical"),
+    ("traversal_passwd_dot", "..%252f..%252f..%252fetc%252fpasswd", "traversal", "critical"),
     ("ssrf_mailhog_canary", "http://mailhog:8025/", "ssrf", "critical"),
     # Cloud metadata endpoints (ADR-012 D2 follow-up). Best-effort: GCP
     # and Azure require specific headers (Metadata-Flavor: Google,
@@ -1171,6 +1178,7 @@ class Scanner:
         for param in self.params:
             baseline = self.collect_baseline(param)
             traversal_snap = None
+            traversal_snap_payload = None
             sqli_quote_snap = None
             sqli_or_snap = None
             sqli_quote_resp = None
@@ -1555,8 +1563,12 @@ class Scanner:
                     if wr_findings:
                         weakrand_seen = True
 
-                if name == "traversal_passwd":
+                # ADR-027 D4: capture first 2xx traversal response for existence
+                # oracle, and record which payload produced it. The noexist probe
+                # is derived from this payload, not hardcoded /etc/passwd.
+                if category == "traversal" and traversal_snap is None and 200 <= r.status_code < 300:
                     traversal_snap = snapshot
+                    traversal_snap_payload = value
 
                 if name == "sqli_blind_true":
                     sqli_blind_true_snap = snapshot
@@ -1797,9 +1809,9 @@ class Scanner:
                         )
 
             # Paired-probe: pathtraver existence oracle.
-            if traversal_snap is not None:
+            if traversal_snap is not None and traversal_snap_payload is not None:
                 noexist_path = (
-                    "../../../etc/passwd_janissary_noexist_" + self._traversal_nonce
+                    traversal_snap_payload + "_janissary_noexist_" + self._traversal_nonce
                 )
                 try:
                     r2 = self._paced_request(self.target, param, noexist_path)
@@ -1812,7 +1824,7 @@ class Scanner:
                         baseline=baseline,
                         snapshot_exists=traversal_snap,
                         snapshot_noexist=snap2,
-                        payload_exists="../../../etc/passwd",
+                        payload_exists=traversal_snap_payload,
                         payload_noexist=noexist_path,
                     )
                     for f in oracle:
