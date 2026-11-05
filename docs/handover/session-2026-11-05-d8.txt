@@ -17,8 +17,19 @@ HEAD:              06ef268 (origin/main, in sync at session close)
 Nearest tag:       v7.10.2 -- 226 commits behind HEAD (version drift; see below)
 Benchmark:         0.921 DAST-applicable (headline) / 0.977 supported-classes
                    (derived, see Benchmark state)
-CI:                benchmark-gate checks DAST-APPLICABLE 0.921, PASS
-                   (verified after 8c0dc26; briefly checked 0.977 for 2 commits)
+CI:                Benchmark Gate workflow: PASS (0.921 DAST-applicable, verified
+                   via gh run list at 0ecd78b and 06ef268).
+                   CI workflow (ci.yml, Ruff + pytest legs): FAILING.
+                     - Red since at least 8a0c694 (2026-11-05 06:29), pre-existing.
+                     - 251 ruff check violations across the codebase.
+                     - 90 files fail ruff format --check.
+                     - All 5 Python version legs fail at "Ruff check" step before
+                       pytest runs.
+                     - This session added 1 SIM102 violation in
+                       score_dast_aware.py:118 (from 8c0dc26's guard fix) and
+                       format drift from edits to the same file. Everything else
+                       is pre-existing debt.
+                     - Not in scope for this session; needs a triage session.
 Tests:             unchanged from prior session (no test edits this session)
 Work tree:         clean
 
@@ -75,6 +86,13 @@ Pathtraver recall: 0.075 (10/133). Included in DAST-applicable; excluded from
 supported-classes. Findings still emit (capability unchanged).
 
 ## Known issues
+
+- **CI workflow (ci.yml) is red** on the Ruff step. 251 ruff check violations
+  + 90 files failing ruff format --check. Pre-existing — red since at least
+  8a0c694 (2026-11-05 06:29) and probably much earlier. Only 1 of 251 would
+  be cleared by `ruff --fix`; the rest need manual changes. This session
+  added exactly one: SIM102 in score_dast_aware.py:118 (from 8c0dc26). All
+  pytest legs are effectively skipped because Ruff fails first.
 
 - Advertised version (pyproject 7.10.2, README pip install ==7.10.2) is
   226 commits behind main. Predates this session; widened by it. Needs a
@@ -139,9 +157,19 @@ supported-classes. Findings still emit (capability unchanged).
 - Do not regenerate committed benchmark artifacts (breaks F1 across
   history per Standing Order).
 - Do not force-push or rewrite published history.
+- Do not attempt to fix 251 ruff violations in a single session. Triage
+  first: categorize by rule (N806 variable names, SIM* combinable-if,
+  B904 bare raise, E702 semicolon, etc.), then batch by category. The 250
+  pre-existing violations span files this session never touched. Fixing
+  just one (SIM102 in score_dast_aware.py:118) does not move CI to green
+  and risks introducing format drift in a file whose gate behavior was
+  just verified across 4 commits.
 
 ## Next-scope menu
 
+- **CI cleanup** (substantial — triage session): 251 ruff violations + 90
+  format files. Categorize by rule, batch by category, verify gate after
+  each batch. Estimated scope: multi-session.
 - (Deferred) BENCHMARK.md Amendment 27 + ADR-001 addendum.
 - CRLF renormalization.
 - Framework-Specific SQLi specificity (Docker).
