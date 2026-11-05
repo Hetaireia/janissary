@@ -56,7 +56,7 @@ def test_sarif_full_document_shape(tmp_path):
     assert doc["$schema"] == "https://json.schemastore.org/sarif-2.1.0.json"
     assert doc["version"] == "2.1.0"
     assert isinstance(doc["runs"], list)
-    assert len(doc["runs"]) == 1
+    assert len(doc["runs"]) == 2
 
     run = doc["runs"][0]
     assert "tool" in run
