@@ -66,6 +66,13 @@ ignore = ["E501", "ANN204", "ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "benchmark/track_a/score_dast_aware.py" = ["N806"]  # TP/FP/FN/TN/P/R/F1 are confusion-matrix notation
+"benchmark/track_c/score.py" = ["N806"]  # same confusion-matrix notation (TP/FP/FN/P/R/F1)
+"src/janissary/**" = ["N814"]  # `from X import CamelCase as _SHORT` local-alias pattern is idiomatic
+"tests/unit/test_graphql_cli.py" = ["N806"]  # `MockScanner = ...` is a class substitute; CamelCase intentional
+"tests/unit/test_host_bypass.py" = ["N806"]  # same
+"tests/unit/test_ws_cli.py" = ["N806"]  # same
+"tests/unit/test_scan_adapter.py" = ["N812"]  # `import janissary.X as A/S` module aliases in tests
+"tests/unit/test_track_c_scorer_abort.py" = ["N812"]  # same
 
 [tool.mypy]
 python_version = "3.10"
