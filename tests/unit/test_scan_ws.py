@@ -88,7 +88,7 @@ def test_scan_ws_learn_connect_failed_scan_incomplete():
         )
 
     s = _scanner()
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.learn", fake_learn):
             summary = s.scan_ws(payloads=['{"x":1}'])
     assert summary.scan_incomplete is True
@@ -100,7 +100,7 @@ def test_scan_ws_no_injectable_fields_scan_incomplete():
         return _model(injectable=False)
 
     s = _scanner()
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.learn", fake_learn):
             summary = s.scan_ws(payloads=['{"x":1}'])
     assert summary.scan_incomplete is True
@@ -115,7 +115,7 @@ def test_scan_ws_success_findings_verified_and_unproven():
         return [_graphql_style_candidate()]
 
     s = _scanner()
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.learn", fake_learn):
             with patch.object(WebSocketDiscoveryModule, "discover", fake_discover):
                 summary = s.scan_ws(payloads=['{"x":1}'])
@@ -137,7 +137,7 @@ def test_scan_ws_discover_exception_scan_incomplete():
         raise RuntimeError("probe failed")
 
     s = _scanner()
-    with patch.object(s, "preflight", return_value=(True, "")):
+    with patch.object(s, "preflight", return_value=(True, "")):  # noqa: SIM117
         with patch("janissary.engine.scanner.learn", fake_learn):
             with patch.object(WebSocketDiscoveryModule, "discover", fake_discover):
                 summary = s.scan_ws(payloads=['{"x":1}'])

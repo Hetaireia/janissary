@@ -18,7 +18,7 @@ class _FakeRunner:
 
 def test_nuclei_path_reaches_runner():
     _FakeRunner.seen = {}
-    with _m.patch.object(_nuclei_mod, "NucleiRunner", _FakeRunner):
+    with _m.patch.object(_nuclei_mod, "NucleiRunner", _FakeRunner):  # noqa: SIM117
         with contextlib.suppress(Exception, SystemExit):
             cli.main(
                 [

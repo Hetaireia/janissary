@@ -135,7 +135,7 @@ def test_ws_flags_registered_in_scan_subparser(tmp_path):
         str(pf),
         "--json",
     ]
-    with patch.object(sys, "argv", argv):
+    with patch.object(sys, "argv", argv):  # noqa: SIM117
         with patch("janissary.cli.Scanner") as MockScanner:
             inst = MockScanner.return_value
             inst.scan.return_value = _summary([])
