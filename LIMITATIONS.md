@@ -18,7 +18,7 @@ Amendment 26 (Track C). crAPI breakdown is pending.
 | SQL injection (error-based) | HTTP | high | Requires SQL text in error body |
 | SQL injection (blind) | HTTP | medium | Timing-based; requires stable baseline |
 | Reflected XSS | HTTP | high | Unescaped HTML echo caught. DOM-based XSS on SPAs is out of scope — see "DOM-based XSS on SPAs" |
-| Path traversal | HTTP | **0.049-0.308** | Partially supported; see "Known gaps" |
+| Path traversal | HTTP | **0.075** | Partially supported; see "Known gaps" |
 | LDAP injection | HTTP | medium | — |
 | LFI | HTTP | medium | — |
 | SSRF | HTTP | medium | — |
@@ -125,12 +125,17 @@ as scope, not bug.
 
 ### Path traversal
 
-**Status:** partially supported. Recall 0.049-0.308 on OWASP Benchmark.
-Content-signature gates exist but are narrow; parameters that produce
-no distinctive traversal content in the response are missed.
+**Status:** partially supported. Overall recall 0.075 on the OWASP
+Benchmark (per-subcategory F1 range 0.049-0.308). Scored in the
+DAST-applicable metric (included in the 0.921 headline); excluded
+from the supported-classes metric (the 0.977 figure) per ADR-027 D8
+amended (2026-11-05). Content-signature gates exist but are narrow;
+parameters that produce no distinctive traversal content in the
+response are missed.
 
 **Unblock:** Phase 2 protocol-specific oracle, or a traversal-specific
-content-signature expansion.
+content-signature expansion. Not currently scheduled (ADR-027 D8
+amended, 2026-11-05).
 
 ## Unsupported protocols
 
