@@ -1065,6 +1065,80 @@ class Scanner:
             return retry
         return r
 
+    def run_idor(self, alt_session_spec) -> list[ScanFinding]:
+        """Cross-identity IDOR probe (M42, ADR-024 D4-D7).
+
+        Iterates self._observations (requires collect_observations=True),
+        refetches each ID-like URL under alt_session_spec (identity B),
+        compares to identity A's observation. Returns ScanFinding list
+        with verification_status="unproven" via IdorConfirmer.
+
+        Returns [] if observations are empty or alt_session_spec is None.
+        """
+        if not self._observations or alt_session_spec is None:
+            return []
+        from janissary.auth import apply_to_session, AuthConfig as _AC
+        from janissary.detection.idor import is_idor_testable_url, is_idor_candidate
+        from janissary.verification.types import (
+            CandidateFinding as _CF,
+            VerifiedFinding as _VF,
+        )
+
+        b_session = requests.Session()
+        apply_to_session(
+            b_session,
+            _AC(cookie=alt_session_spec.cookie, bearer=alt_session_spec.bearer),
+        )
+        if self.proxies:
+            b_session.proxies.update(self.proxies)
+
+        findings: list[ScanFinding] = []
+        seen: set[str] = set()
+        try:
+            for obs in self._observations:
+                url = obs.url
+                if not url or url in seen:
+                    continue
+                seen.add(url)
+                if not is_idor_testable_url(url):
+                    continue
+                try:
+                    b_response = b_session.get(url, timeout=self.timeout)
+                except requests.RequestException:
+                    continue
+                if not is_idor_candidate(
+                    obs, b_response.status_code, b_response.text or ""
+                ):
+                    continue
+                candidate = _CF(
+                    param=obs.param or "",
+                    payload_name="idor",
+                    payload_value=url,
+                    category="idor",
+                    severity="medium",
+                    finding_type="idor_candidate",
+                    detail=(
+                        f"A and B both received "
+                        f"{obs.response_status}/{b_response.status_code} "
+                        f"with similar body on {url}"
+                    ),
+                    response_status=b_response.status_code,
+                    response_length=len(b_response.text or ""),
+                    response_content_type=b_response.headers.get(
+                        "content-type", ""
+                    ),
+                    url=url,
+                    method=obs.method or "GET",
+                    discovery_reason="idor:cross_identity_match",
+                )
+                result = _ENGINE.verify(candidate)
+                if isinstance(result, _VF):
+                    findings.append(_to_scan_finding(result))
+        finally:
+            b_session.close()
+        return findings
+
+
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
             target=self.target,

@@ -300,6 +300,24 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print("[!] --sessions is mutually exclusive with --cookie/--bearer", file=sys.stderr)
         return 64
 
+    if getattr(args, "idor", False):
+        _sessions = getattr(args, "sessions", None)
+        _cookie = getattr(args, "cookie", None)
+        _bearer = getattr(args, "bearer", None)
+        _cookie_alt = getattr(args, "cookie_alt", None)
+        _bearer_alt = getattr(args, "bearer_alt", None)
+        if _sessions:
+            if _cookie_alt or _bearer_alt:
+                print("[!] --idor: --sessions is mutually exclusive with --cookie-alt/--bearer-alt", file=sys.stderr)
+                return 64
+        else:
+            if not (_cookie or _bearer):
+                print("[!] --idor: primary identity missing (--cookie or --bearer required)", file=sys.stderr)
+                return 64
+            if not (_cookie_alt or _bearer_alt):
+                print("[!] --idor: alternate identity missing (--cookie-alt or --bearer-alt required)", file=sys.stderr)
+                return 64
+
     if getattr(args, "ws", False) and not getattr(args, "ws_payloads", None):
         print("[!] --ws requires --ws-payloads PATH", file=sys.stderr)
         return 64
@@ -363,6 +381,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if not auth_cfg.is_empty:
         auth_session = requests.Session()
         apply_to_session(auth_session, auth_cfg)
+
+    idor_alt_spec = None
+    if getattr(args, "idor", False):
+        from janissary.auth import SessionSpec as _SS
+        if auth_cfg.sessions:
+            idor_alt_spec = auth_cfg.sessions[1]
+        elif getattr(args, "cookie_alt", None):
+            idor_alt_spec = _SS(cookie=args.cookie_alt)
+        elif getattr(args, "bearer_alt", None):
+            idor_alt_spec = _SS(bearer=args.bearer_alt)
 
     collaborator_client = None
     _collab_url = getattr(args, "collaborator", None)
@@ -448,7 +476,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
         json_template=_json_template,
         baseline_value=args.baseline_value or "",
-        collect_observations=getattr(args, "heuristic", False),
+        collect_observations=getattr(args, "heuristic", False) or getattr(args, "idor", False),
     )
 
     if not args.quiet:
@@ -509,6 +537,20 @@ def cmd_scan(args: argparse.Namespace) -> int:
             if not args.quiet:
                 print(
                     f"[*] Heuristic: {len(heuristic_findings)} candidate(s) "
+                    f"(see --json / --jsonl / --export for detail)"
+                )
+
+    if getattr(args, "idor", False) and not summary.aborted and idor_alt_spec is not None:
+        if not args.quiet:
+            print("[*] IDOR cross-identity probe...")
+        idor_findings = scanner.run_idor(idor_alt_spec)
+        if idor_findings:
+            for f in idor_findings:
+                summary.findings.append(f)
+            summary.finding_count = len(summary.findings)
+            if not args.quiet:
+                print(
+                    f"[*] IDOR: {len(idor_findings)} candidate(s) "
                     f"(see --json / --jsonl / --export for detail)"
                 )
 
@@ -1231,11 +1273,17 @@ class _SarifRunInput:
 
 
 def _parse_signals(reason: str | None) -> list[str]:
-    """Parse 'heuristic:HEUR-001' -> ['HEUR-001']; 'heuristic:X+Y' -> ['X','Y']."""
-    if not reason or not reason.startswith("heuristic:"):
-        return []
-    return reason[len("heuristic:"):].split("+")
+    """Parse discovery_reason into SARIF properties.signals (ADR-019 D3).
 
+    Handles heuristic: and idor: prefixes.
+    """
+    if not reason:
+        return []
+    if reason.startswith("heuristic:"):
+        return reason[len("heuristic:"):].split("+")
+    if reason.startswith("idor:"):
+        return ["idor_" + reason[len("idor:"):].replace(":", "_")]
+    return []
 
 def _from_scan_summary(
     summary: ScanSummary,
@@ -1727,6 +1775,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Emit heuristic discovery candidates (unproven) alongside "
             "verified findings (M38, ADR-022)."
+        ),
+    )
+    scan.add_argument(
+        "--idor",
+        action="store_true",
+        help=(
+            "Run cross-identity IDOR probe (M42, ADR-024). Requires "
+            "2+ identities via --sessions, or --cookie/--cookie-alt, "
+            "or --bearer/--bearer-alt."
         ),
     )
     scan.add_argument("--quiet", action="store_true")

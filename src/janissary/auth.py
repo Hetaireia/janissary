@@ -118,6 +118,24 @@ def add_auth_flags(parser) -> None:
         ),
     )
     parser.add_argument(
+        "--cookie-alt",
+        default=None,
+        metavar="STRING",
+        help=(
+            "Alternate cookie for --idor cross-identity probe (M42). "
+            "Requires --cookie as primary identity."
+        ),
+    )
+    parser.add_argument(
+        "--bearer-alt",
+        default=None,
+        metavar="TOKEN",
+        help=(
+            "Alternate bearer for --idor cross-identity probe (M42). "
+            "Requires --bearer as primary identity."
+        ),
+    )
+    parser.add_argument(
         "--redact-auth",
         action="store_true",
         help=(
