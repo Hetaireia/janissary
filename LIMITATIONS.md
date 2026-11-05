@@ -1,6 +1,6 @@
 # Limitations
 
-Last updated: 2026-11-01. Linked from README. Updated every release.
+Last updated: 2026-11-05. Linked from README. Updated every release.
 
 This is the honest inventory of what Janissary can and cannot prove.
 Absence of a limitation here does not mean absence of a limitation;
