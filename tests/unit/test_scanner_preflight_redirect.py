@@ -1,4 +1,5 @@
 """Unit test for ABORT-1: preflight follows redirects (Phase 4)."""
+
 from __future__ import annotations
 
 
@@ -25,9 +26,13 @@ def test_preflight_passes_allow_redirects_true():
 
     scanner._request = fake_request
     ok, reason = scanner.preflight()
-    assert ok is True, f"preflight should pass when redirect-followed body is non-empty; reason={reason!r}"
+    assert ok is True, (
+        f"preflight should pass when redirect-followed body is non-empty; reason={reason!r}"
+    )
     assert reason == ""
-    assert seen == [True], f"preflight must call _request(..., allow_redirects=True); got {seen}"
+    assert seen == [True], (
+        f"preflight must call _request(..., allow_redirects=True); got {seen}"
+    )
 
 
 def test_preflight_still_aborts_on_empty_final_body():
@@ -39,6 +44,7 @@ def test_preflight_still_aborts_on_empty_final_body():
     def fake_request(url, param, value, allow_redirects=False):
         class R:
             pass
+
         r = R()
         r.status_code = 200
         r.text = ""
@@ -58,6 +64,7 @@ def test_preflight_does_not_abort_on_4xx():
     def fake_request(url, param, value, allow_redirects=False):
         class R:
             pass
+
         r = R()
         r.status_code = 404
         r.text = "not found"

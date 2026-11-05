@@ -5,6 +5,7 @@ only accepts findings produced by VerificationEngine.verify() ->
 _to_scan_finding(). These tests pin both the mechanism and the
 source-level wiring, so a future edit that removes either fails here.
 """
+
 from dataclasses import asdict
 from pathlib import Path
 
@@ -104,9 +105,10 @@ def test_source_uses_verified_findings_list_and_marker():
     """Source-level tripwire: removing the invariant from scanner.py
     must fail this test even if the 670 behavior tests still pass."""
     src = Path("src/janissary/engine/scanner.py").read_text(encoding="utf-8")
-    assert "findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)" in src, (
-        "ScanSummary.findings no longer uses _VerifiedFindingsList default factory"
-    )
+    assert (
+        "findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)"
+        in src
+    ), "ScanSummary.findings no longer uses _VerifiedFindingsList default factory"
     assert "finding._engine_emitted = True" in src, (
         "_to_scan_finding no longer sets _engine_emitted marker"
     )

@@ -15,6 +15,7 @@ Design notes for learn():
 
 See docs/PHASE-6-PLAN.md FN-16.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -91,22 +92,34 @@ def _walk_injectables(
     if value is None:
         return
     if isinstance(value, str):
-        out.append(InjectableField(
-            message_index=message_index, path=prefix,
-            value_kind="string", original_value=value,
-        ))
+        out.append(
+            InjectableField(
+                message_index=message_index,
+                path=prefix,
+                value_kind="string",
+                original_value=value,
+            )
+        )
         return
     if isinstance(value, int):
-        out.append(InjectableField(
-            message_index=message_index, path=prefix,
-            value_kind="integer", original_value=value,
-        ))
+        out.append(
+            InjectableField(
+                message_index=message_index,
+                path=prefix,
+                value_kind="integer",
+                original_value=value,
+            )
+        )
         return
     if isinstance(value, float):
-        out.append(InjectableField(
-            message_index=message_index, path=prefix,
-            value_kind="float", original_value=value,
-        ))
+        out.append(
+            InjectableField(
+                message_index=message_index,
+                path=prefix,
+                value_kind="float",
+                original_value=value,
+            )
+        )
         return
     if isinstance(value, dict):
         for k in sorted(value.keys()):
@@ -157,7 +170,7 @@ def _split_path(path: str) -> list[tuple[str, Any]]:
             if j < 0:
                 raise ValueError(f"unclosed bracket in path: {path!r}")
             try:
-                idx = int(path[i + 1:j])
+                idx = int(path[i + 1 : j])
             except ValueError as exc:
                 raise ValueError(f"non-integer index in path: {path!r}") from exc
             steps.append(("index", idx))
@@ -289,6 +302,7 @@ def _rtt_stats(samples: list[float]) -> tuple[float, float, int]:
     the small-sample bias that sample-stddev would introduce at n=2.
     """
     import statistics
+
     n = len(samples)
     if n == 0:
         return (0.0, 0.0, 0)
@@ -330,8 +344,7 @@ async def _capture_baseline_timing(
     samples_by_index: dict[int, list[float]] = {}
     try:
         c2s_indices = [
-            i for i, m in enumerate(sequence.messages)
-            if m.direction == "c2s"
+            i for i, m in enumerate(sequence.messages) if m.direction == "c2s"
         ]
         for idx in c2s_indices:
             samples_by_index[idx] = []
@@ -339,7 +352,7 @@ async def _capture_baseline_timing(
         for _ in range(n_samples):
             for idx in c2s_indices:
                 try:
-                    for pre in sequence.messages[:idx + 1]:
+                    for pre in sequence.messages[: idx + 1]:
                         if pre.direction == "c2s":
                             await ws.send(pre.payload)
                     _, first_s = await _collect_s2c_with_timing(
@@ -383,9 +396,7 @@ async def learn(
         )
 
     try:
-        ws = await _connect(
-            url, timeout=timeout, origin=origin, headers=headers
-        )
+        ws = await _connect(url, timeout=timeout, origin=origin, headers=headers)
     except Exception as exc:
         return LearnedModel(
             wire_format="unknown",
@@ -405,30 +416,32 @@ async def learn(
             ws, quiet_s=response_quiet_s, total_budget_s=passive_window_s
         )
         for frame in passive_frames:
-            messages.append(WebSocketMessage(
-                direction="s2c", payload=frame, elapsed=_elapsed()
-            ))
+            messages.append(
+                WebSocketMessage(direction="s2c", payload=frame, elapsed=_elapsed())
+            )
 
         for payload in payloads:
             try:
                 await ws.send(payload)
             except Exception as exc:
-                messages.append(WebSocketMessage(
-                    direction="c2s",
-                    payload=f"<send_error: {type(exc).__name__}>",
-                    elapsed=_elapsed(),
-                ))
+                messages.append(
+                    WebSocketMessage(
+                        direction="c2s",
+                        payload=f"<send_error: {type(exc).__name__}>",
+                        elapsed=_elapsed(),
+                    )
+                )
                 continue
-            messages.append(WebSocketMessage(
-                direction="c2s", payload=payload, elapsed=_elapsed()
-            ))
+            messages.append(
+                WebSocketMessage(direction="c2s", payload=payload, elapsed=_elapsed())
+            )
             s2c_frames = await _collect_s2c(
                 ws, quiet_s=response_quiet_s, total_budget_s=timeout
             )
             for frame in s2c_frames:
-                messages.append(WebSocketMessage(
-                    direction="s2c", payload=frame, elapsed=_elapsed()
-                ))
+                messages.append(
+                    WebSocketMessage(direction="s2c", payload=frame, elapsed=_elapsed())
+                )
     finally:
         with contextlib.suppress(Exception):
             await ws.close()
@@ -444,9 +457,13 @@ async def learn(
     baseline_rtt: dict[int, tuple[float, float, int]] = {}
     try:
         baseline_rtt = await _capture_baseline_timing(
-            url, sequence, n_samples=n_samples,
-            timeout=timeout, quiet_s=response_quiet_s,
-            origin=origin, headers=headers,
+            url,
+            sequence,
+            n_samples=n_samples,
+            timeout=timeout,
+            quiet_s=response_quiet_s,
+            origin=origin,
+            headers=headers,
         )
     except Exception:
         pass
@@ -552,18 +569,20 @@ async def probe(
             try:
                 mutated = set_field_value(original_payload, field.path, payload_value)
             except ValueError as exc:
-                results.append(ProbeResult(
-                    field_path=field.path,
-                    message_index=field.message_index,
-                    payload_name=payload_name,
-                    payload_value=payload_value,
-                    category=category,
-                    original_payload=original_payload,
-                    mutated_payload="",
-                    response_frames=(),
-                    sent_ok=False,
-                    error_note=f"mutation_failed: {exc}",
-                ))
+                results.append(
+                    ProbeResult(
+                        field_path=field.path,
+                        message_index=field.message_index,
+                        payload_name=payload_name,
+                        payload_value=payload_value,
+                        category=category,
+                        original_payload=original_payload,
+                        mutated_payload="",
+                        response_frames=(),
+                        sent_ok=False,
+                        error_note=f"mutation_failed: {exc}",
+                    )
+                )
                 continue
 
             try:
@@ -571,18 +590,20 @@ async def probe(
                     url, timeout=timeout, origin=origin, headers=headers
                 )
             except Exception as exc:
-                results.append(ProbeResult(
-                    field_path=field.path,
-                    message_index=field.message_index,
-                    payload_name=payload_name,
-                    payload_value=payload_value,
-                    category=category,
-                    original_payload=original_payload,
-                    mutated_payload=mutated,
-                    response_frames=(),
-                    sent_ok=False,
-                    error_note=f"connect_failed: {type(exc).__name__}",
-                ))
+                results.append(
+                    ProbeResult(
+                        field_path=field.path,
+                        message_index=field.message_index,
+                        payload_name=payload_name,
+                        payload_value=payload_value,
+                        category=category,
+                        original_payload=original_payload,
+                        mutated_payload=mutated,
+                        response_frames=(),
+                        sent_ok=False,
+                        error_note=f"connect_failed: {type(exc).__name__}",
+                    )
+                )
                 continue
 
             try:
@@ -595,7 +616,26 @@ async def probe(
                 try:
                     await ws.send(mutated)
                 except Exception as exc:
-                    results.append(ProbeResult(
+                    results.append(
+                        ProbeResult(
+                            field_path=field.path,
+                            message_index=field.message_index,
+                            payload_name=payload_name,
+                            payload_value=payload_value,
+                            category=category,
+                            original_payload=original_payload,
+                            mutated_payload=mutated,
+                            response_frames=(),
+                            sent_ok=False,
+                            error_note=f"send_failed: {type(exc).__name__}",
+                        )
+                    )
+                    continue
+                s2c_frames, first_frame_s = await _collect_s2c_with_timing(
+                    ws, quiet_s=response_quiet_s, total_budget_s=timeout
+                )
+                results.append(
+                    ProbeResult(
                         field_path=field.path,
                         message_index=field.message_index,
                         payload_name=payload_name,
@@ -603,26 +643,11 @@ async def probe(
                         category=category,
                         original_payload=original_payload,
                         mutated_payload=mutated,
-                        response_frames=(),
-                        sent_ok=False,
-                        error_note=f"send_failed: {type(exc).__name__}",
-                    ))
-                    continue
-                s2c_frames, first_frame_s = await _collect_s2c_with_timing(
-                    ws, quiet_s=response_quiet_s, total_budget_s=timeout
+                        response_frames=tuple(s2c_frames),
+                        sent_ok=True,
+                        response_time=first_frame_s,
+                    )
                 )
-                results.append(ProbeResult(
-                    field_path=field.path,
-                    message_index=field.message_index,
-                    payload_name=payload_name,
-                    payload_value=payload_value,
-                    category=category,
-                    original_payload=original_payload,
-                    mutated_payload=mutated,
-                    response_frames=tuple(s2c_frames),
-                    sent_ok=True,
-                    response_time=first_frame_s,
-                ))
             finally:
                 with contextlib.suppress(Exception):
                     await ws.close()
@@ -643,7 +668,7 @@ def _extract_baseline_response(
     the original (unmutated) payload produced."""
     msgs = model.baseline_sequence.messages
     out: list[str] = []
-    for m in msgs[message_index + 1:]:
+    for m in msgs[message_index + 1 :]:
         if m.direction == "c2s":
             break
         out.append(m.payload)
@@ -653,9 +678,7 @@ def _extract_baseline_response(
 def _seq_from_s2c_frames(frames: tuple[str, ...]) -> MessageSequence:
     """Build a MessageSequence of only s2c frames for normalization."""
     return MessageSequence(
-        messages=[
-            WebSocketMessage(direction="s2c", payload=f) for f in frames
-        ]
+        messages=[WebSocketMessage(direction="s2c", payload=f) for f in frames]
     )
 
 
@@ -803,8 +826,11 @@ def verify(
 
         if baseline_norm != probe_norm or timing_differs:
             delta_kind = _classify_delta(
-                p, baseline_norm, probe_norm,
-                len(baseline_frames), len(p.response_frames),
+                p,
+                baseline_norm,
+                probe_norm,
+                len(baseline_frames),
+                len(p.response_frames),
                 timing_differs=timing_differs,
             )
             # delta_kind cannot be "no_delta" here given the guard above,

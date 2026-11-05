@@ -1,4 +1,5 @@
 """Tests for HeuristicConfirmer + integration with _ENGINE (M38)."""
+
 from __future__ import annotations
 
 from janissary.engine.scanner import _ENGINE

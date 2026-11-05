@@ -1,4 +1,5 @@
 """CLI tests for --heuristic flag (M38)."""
+
 from __future__ import annotations
 
 from janissary.cli import build_parser
@@ -67,6 +68,8 @@ def test_scan_help_mentions_heuristic():
             scan_parser = action.choices["scan"]
             break
     assert scan_parser is not None
-    h = next((a for a in scan_parser._actions if "--heuristic" in a.option_strings), None)
+    h = next(
+        (a for a in scan_parser._actions if "--heuristic" in a.option_strings), None
+    )
     assert h is not None
     assert "heuristic" in (h.help or "").lower()

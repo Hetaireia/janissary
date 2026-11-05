@@ -1,4 +1,5 @@
 """Integration tests for tri-session rotation (M41, ADR-023 D6)."""
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -43,11 +44,13 @@ def test_non_401_never_rotates():
 
 
 def test_rotates_on_401_and_returns_retry():
-    s = _scanner(sessions=[
-        SessionSpec(cookie="a=1"),
-        SessionSpec(cookie="b=2"),
-        SessionSpec(cookie="c=3"),
-    ])
+    s = _scanner(
+        sessions=[
+            SessionSpec(cookie="a=1"),
+            SessionSpec(cookie="b=2"),
+            SessionSpec(cookie="c=3"),
+        ]
+    )
     summary = _summary()
     r401 = _resp(401)
     r200 = _resp(200)
@@ -82,10 +85,12 @@ def test_exhausted_rotator_returns_original_no_retry():
 
 
 def test_rotation_clears_stale_cookie_when_switching_to_bearer():
-    s = _scanner(sessions=[
-        SessionSpec(cookie="old=1"),
-        SessionSpec(bearer="newtok"),
-    ])
+    s = _scanner(
+        sessions=[
+            SessionSpec(cookie="old=1"),
+            SessionSpec(bearer="newtok"),
+        ]
+    )
     # Simulate first session having been applied before 401
     s.session.headers["Cookie"] = "old=1"
     s.session.headers["Authorization"] = "Bearer stale"

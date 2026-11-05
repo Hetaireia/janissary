@@ -7,6 +7,7 @@ ping-ponging between A and B when both are failing.
 The rotator does not apply sessions to HTTP sessions -- that is
 auth.apply_to_session's job. This module is pure state.
 """
+
 from __future__ import annotations
 
 from janissary.auth import SessionSpec

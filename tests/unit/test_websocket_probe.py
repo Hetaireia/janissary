@@ -1,4 +1,5 @@
 """Tests for WebSocket probe() orchestration (Phase 2.2 + FN-16 part 4)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -140,15 +141,22 @@ def test_probe_replays_handshake_before_mutation():
             await ws.send(msg)
 
     # Build a 2-message model: c2s AUTH at 0, c2s JSON at 1.
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="c2s", payload="AUTH"),
-        WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="c2s", payload="AUTH"),
+            WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
+        ]
+    )
     field = InjectableField(
-        message_index=1, path="a", value_kind="string", original_value="orig",
+        message_index=1,
+        path="a",
+        value_kind="string",
+        original_value="orig",
     )
     model = LearnedModel(
-        wire_format="json", baseline_sequence=seq, injectable_fields=[field],
+        wire_format="json",
+        baseline_sequence=seq,
+        injectable_fields=[field],
     )
     payloads = [("sqli_quote", "'", "sqli")]
 
@@ -180,8 +188,11 @@ def test_probe_silent_server_records_empty_frames():
     async def run():
         async with _serve(handler) as url:
             return await probe(
-                url, model, payloads=payloads,
-                timeout=0.5, response_quiet_s=0.1,
+                url,
+                model,
+                payloads=payloads,
+                timeout=0.5,
+                response_quiet_s=0.1,
             )
 
     results = asyncio.run(run())
@@ -199,8 +210,10 @@ def test_probe_invalid_field_index_skipped():
         baseline_sequence=MessageSequence(messages=[]),
         injectable_fields=[
             InjectableField(
-                message_index=99, path="a",
-                value_kind="string", original_value="x",
+                message_index=99,
+                path="a",
+                value_kind="string",
+                original_value="x",
             ),
         ],
     )
@@ -211,15 +224,20 @@ def test_probe_invalid_field_index_skipped():
 def test_probe_field_on_s2c_message_skipped():
     """Defensive: field pointing at an s2c message must be skipped
     (we cannot mutate server-authored frames)."""
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="s2c", payload='{"a":"x"}'),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="s2c", payload='{"a":"x"}'),
+        ]
+    )
     model = LearnedModel(
-        wire_format="json", baseline_sequence=seq,
+        wire_format="json",
+        baseline_sequence=seq,
         injectable_fields=[
             InjectableField(
-                message_index=0, path="a",
-                value_kind="string", original_value="x",
+                message_index=0,
+                path="a",
+                value_kind="string",
+                original_value="x",
             ),
         ],
     )
@@ -230,6 +248,7 @@ def test_probe_field_on_s2c_message_skipped():
 def test_probe_mutation_failure_recorded():
     """Hand-constructed bad path: set_field_value raises; result carries
     sent_ok=False and a mutation_failed note (one per payload attempted)."""
+
     async def handler(ws):
         async for msg in ws:
             await ws.send(msg)
@@ -256,7 +275,10 @@ def test_probe_connect_failure_recorded():
 
     async def run():
         return await probe(
-            "ws://127.0.0.1:1", model, payloads=payloads, timeout=0.5,
+            "ws://127.0.0.1:1",
+            model,
+            payloads=payloads,
+            timeout=0.5,
             response_quiet_s=0.1,
         )
 

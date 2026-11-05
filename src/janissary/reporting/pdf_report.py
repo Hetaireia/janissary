@@ -50,7 +50,7 @@ def _wrap(text: str, width: int = MAX_CHARS):
     text = text or ""
     if len(text) <= width:
         return [text]
-    return [text[i:i + width] for i in range(0, len(text), width)]
+    return [text[i : i + width] for i in range(0, len(text), width)]
 
 
 def _build_lines(meta: dict, findings: list):
@@ -107,16 +107,14 @@ def _build_lines(meta: dict, findings: list):
 def _paginate(lines, per_page: int = MAX_LINES_PER_PAGE):
     if not lines:
         return [[""]]
-    return [lines[i:i + per_page] for i in range(0, len(lines), per_page)]
+    return [lines[i : i + per_page] for i in range(0, len(lines), per_page)]
 
 
 def _render_content_stream(lines):
     ops = []
     y = PAGE_H - MARGIN
     for line in lines:
-        ops.append(
-            f"BT /F1 9 Tf {MARGIN} {y} Td ({_escape_pdf_text(line)}) Tj ET"
-        )
+        ops.append(f"BT /F1 9 Tf {MARGIN} {y} Td ({_escape_pdf_text(line)}) Tj ET")
         y -= LINE_H
     return "\n".join(ops).encode("latin-1", errors="replace")
 

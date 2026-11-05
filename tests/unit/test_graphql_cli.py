@@ -1,4 +1,5 @@
 """Tests for --graphql CLI flag and _merge_graphql_into_scan (FN-15 3c)."""
+
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
@@ -65,7 +66,9 @@ def _summary(findings=None, **kw):
 
 def test_merge_appends_findings_and_updates_count():
     s = _summary([_scan_finding()])
-    gql = _summary([_graphql_finding(), _graphql_finding(finding_type="graphql_batching_accepted")])
+    gql = _summary(
+        [_graphql_finding(), _graphql_finding(finding_type="graphql_batching_accepted")]
+    )
     result = _merge_graphql_into_scan(s, gql)
     assert result is s
     assert len(s.findings) == 3

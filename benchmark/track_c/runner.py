@@ -1,4 +1,5 @@
 """Track C runner — real-target precision benchmark."""
+
 from __future__ import annotations
 
 import argparse
@@ -83,7 +84,9 @@ def login(cfg: dict) -> requests.Session:
         jwt_field = login_cfg["capture_jwt_from_json"]
         jwt = resp.get(jwt_field)
         if not jwt:
-            raise SystemExit(f"login missing field {jwt_field!r}; keys={list(resp.keys())}")
+            raise SystemExit(
+                f"login missing field {jwt_field!r}; keys={list(resp.keys())}"
+            )
         s._jns_bearer = jwt
         print(f"  JWT captured from {jwt_field!r}: {len(jwt)} chars")
         return s
@@ -108,7 +111,9 @@ def login(cfg: dict) -> requests.Session:
         data = dict(login_cfg["post_data"])
         if tok:
             data["user_token"] = tok
-        r = s.post(base + login_cfg["post_url"], data=data, timeout=10, allow_redirects=True)
+        r = s.post(
+            base + login_cfg["post_url"], data=data, timeout=10, allow_redirects=True
+        )
         print(f"  security set -> {r.status_code}, url={r.url}")
 
     verify_url = base + cfg.get("verify_url", "/vulnerabilities/sqli/?id=1")
@@ -116,7 +121,9 @@ def login(cfg: dict) -> requests.Session:
     if "login.php" in rv.url:
         raise SystemExit(f"not authenticated: {rv.url}")
     if len(rv.text) < 500:
-        raise SystemExit(f"auth verification: {rv.status_code}, {len(rv.text)}B too small")
+        raise SystemExit(
+            f"auth verification: {rv.status_code}, {len(rv.text)}B too small"
+        )
     print(f"  auth OK: {verify_url} -> {rv.status_code}, {len(rv.text)}B")
 
     return s
@@ -155,7 +162,8 @@ def _dedupe_jsonl(path: Path) -> int:
         try:
             rec = json.loads(s)
         except json.JSONDecodeError:
-            kept.append(s); continue
+            kept.append(s)
+            continue
         fp = rec.get("fingerprint")
         if fp is None or fp not in seen:
             seen.add(fp) if fp is not None else None
@@ -166,15 +174,30 @@ def _dedupe_jsonl(path: Path) -> int:
     return dropped
 
 
-def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, idx: int, sessions_file: str | None = None, sessions_count: int | None = None) -> dict:
+def scan_case(
+    cfg: dict,
+    session: requests.Session,
+    case: dict,
+    out_dir: Path,
+    idx: int,
+    sessions_file: str | None = None,
+    sessions_count: int | None = None,
+) -> dict:
     base = cfg["base_url"]
     url = base + case["path"]
     cmd = [
-        sys.executable, "-m", "janissary.cli", "scan",
-        "-u", url,
-        "-p", case["param"],
-        "--method", case["method"],
-        "--jsonl", "--quiet",
+        sys.executable,
+        "-m",
+        "janissary.cli",
+        "scan",
+        "-u",
+        url,
+        "-p",
+        case["param"],
+        "--method",
+        case["method"],
+        "--jsonl",
+        "--quiet",
         "--no-waf",
     ]
     _notes = case.get("notes", "") or ""
@@ -208,7 +231,10 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, i
         "aborted": False,
     }
     try:
-        with open(out, "w", encoding="utf-8") as fout, open(err, "w", encoding="utf-8") as ferr:
+        with (
+            open(out, "w", encoding="utf-8") as fout,
+            open(err, "w", encoding="utf-8") as ferr,
+        ):
             proc = subprocess.run(cmd, stdout=fout, stderr=ferr, timeout=180)
         err_text = ""
         try:
@@ -218,7 +244,9 @@ def scan_case(cfg: dict, session: requests.Session, case: dict, out_dir: Path, i
         dropped = _dedupe_jsonl(out)
         sz = out.stat().st_size
         aborted = proc.returncode == 2 or "aborted" in err_text
-        record.update(exit=proc.returncode, out_bytes=sz, dropped=dropped, aborted=aborted)
+        record.update(
+            exit=proc.returncode, out_bytes=sz, dropped=dropped, aborted=aborted
+        )
         line = f"  {case['method']} {case['path']} param={case['param']} ({case['vuln_class']}) -> exit {proc.returncode}, {sz}B"
         if dropped:
             line += f" [dedupe: -{dropped}]"
@@ -277,14 +305,31 @@ def main() -> None:
 
     records = []
     for idx, c in enumerate(cases):
-        records.append(scan_case(cfg, session, c, out_dir, idx, sessions_file=args.sessions_file, sessions_count=sessions_count))
+        records.append(
+            scan_case(
+                cfg,
+                session,
+                c,
+                out_dir,
+                idx,
+                sessions_file=args.sessions_file,
+                sessions_count=sessions_count,
+            )
+        )
 
-    (out_dir / "manifest.json").write_text(json.dumps({
-        "app": args.app,
-        "cases": len(cases),
-        "stamp": stamp,
-    }, indent=2))
-    (out_dir / "exit_codes.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+    (out_dir / "manifest.json").write_text(
+        json.dumps(
+            {
+                "app": args.app,
+                "cases": len(cases),
+                "stamp": stamp,
+            },
+            indent=2,
+        )
+    )
+    (out_dir / "exit_codes.json").write_text(
+        json.dumps(records, indent=2), encoding="utf-8"
+    )
     print(f"[track_c] done: {out_dir}")
 
 

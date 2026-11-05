@@ -78,7 +78,9 @@ Probe 2026-11-05:
 class SessionSpec:
     cookie: str | None = None
     bearer: str | None = None
+
     def headers(self) -> dict: ...
+
 
 @dataclass
 class AuthConfig:
@@ -104,10 +106,16 @@ class _SessionRotator:
         self._sessions = sessions
         self._current = 0
         self._exhausted = False
-    def current(self) -> SessionSpec: return self._sessions[self._current]
-    def can_rotate(self) -> bool: return not self._exhausted
+
+    def current(self) -> SessionSpec:
+        return self._sessions[self._current]
+
+    def can_rotate(self) -> bool:
+        return not self._exhausted
+
     def rotate(self) -> SessionSpec | None:
-        if self._exhausted: return None
+        if self._exhausted:
+            return None
         self._current += 1
         if self._current >= len(self._sessions):
             self._exhausted = True
@@ -122,7 +130,8 @@ Prevents ping-ponging between A and B.
 
 ```python
 def apply_to_session(session, config):
-    if config is None or config.is_empty: return
+    if config is None or config.is_empty:
+        return
     for h in ("Cookie", "Authorization"):
         session.headers.pop(h, None)
     for k, v in config.headers().items():

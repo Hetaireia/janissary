@@ -461,13 +461,9 @@ def _probe_endpoint(
                     profile.suggestions_supported = True
                     break
         else:
-            profile.notes.append(
-                "suggestions: no suitable probe field in schema"
-            )
+            profile.notes.append("suggestions: no suitable probe field in schema")
     else:
-        profile.notes.append(
-            "suggestions: untestable without introspection"
-        )
+        profile.notes.append("suggestions: untestable without introspection")
 
     return profile
 
@@ -590,7 +586,7 @@ def _derive_suggestion_probe(schema: dict) -> str | None:
                 continue
             # Drop middle char to produce a near-miss
             mid = len(fname) // 2
-            return fname[:mid] + fname[mid+1:]
+            return fname[:mid] + fname[mid + 1 :]
         return None
     return None
 
@@ -677,6 +673,7 @@ def depth_probe(
     -- the caller knows depth was NOT tested, versus a false "clean" that
     reports low=1.
     """
+
     def _build(d: int) -> str:
         if path:
             return build_wrapped_nested_query(path, field_name, d)

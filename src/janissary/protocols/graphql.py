@@ -16,6 +16,7 @@ Where `response` is duck-typed: any object with `.text` or `.body`
 attribute, `.status_code` or `.status`, and `.headers` dict. The
 same shapes HTTPNormalizer accepts.
 """
+
 from __future__ import annotations
 
 import json
@@ -25,16 +26,18 @@ from .base import NormalizedResponse
 from .http import HTTPNormalizer, _get_headers, _get_status, _get_text
 
 
-_TIMING_KEYS = frozenset({
-    "time",
-    "duration",
-    "elapsed",
-    "elapsed_ms",
-    "duration_ms",
-    "timing",
-    "startTime",
-    "endTime",
-})
+_TIMING_KEYS = frozenset(
+    {
+        "time",
+        "duration",
+        "elapsed",
+        "elapsed_ms",
+        "duration_ms",
+        "timing",
+        "startTime",
+        "endTime",
+    }
+)
 
 
 def _sort_keys(obj: Any) -> Any:

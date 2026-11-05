@@ -7,6 +7,7 @@ that a baseline's incidental refresh does not look like a delta.
 
 See docs/ROADMAP.md Phase 0.3.
 """
+
 from __future__ import annotations
 
 import re
@@ -17,24 +18,30 @@ from janissary.detection.analyzer import normalize_body
 from .base import NormalizedResponse
 
 
-_VOLATILE_HEADER_NAMES = frozenset({
-    "set-cookie",
-    "x-csrf-token",
-    "x-csrftoken",
-    "x-xsrf-token",
-    "x-request-id",
-    "x-trace-id",
-    "x-correlation-id",
-})
+_VOLATILE_HEADER_NAMES = frozenset(
+    {
+        "set-cookie",
+        "x-csrf-token",
+        "x-csrftoken",
+        "x-xsrf-token",
+        "x-request-id",
+        "x-trace-id",
+        "x-correlation-id",
+    }
+)
 
 _VOLATILE_COOKIE_NAMES = re.compile(
     r"(?i)\b(session|sessionid|jsessionid|phpsessid|csrf|csrftoken|nonce|xsrf|_ga|_gid)\b\s*=\s*[^;]+"
 )
 
 _BODY_CSRF_PATTERNS = (
-    re.compile(r"(?i)(\bcsrf[_\-]?token\b)\s*[=:]\s*[\"']?[A-Za-z0-9\-_+/=.]{8,}[\"']?"),
+    re.compile(
+        r"(?i)(\bcsrf[_\-]?token\b)\s*[=:]\s*[\"']?[A-Za-z0-9\-_+/=.]{8,}[\"']?"
+    ),
     re.compile(r"(?i)(\bnonce\b)\s*[=:]\s*[\"']?[A-Za-z0-9\-_+/=.]{8,}[\"']?"),
-    re.compile(r"(?i)(\bsession[_\-]?id\b)\s*[=:]\s*[\"']?[A-Za-z0-9\-_+/=.]{8,}[\"']?"),
+    re.compile(
+        r"(?i)(\bsession[_\-]?id\b)\s*[=:]\s*[\"']?[A-Za-z0-9\-_+/=.]{8,}[\"']?"
+    ),
 )
 
 

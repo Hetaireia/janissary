@@ -25,6 +25,7 @@ Juice-shop prerequisite:
     - Container absent with JANISSARY_INTEGRATION=1 set: test FAILs
       with instructions, so CI gating can rely on it running.
 """
+
 import json
 import os
 import subprocess
@@ -36,7 +37,9 @@ from janissary.engine.scanner import Scanner
 
 
 JANISSARY_REPO = Path(__file__).parent.parent.parent
-JUICE_LOGIN = JANISSARY_REPO / "benchmark" / "track_c" / "templates" / "juice_login.json"
+JUICE_LOGIN = (
+    JANISSARY_REPO / "benchmark" / "track_c" / "templates" / "juice_login.json"
+)
 JUICE_URL = "http://127.0.0.1:3000/rest/user/login"
 
 
@@ -44,11 +47,16 @@ def _juice_container_up() -> bool:
     try:
         r = subprocess.run(
             [
-                "docker", "ps",
-                "--filter", "name=janissary-trackc-juice",
-                "--format", "{{.Names}}",
+                "docker",
+                "ps",
+                "--filter",
+                "name=janissary-trackc-juice",
+                "--format",
+                "{{.Names}}",
             ],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return "janissary-trackc-juice" in (r.stdout or "")
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -64,7 +72,9 @@ def _require_juice() -> None:
             "Start it with: docker run -d -p 3000:3000 --name janissary-trackc-juice "
             "bkimminich/juice-shop:v17.1.1"
         )
-    pytest.skip("juice-shop not running — set JANISSARY_INTEGRATION=1 to fail instead of skip")
+    pytest.skip(
+        "juice-shop not running — set JANISSARY_INTEGRATION=1 to fail instead of skip"
+    )
 
 
 def test_missed_sqli_reported_not_silently_dropped():
@@ -86,7 +96,7 @@ def test_missed_sqli_reported_not_silently_dropped():
         "FN-12 regression: 0 findings on juice-shop. Was the fix reverted, "
         "or has juice-shop stopped 500-ing on the ' payload? Check with: "
         "curl -X POST http://127.0.0.1:3000/rest/user/login "
-        "-H 'Content-Type: application/json' -d '{\"email\":\"'\",\"password\":\"x\"}'"
+        '-H \'Content-Type: application/json\' -d \'{"email":"\'","password":"x"}\''
     )
     statuses = {f.verification_status for f in summary.findings}
     assert "unproven" in statuses, (

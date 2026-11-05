@@ -54,8 +54,11 @@ through one flag.
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--app", required=True)
-    ap.add_argument("--sessions-file", default=None,
-                    help="Path to sessions JSON for scanner tri-session rotation")
+    ap.add_argument(
+        "--sessions-file",
+        default=None,
+        help="Path to sessions JSON for scanner tri-session rotation",
+    )
     args = ap.parse_args()
     ...
 ```

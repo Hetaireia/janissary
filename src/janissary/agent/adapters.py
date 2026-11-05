@@ -177,7 +177,14 @@ def scan_adapter(target: str, context: dict) -> list[Finding]:
     from janissary.engine.scanner import Scanner
 
     params = list(parse_qs(urlparse(target).query).keys()) or [
-        "id", "name", "q", "search", "query", "user", "username", "email",
+        "id",
+        "name",
+        "q",
+        "search",
+        "query",
+        "user",
+        "username",
+        "email",
     ]
     scanner = Scanner(
         target=target,

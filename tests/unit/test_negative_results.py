@@ -53,9 +53,7 @@ def test_scan_with_findings_does_not_print_negative_result(capsys):
 
 
 def test_aborted_scan_does_not_print_negative_result(capsys):
-    _print_summary(
-        _fake_summary(aborted=True, abort_reason="network error")
-    )
+    _print_summary(_fake_summary(aborted=True, abort_reason="network error"))
     out = capsys.readouterr().out
     assert "Negative result" not in out
     assert "ABORTED" in out

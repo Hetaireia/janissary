@@ -1,4 +1,5 @@
 """Tests for verify() and WebSocketDiscoveryModule (FN-16 part 5)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -34,15 +35,22 @@ async def _serve(handler):
 
 def _build_model(baseline_payload: str, response_payload: str) -> LearnedModel:
     """Model with c2s baseline_payload then s2c response_payload, one field."""
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="c2s", payload=baseline_payload),
-        WebSocketMessage(direction="s2c", payload=response_payload),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="c2s", payload=baseline_payload),
+            WebSocketMessage(direction="s2c", payload=response_payload),
+        ]
+    )
     field = InjectableField(
-        message_index=0, path="a", value_kind="string", original_value="orig",
+        message_index=0,
+        path="a",
+        value_kind="string",
+        original_value="orig",
     )
     return LearnedModel(
-        wire_format="json", baseline_sequence=seq, injectable_fields=[field],
+        wire_format="json",
+        baseline_sequence=seq,
+        injectable_fields=[field],
     )
 
 
@@ -88,15 +96,20 @@ def test_verify_skips_empty_frames():
 
 
 def test_verify_skips_no_baseline():
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
+        ]
+    )
     model = LearnedModel(
-        wire_format="json", baseline_sequence=seq,
+        wire_format="json",
+        baseline_sequence=seq,
         injectable_fields=[
             InjectableField(
-                message_index=0, path="a",
-                value_kind="string", original_value="orig",
+                message_index=0,
+                path="a",
+                value_kind="string",
+                original_value="orig",
             ),
         ],
     )
@@ -147,7 +160,8 @@ def test_candidate_routes_through_engine_as_unproven():
 
 def test_discovery_empty_model_returns_empty():
     model = LearnedModel(
-        wire_format="unknown", baseline_sequence=MessageSequence(),
+        wire_format="unknown",
+        baseline_sequence=MessageSequence(),
         injectable_fields=[],
     )
     module = WebSocketDiscoveryModule(url="ws://127.0.0.1:1", model=model)
@@ -157,6 +171,7 @@ def test_discovery_empty_model_returns_empty():
 
 def test_discovery_end_to_end_echo_produces_candidates():
     """Echo server: mutated payload differs from baseline response."""
+
     async def handler(ws):
         async for msg in ws:
             await ws.send(msg)
@@ -168,7 +183,8 @@ def test_discovery_end_to_end_echo_produces_candidates():
         async with _serve(handler) as url:
             module.url = url
             return await module.discover(
-                max_probes=2, response_quiet_s=0.1,
+                max_probes=2,
+                response_quiet_s=0.1,
             )
 
     candidates = asyncio.run(run())
@@ -179,6 +195,7 @@ def test_discovery_end_to_end_echo_produces_candidates():
 
 def test_discovery_fixed_response_no_candidates():
     """Server always responds identically -> baseline and probe match -> no candidates."""
+
     async def handler(ws):
         async for _ in ws:
             await ws.send('{"status":"ok"}')
@@ -190,7 +207,8 @@ def test_discovery_fixed_response_no_candidates():
         async with _serve(handler) as url:
             module.url = url
             return await module.discover(
-                max_probes=2, response_quiet_s=0.1,
+                max_probes=2,
+                response_quiet_s=0.1,
             )
 
     candidates = asyncio.run(run())
@@ -217,13 +235,16 @@ def test_discovery_max_probes_passed_to_probe():
 
 # --- FN-16 follow-up: detail string delta classification -------------------
 
+
 def test_classify_delta_echoed_payload():
     """Payload value appearing in probe_norm but not baseline_norm -> echoed_payload."""
     from janissary.integrations.websocket_learn import _classify_delta
 
     p = _probe(response_frames=(), payload_value="ECHO_MARKER")
     kind = _classify_delta(
-        p, baseline_norm="orig", probe_norm="orig ECHO_MARKER",
+        p,
+        baseline_norm="orig",
+        probe_norm="orig ECHO_MARKER",
     )
     assert kind == "echoed_payload", (
         f"payload present only in probe_norm must classify as echoed_payload; "
@@ -237,8 +258,11 @@ def test_classify_delta_length_delta():
 
     p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
     kind = _classify_delta(
-        p, baseline_norm="ok", probe_norm="error internal",
-        baseline_frame_count=1, probe_frame_count=1,
+        p,
+        baseline_norm="ok",
+        probe_norm="error internal",
+        baseline_frame_count=1,
+        probe_frame_count=1,
     )
     assert kind == "length_delta", (
         f"same-count length difference must classify as length_delta; got {kind!r}"
@@ -269,8 +293,11 @@ def test_classify_delta_frame_count_delta():
 
     p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
     kind = _classify_delta(
-        p, baseline_norm="ab", probe_norm="cd",
-        baseline_frame_count=1, probe_frame_count=2,
+        p,
+        baseline_norm="ab",
+        probe_norm="cd",
+        baseline_frame_count=1,
+        probe_frame_count=2,
     )
     assert kind == "frame_count_delta", (
         f"differing frame counts must classify as frame_count_delta; got {kind!r}"
@@ -283,8 +310,11 @@ def test_classify_delta_content_delta():
 
     p = _probe(response_frames=(), payload_value="NOT_PRESENT_IN_EITHER")
     kind = _classify_delta(
-        p, baseline_norm="abc", probe_norm="xyz",
-        baseline_frame_count=1, probe_frame_count=1,
+        p,
+        baseline_norm="abc",
+        probe_norm="xyz",
+        baseline_frame_count=1,
+        probe_frame_count=1,
     )
     assert kind == "content_delta", (
         f"same-length different-content must classify as content_delta; got {kind!r}"
@@ -297,12 +327,16 @@ def test_classify_delta_precedence_echo_over_frame_count():
 
     p = _probe(response_frames=(), payload_value="ECHO")
     kind = _classify_delta(
-        p, baseline_norm="a", probe_norm="aECHO",
-        baseline_frame_count=1, probe_frame_count=2,
+        p,
+        baseline_norm="a",
+        probe_norm="aECHO",
+        baseline_frame_count=1,
+        probe_frame_count=2,
     )
     assert kind == "echoed_payload", (
         f"echo precedence must override frame_count_delta; got {kind!r}"
     )
+
 
 # --- FN-21 gap 2: probe-path timing capture ---
 
@@ -315,10 +349,15 @@ def test_probe_result_has_response_time_field():
     from janissary.protocols.websocket import ProbeResult
 
     p = ProbeResult(
-        field_path="a", message_index=0, payload_name="x",
-        payload_value="'", category="sqli",
-        original_payload="o", mutated_payload="m",
-        response_frames=(), sent_ok=True,
+        field_path="a",
+        message_index=0,
+        payload_name="x",
+        payload_value="'",
+        category="sqli",
+        original_payload="o",
+        mutated_payload="m",
+        response_frames=(),
+        sent_ok=True,
     )
     assert hasattr(p, "response_time"), (
         "ProbeResult must expose response_time (FN-21 gap 2)"
@@ -328,10 +367,15 @@ def test_probe_result_has_response_time_field():
     )
 
     p2 = ProbeResult(
-        field_path="a", message_index=0, payload_name="x",
-        payload_value="'", category="sqli",
-        original_payload="o", mutated_payload="m",
-        response_frames=(), sent_ok=True,
+        field_path="a",
+        message_index=0,
+        payload_name="x",
+        payload_value="'",
+        category="sqli",
+        original_payload="o",
+        mutated_payload="m",
+        response_frames=(),
+        sent_ok=True,
         response_time=0.42,
     )
     assert p2.response_time == 0.42
@@ -342,10 +386,15 @@ def test_probe_result_to_dict_includes_response_time():
     from janissary.protocols.websocket import ProbeResult
 
     p = ProbeResult(
-        field_path="a", message_index=0, payload_name="x",
-        payload_value="'", category="sqli",
-        original_payload="o", mutated_payload="m",
-        response_frames=(), sent_ok=True,
+        field_path="a",
+        message_index=0,
+        payload_name="x",
+        payload_value="'",
+        category="sqli",
+        original_payload="o",
+        mutated_payload="m",
+        response_frames=(),
+        sent_ok=True,
         response_time=0.42,
     )
     d = p.to_dict()
@@ -363,6 +412,7 @@ def test_collect_s2c_with_timing_returns_first_frame_time():
         def __init__(self, frames, delays):
             self._frames = list(frames)
             self._delays = list(delays)
+
         async def recv(self):
             if self._delays:
                 await asyncio.sleep(self._delays.pop(0))
@@ -374,9 +424,7 @@ def test_collect_s2c_with_timing_returns_first_frame_time():
 
     async def run():
         ws = FakeWs(["f1", "f2"], [0.05, 0.0])
-        return await _collect_s2c_with_timing(
-            ws, quiet_s=0.1, total_budget_s=0.5
-        )
+        return await _collect_s2c_with_timing(ws, quiet_s=0.1, total_budget_s=0.5)
 
     frames, first_s = asyncio.run(run())
     assert frames == ["f1", "f2"], f"frames: {frames!r}"
@@ -406,6 +454,8 @@ def test_collect_s2c_with_timing_returns_none_on_timeout():
     assert first_s is None, (
         f"first_s must be None when no frame arrived, got {first_s!r}"
     )
+
+
 def test_probe_populates_response_time():
     """probe() must pass _collect_s2c_with_timing's first_s to ProbeResult.
 
@@ -432,21 +482,27 @@ def test_probe_populates_response_time():
     )
 
     async def run():
-        with patch(
-            "janissary.integrations.websocket_learn._connect",
-            new=AsyncMock(return_value=fake_ws),
-        ), patch(
-            "janissary.integrations.websocket_learn._replay_prefix",
-            new=AsyncMock(),
-        ), patch(
-            "janissary.integrations.websocket_learn._collect_s2c",
-            new=AsyncMock(return_value=["fallback"]),
-        ), patch(
-            "janissary.integrations.websocket_learn._collect_s2c_with_timing",
-            new=AsyncMock(return_value=(["resp"], 0.42)),
+        with (
+            patch(
+                "janissary.integrations.websocket_learn._connect",
+                new=AsyncMock(return_value=fake_ws),
+            ),
+            patch(
+                "janissary.integrations.websocket_learn._replay_prefix",
+                new=AsyncMock(),
+            ),
+            patch(
+                "janissary.integrations.websocket_learn._collect_s2c",
+                new=AsyncMock(return_value=["fallback"]),
+            ),
+            patch(
+                "janissary.integrations.websocket_learn._collect_s2c_with_timing",
+                new=AsyncMock(return_value=(["resp"], 0.42)),
+            ),
         ):
             return await probe(
-                "ws://test/", model,
+                "ws://test/",
+                model,
                 payloads=[("p1", "payload_val", "sqli")],
                 max_probes=1,
             )
@@ -457,6 +513,7 @@ def test_probe_populates_response_time():
         f"probe() must populate response_time from "
         f"_collect_s2c_with_timing; got {results[0].response_time!r}"
     )
+
 
 # --- FN-21 gap 4: baseline RTT sampling + std-dev ---
 
@@ -521,14 +578,17 @@ def test_capture_baseline_timing_returns_stats():
     class TimedWs:
         def __init__(self):
             self._recv_count = 0
+
         async def send(self, payload):
             self._recv_count = 0
+
         async def recv(self):
             if self._recv_count == 0:
                 self._recv_count += 1
                 await asyncio.sleep(0.02)
                 return "resp"
             await asyncio.sleep(3600)
+
         async def close(self):
             pass
 
@@ -548,8 +608,11 @@ def test_capture_baseline_timing_returns_stats():
             new=AsyncMock(side_effect=fake_connect),
         ):
             return await _capture_baseline_timing(
-                "ws://test/", seq, n_samples=3,
-                timeout=0.5, quiet_s=0.05,
+                "ws://test/",
+                seq,
+                n_samples=3,
+                timeout=0.5,
+                quiet_s=0.05,
             )
 
     result = asyncio.run(run())
@@ -570,9 +633,7 @@ def test_capture_baseline_timing_handles_connect_failure():
     async def failing_connect(*args, **kwargs):
         raise ConnectionRefusedError("test")
 
-    seq = SimpleNamespace(
-        messages=[SimpleNamespace(direction="c2s", payload="x")]
-    )
+    seq = SimpleNamespace(messages=[SimpleNamespace(direction="c2s", payload="x")])
 
     async def run():
         with patch(
@@ -580,8 +641,11 @@ def test_capture_baseline_timing_handles_connect_failure():
             new=AsyncMock(side_effect=failing_connect),
         ):
             return await _capture_baseline_timing(
-                "ws://test/", seq, n_samples=2,
-                timeout=0.2, quiet_s=0.05,
+                "ws://test/",
+                seq,
+                n_samples=2,
+                timeout=0.2,
+                quiet_s=0.05,
             )
 
     result = asyncio.run(run())
@@ -612,24 +676,31 @@ def test_learn_populates_baseline_rtt():
     fake_field = SimpleNamespace(path="a", message_index=0)
 
     async def run():
-        with patch(
-            "janissary.integrations.websocket_learn._connect",
-            new=AsyncMock(side_effect=fake_connect),
-        ), patch(
-            "janissary.integrations.websocket_learn._collect_s2c",
-            new=AsyncMock(return_value=["echo"]),
-        ), patch(
-            "janissary.integrations.websocket_learn.detect_wire_format",
-            return_value="json",
-        ), patch(
-            "janissary.integrations.websocket_learn.find_injectable_fields",
-            return_value=[fake_field],
-        ), patch(
-            "janissary.integrations.websocket_learn._capture_baseline_timing",
-            new=AsyncMock(return_value=fake_stats),
+        with (
+            patch(
+                "janissary.integrations.websocket_learn._connect",
+                new=AsyncMock(side_effect=fake_connect),
+            ),
+            patch(
+                "janissary.integrations.websocket_learn._collect_s2c",
+                new=AsyncMock(return_value=["echo"]),
+            ),
+            patch(
+                "janissary.integrations.websocket_learn.detect_wire_format",
+                return_value="json",
+            ),
+            patch(
+                "janissary.integrations.websocket_learn.find_injectable_fields",
+                return_value=[fake_field],
+            ),
+            patch(
+                "janissary.integrations.websocket_learn._capture_baseline_timing",
+                new=AsyncMock(return_value=fake_stats),
+            ),
         ):
             return await learn(
-                "ws://test/", payloads=['{"a":"x"}'],
+                "ws://test/",
+                payloads=['{"a":"x"}'],
                 n_samples=3,
             )
 
@@ -638,6 +709,8 @@ def test_learn_populates_baseline_rtt():
         f"learn() must populate baseline_rtt via _capture_baseline_timing; "
         f"got {model.baseline_rtt!r}"
     )
+
+
 # --- FN-21 gaps 1+3+5: timing delta classification + caller guard + no_delta ---
 
 
@@ -691,13 +764,15 @@ def test_classify_delta_timing_delta():
 
     p = _probe(response_frames=(), payload_value="X")
     kind = _classify_delta(
-        p, baseline_norm="abc", probe_norm="abc",
-        baseline_frame_count=1, probe_frame_count=1,
+        p,
+        baseline_norm="abc",
+        probe_norm="abc",
+        baseline_frame_count=1,
+        probe_frame_count=1,
         timing_differs=True,
     )
     assert kind == "timing_delta", (
-        f"identical content + timing_differs must be timing_delta; "
-        f"got {kind!r}"
+        f"identical content + timing_differs must be timing_delta; got {kind!r}"
     )
 
 
@@ -707,13 +782,15 @@ def test_classify_delta_no_delta():
 
     p = _probe(response_frames=(), payload_value="X")
     kind = _classify_delta(
-        p, baseline_norm="abc", probe_norm="abc",
-        baseline_frame_count=1, probe_frame_count=1,
+        p,
+        baseline_norm="abc",
+        probe_norm="abc",
+        baseline_frame_count=1,
+        probe_frame_count=1,
         timing_differs=False,
     )
     assert kind == "no_delta", (
-        f"identical content + timing_differs=False must be no_delta; "
-        f"got {kind!r}"
+        f"identical content + timing_differs=False must be no_delta; got {kind!r}"
     )
 
 
@@ -724,13 +801,18 @@ def test_verify_emits_timing_delta_candidate():
     wired: today the content guard blocks classification, so no candidate.
     """
     from janissary.protocols.websocket import (
-        LearnedModel, MessageSequence, WebSocketMessage, ProbeResult,
+        LearnedModel,
+        MessageSequence,
+        WebSocketMessage,
+        ProbeResult,
     )
 
-    seq = MessageSequence(messages=[
-        WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
-        WebSocketMessage(direction="s2c", payload='{"a":"orig"}'),
-    ])
+    seq = MessageSequence(
+        messages=[
+            WebSocketMessage(direction="c2s", payload='{"a":"orig"}'),
+            WebSocketMessage(direction="s2c", payload='{"a":"orig"}'),
+        ]
+    )
     model = LearnedModel(
         wire_format="json",
         baseline_sequence=seq,
@@ -738,8 +820,11 @@ def test_verify_emits_timing_delta_candidate():
         baseline_rtt={0: (0.1, 0.02, 5)},
     )
     p = ProbeResult(
-        field_path="a", message_index=0, payload_name="sqli_quote",
-        payload_value="'", category="sqli",
+        field_path="a",
+        message_index=0,
+        payload_name="sqli_quote",
+        payload_value="'",
+        category="sqli",
         original_payload='{"a":"orig"}',
         mutated_payload='{"a":"\'"}',
         response_frames=('{"a":"orig"}',),  # identical content

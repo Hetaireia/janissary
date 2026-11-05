@@ -1,4 +1,5 @@
 """Tests for src/janissary/heuristic/engine.py (M38)."""
+
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
@@ -39,7 +40,9 @@ def test_engine_uses_default_signatures():
 
 
 def test_engine_custom_signatures():
-    sig = HeuristicSignature(id="HEUR-TEST", category="test", target_layer="body", patterns=(r"foo",))
+    sig = HeuristicSignature(
+        id="HEUR-TEST", category="test", target_layer="body", patterns=(r"foo",)
+    )
     e = HeuristicEngine(signatures=(sig,))
     assert e._signatures == (sig,)
 
@@ -54,7 +57,9 @@ def test_match_no_match():
 
 
 def test_match_finds_sqli_error():
-    obs = Observation(url="http://x/", body="You have an error in your SQL syntax near MySQL")
+    obs = Observation(
+        url="http://x/", body="You have an error in your SQL syntax near MySQL"
+    )
     matches = HeuristicEngine().match([obs])
     assert any(m.signature_id == "HEUR-001" for m in matches)
 
@@ -66,7 +71,9 @@ def test_match_finds_passwd_leak():
 
 
 def test_match_finds_traceback():
-    obs = Observation(url="http://x/", body="Traceback (most recent call last): File test.py")
+    obs = Observation(
+        url="http://x/", body="Traceback (most recent call last): File test.py"
+    )
     matches = HeuristicEngine().match([obs])
     assert any(m.signature_id == "HEUR-003" for m in matches)
 
@@ -90,7 +97,9 @@ def test_match_preserves_observation_order():
 
 
 def test_match_one_pattern_per_signature_per_observation():
-    obs = Observation(url="http://x/", body="SQL syntax error near MySQL also ORA-12345")
+    obs = Observation(
+        url="http://x/", body="SQL syntax error near MySQL also ORA-12345"
+    )
     matches = HeuristicEngine().match([obs])
     heur_001 = [m for m in matches if m.signature_id == "HEUR-001"]
     assert len(heur_001) == 1

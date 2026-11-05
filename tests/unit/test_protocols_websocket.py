@@ -1,4 +1,5 @@
 """Tests for WebSocketNormalizer (Phase 2.2 + FN-16 part 1)."""
+
 from janissary.protocols import BaselineNormalizer, NormalizedResponse
 from janissary.protocols.websocket import (
     MessageSequence,
@@ -24,18 +25,22 @@ def test_empty_sequence_normalizes_to_empty_array():
 
 
 def test_single_frame_canonicalizes():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(direction="c2s", payload='{"b": 2, "a": 1}'),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(direction="c2s", payload='{"b": 2, "a": 1}'),
+        )
+    )
     assert out.body == '[{"direction":"c2s","payload":"{\\"a\\":1,\\"b\\":2}"}]'
 
 
 def test_order_preserved_across_directions():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(direction="c2s", payload="ping"),
-        WebSocketMessage(direction="s2c", payload="pong"),
-        WebSocketMessage(direction="c2s", payload="ping"),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(direction="c2s", payload="ping"),
+            WebSocketMessage(direction="s2c", payload="pong"),
+            WebSocketMessage(direction="c2s", payload="ping"),
+        )
+    )
     # Payloads are non-JSON; whitespace-collapsed text preserved as-is
     assert '"c2s","payload":"ping"' in out.body
     assert '"s2c","payload":"pong"' in out.body
@@ -63,12 +68,14 @@ def test_timing_dropped_from_body():
 
 
 def test_volatile_keys_stripped_from_json_payloads():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(
-            direction="c2s",
-            payload='{"type": "ping", "timestamp": 1234, "session_id": "abc"}',
-        ),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(
+                direction="c2s",
+                payload='{"type": "ping", "timestamp": 1234, "session_id": "abc"}',
+            ),
+        )
+    )
     assert "1234" not in out.body
     assert "abc" not in out.body
     assert "ping" in out.body
@@ -77,24 +84,28 @@ def test_volatile_keys_stripped_from_json_payloads():
 
 
 def test_volatile_keys_stripped_nested():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(
-            direction="s2c",
-            payload='{"user": {"name": "alice", "sessionId": "xyz"}}',
-        ),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(
+                direction="s2c",
+                payload='{"user": {"name": "alice", "sessionId": "xyz"}}',
+            ),
+        )
+    )
     assert "xyz" not in out.body
     assert "alice" in out.body
     assert any("sessionId" in s for s in out.stripped)
 
 
 def test_non_json_payload_whitespace_collapsed():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(direction="c2s", payload="  hello\n\n  world  "),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(direction="c2s", payload="  hello\n\n  world  "),
+        )
+    )
     assert "hello world" in out.body
     # Should not have internal double-space
-    assert '  hello' not in out.body
+    assert "  hello" not in out.body
 
 
 def test_semantically_equivalent_sequences_normalize_identically():
@@ -115,8 +126,16 @@ def test_semantically_equivalent_sequences_normalize_identically():
 
 def test_different_traffic_differs():
     """Sanity: genuinely different traffic must not collide."""
-    a = _seq(WebSocketMessage(direction="c2s", payload='{"type": "subscribe", "channel": "A"}'))
-    b = _seq(WebSocketMessage(direction="c2s", payload='{"type": "subscribe", "channel": "B"}'))
+    a = _seq(
+        WebSocketMessage(
+            direction="c2s", payload='{"type": "subscribe", "channel": "A"}'
+        )
+    )
+    b = _seq(
+        WebSocketMessage(
+            direction="c2s", payload='{"type": "subscribe", "channel": "B"}'
+        )
+    )
     na = WebSocketNormalizer().normalize(a)
     nb = WebSocketNormalizer().normalize(b)
     assert na.body != nb.body
@@ -137,7 +156,9 @@ def test_stripped_is_tuple():
 
 
 def test_length_matches_body():
-    out = WebSocketNormalizer().normalize(_seq(
-        WebSocketMessage(direction="c2s", payload="ping"),
-    ))
+    out = WebSocketNormalizer().normalize(
+        _seq(
+            WebSocketMessage(direction="c2s", payload="ping"),
+        )
+    )
     assert out.length == len(out.body)

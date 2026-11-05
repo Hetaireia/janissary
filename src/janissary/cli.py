@@ -118,7 +118,9 @@ def _print_summary(summary: ScanSummary) -> None:
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
     if summary.scan_incomplete:
-        print("  INCOMPLETE:      partial results — scan did not complete all parameters/payloads")
+        print(
+            "  INCOMPLETE:      partial results — scan did not complete all parameters/payloads"
+        )
         return
 
     if summary.waf is not None:
@@ -182,9 +184,7 @@ def _print_summary(summary: ScanSummary) -> None:
         for f in summary.findings:
             by_sev[f.severity] = by_sev.get(f.severity, 0) + 1
             if getattr(f, "verification_status", "verified") == "unproven":
-                unproven_by_sev[f.severity] = (
-                    unproven_by_sev.get(f.severity, 0) + 1
-                )
+                unproven_by_sev[f.severity] = unproven_by_sev.get(f.severity, 0) + 1
         for sev in sorted(by_sev, key=lambda s: SEV_ORDER.get(s, 99)):
             line = f"    {sev.upper():10} {by_sev[sev]}"
             n_unproven = unproven_by_sev.get(sev, 0)
@@ -218,9 +218,7 @@ def _merge_graphql_into_scan(summary, gql_summary):
     if gql_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:
-            summary.abort_reason = (
-                gql_summary.abort_reason or "graphql scan incomplete"
-            )
+            summary.abort_reason = gql_summary.abort_reason or "graphql scan incomplete"
     if gql_summary.aborted and not summary.aborted:
         summary.aborted = True
         summary.abort_reason = gql_summary.abort_reason
@@ -296,8 +294,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print("[!] scan requires --url", file=sys.stderr)
         return 64
 
-    if getattr(args, "sessions", None) and (getattr(args, "cookie", None) or getattr(args, "bearer", None)):
-        print("[!] --sessions is mutually exclusive with --cookie/--bearer", file=sys.stderr)
+    if getattr(args, "sessions", None) and (
+        getattr(args, "cookie", None) or getattr(args, "bearer", None)
+    ):
+        print(
+            "[!] --sessions is mutually exclusive with --cookie/--bearer",
+            file=sys.stderr,
+        )
         return 64
 
     if getattr(args, "idor", False):
@@ -308,14 +311,23 @@ def cmd_scan(args: argparse.Namespace) -> int:
         _bearer_alt = getattr(args, "bearer_alt", None)
         if _sessions:
             if _cookie_alt or _bearer_alt:
-                print("[!] --idor: --sessions is mutually exclusive with --cookie-alt/--bearer-alt", file=sys.stderr)
+                print(
+                    "[!] --idor: --sessions is mutually exclusive with --cookie-alt/--bearer-alt",
+                    file=sys.stderr,
+                )
                 return 64
         else:
             if not (_cookie or _bearer):
-                print("[!] --idor: primary identity missing (--cookie or --bearer required)", file=sys.stderr)
+                print(
+                    "[!] --idor: primary identity missing (--cookie or --bearer required)",
+                    file=sys.stderr,
+                )
                 return 64
             if not (_cookie_alt or _bearer_alt):
-                print("[!] --idor: alternate identity missing (--cookie-alt or --bearer-alt required)", file=sys.stderr)
+                print(
+                    "[!] --idor: alternate identity missing (--cookie-alt or --bearer-alt required)",
+                    file=sys.stderr,
+                )
                 return 64
 
     if getattr(args, "ws", False) and not getattr(args, "ws_payloads", None):
@@ -385,6 +397,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     idor_alt_spec = None
     if getattr(args, "idor", False):
         from janissary.auth import SessionSpec as _SS
+
         if auth_cfg.sessions:
             idor_alt_spec = auth_cfg.sessions[1]
         elif getattr(args, "cookie_alt", None):
@@ -433,6 +446,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "json_template", None):
         import json as _json
         from pathlib import Path as _Path
+
         _jt_path = _Path(args.json_template)
         if not _jt_path.exists():
             print(f"[!] --json-template: {_jt_path} not found", file=sys.stderr)
@@ -446,6 +460,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     ws_payloads = None
     if getattr(args, "ws", False):
         from pathlib import Path as _Path
+
         _ws_path = _Path(args.ws_payloads)
         if not _ws_path.exists():
             print(f"[!] --ws-payloads: {_ws_path} not found", file=sys.stderr)
@@ -476,7 +491,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
         json_template=_json_template,
         baseline_value=args.baseline_value or "",
-        collect_observations=getattr(args, "heuristic", False) or getattr(args, "idor", False),
+        collect_observations=getattr(args, "heuristic", False)
+        or getattr(args, "idor", False),
         verbose=getattr(args, "verbose", False),
     )
 
@@ -495,9 +511,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "graphql", False) and not summary.aborted:
         if not args.quiet:
             print("[*] GraphQL discovery...")
-        gql_summary = scanner.scan_graphql(
-            include_probes=True, include_fuzz=False
-        )
+        gql_summary = scanner.scan_graphql(include_probes=True, include_fuzz=False)
         summary = _merge_graphql_into_scan(summary, gql_summary)
         if not args.quiet and gql_summary.findings:
             print(
@@ -541,7 +555,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
                     f"(see --json / --jsonl / --export for detail)"
                 )
 
-    if getattr(args, "idor", False) and not summary.aborted and idor_alt_spec is not None:
+    if (
+        getattr(args, "idor", False)
+        and not summary.aborted
+        and idor_alt_spec is not None
+    ):
         if not args.quiet:
             print("[*] IDOR cross-identity probe...")
         idor_findings = scanner.run_idor(idor_alt_spec)
@@ -568,9 +586,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
             _write_sarif(summary, args.export)
         elif ext == "html":
             from janissary.reporting.html_report import write_html_report
+
             write_html_report(payload, args.export)
         elif ext == "pdf":
             from janissary.reporting.pdf_report import write_pdf_report
+
             write_pdf_report(payload, args.export)
         else:
             with open(args.export, "w", encoding="utf-8") as fh:
@@ -1281,10 +1301,11 @@ def _parse_signals(reason: str | None) -> list[str]:
     if not reason:
         return []
     if reason.startswith("heuristic:"):
-        return reason[len("heuristic:"):].split("+")
+        return reason[len("heuristic:") :].split("+")
     if reason.startswith("idor:"):
-        return ["idor_" + reason[len("idor:"):].replace(":", "_")]
+        return ["idor_" + reason[len("idor:") :].replace(":", "_")]
     return []
+
 
 def _from_scan_summary(
     summary: ScanSummary,
@@ -1304,7 +1325,8 @@ def _from_scan_summary(
     )
 
     findings = [
-        f for f in summary.findings
+        f
+        for f in summary.findings
         if verification_filter is None or f.verification_status == verification_filter
     ]
 
@@ -1452,9 +1474,7 @@ def _from_agent_findings(findings: list) -> _SarifRunInput:
     )
 
 
-def _render_sarif(
-    runs: list[tuple[_SarifRunInput, str | None]], path: str
-) -> None:
+def _render_sarif(runs: list[tuple[_SarifRunInput, str | None]], path: str) -> None:
     """Render normalized SARIF run inputs to disk (ADR-019 D1).
 
     Each tuple is (run_input, track_label). If track_label is None,
@@ -1500,7 +1520,7 @@ def _write_sarif(source: ScanSummary | list, path: str) -> None:
     findings have no verification_status field).
     """
     if isinstance(source, ScanSummary):
-        verified  = _from_scan_summary(source, verification_filter="verified")
+        verified = _from_scan_summary(source, verification_filter="verified")
         discovery = _from_scan_summary(source, verification_filter="unproven")
         runs = [(verified, "verified"), (discovery, "discovery")]
     elif isinstance(source, list):
@@ -1523,7 +1543,6 @@ class _ArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         self.print_usage(sys.stderr)
         self.exit(64, f"{self.prog}: error: {message}\n")
-
 
 
 def cmd_host_bypass(args: argparse.Namespace) -> int:
@@ -1591,6 +1610,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
             )
             return 64
         from janissary.legal import require_acceptance
+
         require_acceptance("scan")
         f = findings[0]
         print(format_explanation(f))
@@ -1627,9 +1647,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command")
 
     # -- host-bypass -----------------------------------------------
-    hb = sub.add_parser(
-        "host-bypass", help="probe Host-header ACL bypass (FN-20)"
-    )
+    hb = sub.add_parser("host-bypass", help="probe Host-header ACL bypass (FN-20)")
     hb.add_argument("-u", "--url", required=True, help="target URL")
     hb.add_argument(
         "--baseline-host",
@@ -1684,7 +1702,16 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--method", choices=["GET", "POST"], default="GET")
     scan.add_argument(
         "--inject-in",
-        choices=["auto", "query", "body", "cookie", "header", "param-name", "json-body", "path"],
+        choices=[
+            "auto",
+            "query",
+            "body",
+            "cookie",
+            "header",
+            "param-name",
+            "json-body",
+            "path",
+        ],
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST). For 'path', also pass --baseline-value with a known-good value; URL templates like /users/v1/{username} are substituted per request.",
@@ -1725,7 +1752,12 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="JSON body template for --inject-in json-body. Must contain a {{PAYLOAD}} placeholder.",
     )
-    scan.add_argument("--baseline-value", default="", metavar="VAL", help="Known-good value for --inject-in path baseline. URL templates like /users/v1/{username} substitute this value as the baseline request, then fuzz the segment.")
+    scan.add_argument(
+        "--baseline-value",
+        default="",
+        metavar="VAL",
+        help="Known-good value for --inject-in path baseline. URL templates like /users/v1/{username} substitute this value as the baseline request, then fuzz the segment.",
+    )
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)
     scan.add_argument("--baseline-count", type=int, default=10)
@@ -1745,7 +1777,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="PATH",
         help="Newline-delimited payload file for WebSocket discovery "
-             "(required with --ws). Lines starting with # and blank lines are skipped.",
+        "(required with --ws). Lines starting with # and blank lines are skipped.",
     )
     scan.add_argument(
         "--host-bypass",
@@ -1756,8 +1788,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--baseline-host",
         default=None,
         metavar="VAL",
-        help=("baseline Host header for --host-bypass; if absent, "
-              "derived from the URL"),
+        help=(
+            "baseline Host header for --host-bypass; if absent, derived from the URL"
+        ),
     )
     scan.add_argument(
         "--no-waf",
@@ -1768,7 +1801,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--proxy", default=None, help="HTTP proxy URL (e.g. http://127.0.0.1:8080)"
     )
     scan.add_argument(
-        "--export", default=None, help="write results to a .json, .sarif, .html, or .pdf file"
+        "--export",
+        default=None,
+        help="write results to a .json, .sarif, .html, or .pdf file",
     )
     scan.add_argument(
         "--heuristic",
@@ -2005,7 +2040,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="comma-separated list of template paths or directories",
     )
     nuclei.add_argument(
-        "--nuclei-path", dest="nuclei_path", default=None, metavar="PATH",
+        "--nuclei-path",
+        dest="nuclei_path",
+        default=None,
+        metavar="PATH",
         help="Path to the nuclei binary. Defaults to resolving 'nuclei' on PATH.",
     )
     nuclei.add_argument(
@@ -2019,7 +2057,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     nuclei.add_argument("--timeout", type=float, default=300.0)
     nuclei.add_argument(
-        "--rate-limit", type=int, default=50,
+        "--rate-limit",
+        type=int,
+        default=50,
         help="total requests/second across all templates (not per-template)",
     )
     nuclei.add_argument("--export", default=None, help="write results to a .json file")

@@ -1,4 +1,5 @@
 """Tests for detection/idor.py (M42, ADR-024 D5-D6)."""
+
 from __future__ import annotations
 
 import pytest

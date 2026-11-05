@@ -9,6 +9,7 @@ Per ADR-017 (emission model) and ADR-022 (reconciliation), this module:
 The heuristic engine is pure: it takes observations (already fetched by
 the payload loop) and returns candidates. No network traffic.
 """
+
 from __future__ import annotations
 
 import re

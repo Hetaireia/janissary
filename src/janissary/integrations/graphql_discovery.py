@@ -24,6 +24,7 @@ Design conventions:
 Contract:
     GraphQLDiscoveryModule(client, profile).discover(...) -> list[CandidateFinding]
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -93,37 +94,43 @@ class GraphQLDiscoveryModule:
 
         if self.profile.introspection_enabled:
             type_count = self.profile.type_count
-            out.append(self._candidate(
-                finding_type="introspection_enabled",
-                severity="info",
-                detail=(
-                    f"Schema introspection enabled "
-                    f"({type_count} types exposed); schema oracle in production"
-                ),
-                payload_name="introspection_query",
-                payload_value="__schema introspection",
-            ))
+            out.append(
+                self._candidate(
+                    finding_type="introspection_enabled",
+                    severity="info",
+                    detail=(
+                        f"Schema introspection enabled "
+                        f"({type_count} types exposed); schema oracle in production"
+                    ),
+                    payload_name="introspection_query",
+                    payload_value="__schema introspection",
+                )
+            )
 
         if self.profile.batched_queries:
-            out.append(self._candidate(
-                finding_type="batching_accepted",
-                severity="info",
-                detail="Server accepts batched queries (DoS amplification vector)",
-                payload_name="batch_probe",
-                payload_value="2x __typename in array",
-            ))
+            out.append(
+                self._candidate(
+                    finding_type="batching_accepted",
+                    severity="info",
+                    detail="Server accepts batched queries (DoS amplification vector)",
+                    payload_name="batch_probe",
+                    payload_value="2x __typename in array",
+                )
+            )
 
         if self.profile.suggestions_supported:
-            out.append(self._candidate(
-                finding_type="suggestions_enabled",
-                severity="info",
-                detail=(
-                    "Field-name suggestions enabled "
-                    "(schema oracle via 'Did you mean' error messages)"
-                ),
-                payload_name="field_suggestion_probe",
-                payload_value="__definitelyNotARealField",
-            ))
+            out.append(
+                self._candidate(
+                    finding_type="suggestions_enabled",
+                    severity="info",
+                    detail=(
+                        "Field-name suggestions enabled "
+                        "(schema oracle via 'Did you mean' error messages)"
+                    ),
+                    payload_name="field_suggestion_probe",
+                    payload_value="__definitelyNotARealField",
+                )
+            )
 
         return out
 
@@ -150,30 +157,34 @@ class GraphQLDiscoveryModule:
             depth, refusal = depth_probe(self.client)
 
         if depth is not None and depth >= _DEPTH_THRESHOLD:
-            out.append(self._candidate(
-                finding_type="depth_abuse",
-                severity="medium",
-                detail=(
-                    f"Query depth {depth} accepted on field path "
-                    f"{depth_field_desc!r} (threshold {_DEPTH_THRESHOLD}); "
-                    f"DoS amplification risk"
-                ),
-                payload_name="depth_probe",
-                payload_value=f"nested {depth_field_desc} x{depth}",
-            ))
+            out.append(
+                self._candidate(
+                    finding_type="depth_abuse",
+                    severity="medium",
+                    detail=(
+                        f"Query depth {depth} accepted on field path "
+                        f"{depth_field_desc!r} (threshold {_DEPTH_THRESHOLD}); "
+                        f"DoS amplification risk"
+                    ),
+                    payload_name="depth_probe",
+                    payload_value=f"nested {depth_field_desc} x{depth}",
+                )
+            )
 
         aliases, alias_refusal = alias_probe(self.client)
         if aliases is not None and aliases >= _ALIAS_THRESHOLD:
-            out.append(self._candidate(
-                finding_type="alias_abuse",
-                severity="medium",
-                detail=(
-                    f"Alias count {aliases} accepted without refusal "
-                    f"(threshold {_ALIAS_THRESHOLD}); resource amplification risk"
-                ),
-                payload_name="alias_probe",
-                payload_value=f"aliased __typename x{aliases}",
-            ))
+            out.append(
+                self._candidate(
+                    finding_type="alias_abuse",
+                    severity="medium",
+                    detail=(
+                        f"Alias count {aliases} accepted without refusal "
+                        f"(threshold {_ALIAS_THRESHOLD}); resource amplification risk"
+                    ),
+                    payload_name="alias_probe",
+                    payload_value=f"aliased __typename x{aliases}",
+                )
+            )
 
         return out
 
@@ -181,9 +192,7 @@ class GraphQLDiscoveryModule:
     # Argument fuzzing (opt-in)
     # ------------------------------------------------------------------
 
-    def _fuzz_candidates(
-        self, max_targets: int | None
-    ) -> list[CandidateFinding]:
+    def _fuzz_candidates(self, max_targets: int | None) -> list[CandidateFinding]:
         targets = self._enumerate_fuzz_targets(max_targets)
         out: list[CandidateFinding] = []
         for field, arg in targets:
@@ -214,9 +223,7 @@ class GraphQLDiscoveryModule:
             payload_value=str(result.payload_value)[:200],
         )
 
-    def _enumerate_fuzz_targets(
-        self, max_targets: int | None
-    ) -> list[tuple[str, str]]:
+    def _enumerate_fuzz_targets(self, max_targets: int | None) -> list[tuple[str, str]]:
         """Extract (field, arg) pairs from the introspected schema.
 
         Walks the Query root type, enumerates its fields and their

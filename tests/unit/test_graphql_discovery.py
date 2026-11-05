@@ -1,4 +1,5 @@
 """Tests for GraphQLDiscoveryModule (Phase 2.1 + FN-15 part 2)."""
+
 from unittest.mock import MagicMock, patch
 
 from janissary.integrations.graphql import GraphQLProfile, FuzzResult
@@ -70,8 +71,13 @@ def test_all_three_observations_emit_three_candidates():
 
 def test_depth_above_threshold_emits_candidate():
     m = _module()
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(20, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(20, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
     depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]
     assert len(depth) == 1
@@ -80,16 +86,27 @@ def test_depth_above_threshold_emits_candidate():
 
 def test_depth_below_threshold_no_candidate():
     m = _module()
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(5, "refused")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe",
+        return_value=(5, "refused"),
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
     assert [c for c in out if c.finding_type == "graphql_depth_abuse"] == []
 
 
 def test_alias_above_threshold_emits_candidate():
     m = _module()
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(500, "")):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(500, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
     alias = [c for c in out if c.finding_type == "graphql_alias_abuse"]
     assert len(alias) == 1
@@ -98,8 +115,13 @@ def test_alias_above_threshold_emits_candidate():
 
 def test_alias_below_threshold_no_candidate():
     m = _module()
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(50, "refused")):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(50, "refused"),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
     assert [c for c in out if c.finding_type == "graphql_alias_abuse"] == []
 
@@ -127,9 +149,17 @@ def test_fuzz_error_response_emits_candidate():
         data=None,
         body={"errors": [{"message": "SQL syntax error"}]},
     )
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
-            with patch("janissary.integrations.graphql_discovery.fuzz_arguments", return_value=[fake_result]):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
+            with patch(
+                "janissary.integrations.graphql_discovery.fuzz_arguments",
+                return_value=[fake_result],
+            ):
                 out = m.discover(include_probes=False, include_fuzz=True)
     fuzz = [c for c in out if c.finding_type == "graphql_argument_fuzz_error"]
     assert len(fuzz) == 1
@@ -161,9 +191,17 @@ def test_fuzz_clean_response_no_candidate():
         data={"user": {"id": "1"}},
         body={"data": {"user": {"id": "1"}}},
     )
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
-            with patch("janissary.integrations.graphql_discovery.fuzz_arguments", return_value=[clean]):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
+            with patch(
+                "janissary.integrations.graphql_discovery.fuzz_arguments",
+                return_value=[clean],
+            ):
                 out = m.discover(include_probes=False, include_fuzz=True)
     assert [c for c in out if c.finding_type == "graphql_argument_fuzz_error"] == []
 
@@ -179,7 +217,10 @@ def test_enumerate_fuzz_targets_extracts_field_arg_pairs():
                     {"name": "__typename", "args": []},  # skipped: __ prefix
                 ],
             },
-            {"name": "User", "fields": [{"name": "email", "args": []}]},  # skipped: not query root
+            {
+                "name": "User",
+                "fields": [{"name": "email", "args": []}],
+            },  # skipped: not query root
         ]
     }
     m = _module(query_type="Query", schema=schema)
@@ -219,8 +260,13 @@ def test_all_finding_types_have_graphql_prefix():
         suggestions_supported=True,
         type_count=10,
     )
-    with patch("janissary.integrations.graphql_discovery.depth_probe", return_value=(20, "")):
-        with patch("janissary.integrations.graphql_discovery.alias_probe", return_value=(500, "")):
+    with patch(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(20, "")
+    ):
+        with patch(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(500, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
     assert out
     for c in out:
@@ -269,7 +315,10 @@ def test_depth_uses_schema_derived_path_when_available():
         return (20, "")
 
     with _p("janissary.integrations.graphql_discovery.depth_probe", fake_depth):
-        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+        with _p(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
 
     assert captured["field_name"] == "friend"
@@ -286,18 +335,38 @@ def test_depth_falls_back_when_no_self_ref_path():
     schema = {
         "queryType": {"name": "Query"},
         "types": [
-            {"name": "Query", "fields": [
-                {"name": "user", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
-            ]},
-            {"name": "User", "fields": [
-                {"name": "name", "args": [], "type": {"kind": "SCALAR", "name": "String"}},
-            ]},
+            {
+                "name": "Query",
+                "fields": [
+                    {
+                        "name": "user",
+                        "args": [],
+                        "type": {"kind": "OBJECT", "name": "User"},
+                    },
+                ],
+            },
+            {
+                "name": "User",
+                "fields": [
+                    {
+                        "name": "name",
+                        "args": [],
+                        "type": {"kind": "SCALAR", "name": "String"},
+                    },
+                ],
+            },
         ],
     }
     m = _module(query_type="Query", schema=schema)
 
-    with _p("janissary.integrations.graphql_discovery.depth_probe", return_value=(None, "validation error")):
-        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+    with _p(
+        "janissary.integrations.graphql_discovery.depth_probe",
+        return_value=(None, "validation error"),
+    ):
+        with _p(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
 
     depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]
@@ -311,18 +380,37 @@ def test_depth_fires_with_derived_path_above_threshold():
     schema = {
         "queryType": {"name": "Query"},
         "types": [
-            {"name": "Query", "fields": [
-                {"name": "me", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
-            ]},
-            {"name": "User", "fields": [
-                {"name": "friend", "args": [], "type": {"kind": "OBJECT", "name": "User"}},
-            ]},
+            {
+                "name": "Query",
+                "fields": [
+                    {
+                        "name": "me",
+                        "args": [],
+                        "type": {"kind": "OBJECT", "name": "User"},
+                    },
+                ],
+            },
+            {
+                "name": "User",
+                "fields": [
+                    {
+                        "name": "friend",
+                        "args": [],
+                        "type": {"kind": "OBJECT", "name": "User"},
+                    },
+                ],
+            },
         ],
     }
     m = _module(query_type="Query", schema=schema)
 
-    with _p("janissary.integrations.graphql_discovery.depth_probe", return_value=(25, "")):
-        with _p("janissary.integrations.graphql_discovery.alias_probe", return_value=(None, "")):
+    with _p(
+        "janissary.integrations.graphql_discovery.depth_probe", return_value=(25, "")
+    ):
+        with _p(
+            "janissary.integrations.graphql_discovery.alias_probe",
+            return_value=(None, ""),
+        ):
             out = m.discover(include_probes=True, include_fuzz=False)
 
     depth = [c for c in out if c.finding_type == "graphql_depth_abuse"]

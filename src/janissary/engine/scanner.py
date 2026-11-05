@@ -93,19 +93,54 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
     # target (win.ini) plus structural variants (double-slash, double-
     # encoded) that exercise different servlet input-filter paths.
     ("traversal_win_ini", "..\\..\\..\\windows\\win.ini", "traversal", "critical"),
-    ("traversal_win_encoded", "..%5c..%5c..%5cwindows%5cwin.ini", "traversal", "critical"),
-    ("traversal_passwd_double", "....//....//....//etc/passwd", "traversal", "critical"),
-    ("traversal_passwd_dot", "..%252f..%252f..%252fetc%252fpasswd", "traversal", "critical"),
+    (
+        "traversal_win_encoded",
+        "..%5c..%5c..%5cwindows%5cwin.ini",
+        "traversal",
+        "critical",
+    ),
+    (
+        "traversal_passwd_double",
+        "....//....//....//etc/passwd",
+        "traversal",
+        "critical",
+    ),
+    (
+        "traversal_passwd_dot",
+        "..%252f..%252f..%252fetc%252fpasswd",
+        "traversal",
+        "critical",
+    ),
     ("ssrf_mailhog_canary", "http://mailhog:8025/", "ssrf", "critical"),
     # Cloud metadata endpoints (ADR-012 D2 follow-up). Best-effort: GCP
     # and Azure require specific headers (Metadata-Flavor: Google,
     # Metadata: true) which the target must forward. AWS IMDSv1 has no
     # header requirement; v6 is the IPv6 variant. Response-body markers
     # in SSRF_BODY_MARKERS match content unique to each provider.
-    ("ssrf_metadata_aws", "http://169.254.169.254/latest/meta-data/", "ssrf", "critical"),
-    ("ssrf_metadata_aws_v6", "http://[fd00:ec2::254]/latest/meta-data/", "ssrf", "critical"),
-    ("ssrf_metadata_gcp", "http://metadata.google.internal/computeMetadata/v1/", "ssrf", "critical"),
-    ("ssrf_metadata_azure", "http://169.254.169.254/metadata/instance", "ssrf", "critical"),
+    (
+        "ssrf_metadata_aws",
+        "http://169.254.169.254/latest/meta-data/",
+        "ssrf",
+        "critical",
+    ),
+    (
+        "ssrf_metadata_aws_v6",
+        "http://[fd00:ec2::254]/latest/meta-data/",
+        "ssrf",
+        "critical",
+    ),
+    (
+        "ssrf_metadata_gcp",
+        "http://metadata.google.internal/computeMetadata/v1/",
+        "ssrf",
+        "critical",
+    ),
+    (
+        "ssrf_metadata_azure",
+        "http://169.254.169.254/metadata/instance",
+        "ssrf",
+        "critical",
+    ),
     ("sqli_blind_true", "1' OR '1'='1", "sqli_blind", "high"),
     ("sqli_blind_false", "1' AND '1'='2", "sqli_blind", "high"),
     ("cmdi_semicolon", "; cat /etc/passwd", "cmdi", "critical"),
@@ -136,16 +171,26 @@ DEFAULT_PAYLOADS: list[tuple[str, str, str, str]] = [
 SSRF_BODY_MARKERS: dict[str, list[str]] = {
     "ssrf_mailhog_canary": ["MailHog", "mailhog"],
     "ssrf_metadata_aws": [
-        "ami-id", "ami-launch-index", "instance-id", "placement/",
+        "ami-id",
+        "ami-launch-index",
+        "instance-id",
+        "placement/",
     ],
     "ssrf_metadata_aws_v6": [
-        "ami-id", "ami-launch-index", "instance-id", "placement/",
+        "ami-id",
+        "ami-launch-index",
+        "instance-id",
+        "placement/",
     ],
     "ssrf_metadata_gcp": [
-        "project/project-id", "instance/zone", "service-accounts/",
+        "project/project-id",
+        "instance/zone",
+        "service-accounts/",
     ],
     "ssrf_metadata_azure": [
-        "vmId", "subscriptionId", "resourceGroupName",
+        "vmId",
+        "subscriptionId",
+        "resourceGroupName",
     ],
 }
 
@@ -304,13 +349,22 @@ def _ws_url_from_target(target: str) -> str:
     if target.startswith("ws://") or target.startswith("wss://"):
         return target
     if target.startswith("https://"):
-        return "wss://" + target[len("https://"):]
+        return "wss://" + target[len("https://") :]
     if target.startswith("http://"):
-        return "ws://" + target[len("http://"):]
+        return "ws://" + target[len("http://") :]
     return target
 
 
-_ENGINE = VerificationEngine(confirmers=[CorroboratorConfirmer(), WebSocketReconConfirmer(), GraphQLReconConfirmer(), HeuristicConfirmer(), IdorConfirmer(), AnalyzerImplicitConfirmer()])
+_ENGINE = VerificationEngine(
+    confirmers=[
+        CorroboratorConfirmer(),
+        WebSocketReconConfirmer(),
+        GraphQLReconConfirmer(),
+        HeuristicConfirmer(),
+        IdorConfirmer(),
+        AnalyzerImplicitConfirmer(),
+    ]
+)
 
 
 class _VerifiedFindingsList(list):
@@ -348,7 +402,6 @@ class _VerifiedFindingsList(list):
         super().extend(items)
 
 
-
 @dataclass
 class ScanSummary:
     target: str
@@ -383,7 +436,7 @@ def _substitute_placeholder(obj, placeholder, value):
         return {
             k: _substitute_placeholder(v, placeholder, value)
             for k, v in obj.items()
-            if not (isinstance(k, str) and k.startswith('_'))
+            if not (isinstance(k, str) and k.startswith("_"))
         }
     if isinstance(obj, list):
         return [_substitute_placeholder(v, placeholder, value) for v in obj]
@@ -442,6 +495,7 @@ class Scanner:
         self._session_rotator = None
         if auth_sessions:
             from janissary.engine.session_rotator import SessionRotator
+
             self._session_rotator = SessionRotator(auth_sessions)
         self.inject_in = inject_in.lower()
         if self.inject_in not in {
@@ -459,7 +513,9 @@ class Scanner:
             raise ValueError("inject_in='json-body' requires json_template")
         if self.inject_in == "path":
             if not any(f"{{{p}}}" in self.target for p in self.params):
-                raise ValueError("inject_in='path' requires a {param} placeholder in URL")
+                raise ValueError(
+                    "inject_in='path' requires a {param} placeholder in URL"
+                )
 
         cfg = pacer_config or PacerConfig(base_delay=delay)
         if cfg.min_delay < delay:
@@ -504,6 +560,7 @@ class Scanner:
             return []
         from janissary.heuristic.engine import HeuristicEngine
         from janissary.verification.types import VerifiedFinding as _VF
+
         engine = HeuristicEngine()
         matches = engine.match(self._observations)
         candidates = engine.to_candidates(matches, self._observations)
@@ -525,7 +582,9 @@ class Scanner:
             headers["X-Forwarded-For"] = "127.0.0.1"
         return headers
 
-    def _request(self, url: str, param: str, value: str, allow_redirects: bool = False) -> requests.Response | None:
+    def _request(
+        self, url: str, param: str, value: str, allow_redirects: bool = False
+    ) -> requests.Response | None:
         if self.inject_in == "param-name":
             # OWASP Benchmark "getParameterNames" cases: the payload is
             # delivered as the parameter *name*, whose value is the
@@ -588,10 +647,13 @@ class Scanner:
 
         if self.inject_in == "path":
             from urllib.parse import quote as _quote
+
             path_url = url.replace(f"{{{param}}}", _quote(value, safe=""))
             kwargs = dict(
-                headers=self._headers(), timeout=self.timeout,
-                allow_redirects=allow_redirects, proxies=self.proxies,
+                headers=self._headers(),
+                timeout=self.timeout,
+                allow_redirects=allow_redirects,
+                proxies=self.proxies,
             )
             if self.method == "POST":
                 return self.session.post(path_url, **kwargs)
@@ -911,8 +973,6 @@ class Scanner:
 
         return summary
 
-
-
     def _candidate_to_scan_finding(self, c) -> ScanFinding:
         """Convert a CandidateFinding from an integration module to ScanFinding.
 
@@ -969,6 +1029,7 @@ class Scanner:
             summary.finding_count += 1
 
         return summary
+
     def scan_graphql(
         self,
         include_probes: bool = True,
@@ -1061,6 +1122,7 @@ class Scanner:
         if new_spec is None:
             return r
         from janissary.auth import AuthConfig, apply_to_session
+
         apply_to_session(
             self.session,
             AuthConfig(cookie=new_spec.cookie, bearer=new_spec.bearer),
@@ -1133,9 +1195,7 @@ class Scanner:
                     ),
                     response_status=b_response.status_code,
                     response_length=len(b_response.text or ""),
-                    response_content_type=b_response.headers.get(
-                        "content-type", ""
-                    ),
+                    response_content_type=b_response.headers.get("content-type", ""),
                     url=url,
                     method=obs.method or "GET",
                     discovery_reason="idor:cross_identity_match",
@@ -1146,7 +1206,6 @@ class Scanner:
         finally:
             b_session.close()
         return findings
-
 
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
@@ -1262,7 +1321,10 @@ class Scanner:
                 if self._collect_observations and len(self._observations) < 1000:
                     self._observations.append(
                         Observation(
-                            url=(getattr(getattr(r, "request", None), "url", None) or self.target),
+                            url=(
+                                getattr(getattr(r, "request", None), "url", None)
+                                or self.target
+                            ),
                             body=(r.text or ""),
                             headers=dict(r.headers or {}),
                             method=self.method,
@@ -1277,7 +1339,9 @@ class Scanner:
                 # payload response structurally collapses from the armed
                 # baseline AND an auxiliary signal corroborates. D5
                 # pass-through: no-op when arming.armed is False.
-                if arming.armed and category == "traversal":  # ADR-006 D1: only traversal payloads reach the collapse oracle; non-traversal payloads are handled by their own oracle
+                if (
+                    arming.armed and category == "traversal"
+                ):  # ADR-006 D1: only traversal payloads reach the collapse oracle; non-traversal payloads are handled by their own oracle
                     collapse_raw = check_traversal_collapse_oracle(
                         baseline=baseline,
                         arming=arming,
@@ -1405,10 +1469,16 @@ class Scanner:
                             summary.findings.append(ssrf_finding)
                             summary.finding_count += 1
                             if not quiet:
-                                _say(f"  [{param}] {name} -> ssrf_response | {sf['detail'][:80]}")
+                                _say(
+                                    f"  [{param}] {name} -> ssrf_response | {sf['detail'][:80]}"
+                                )
 
                 # Blind SQLi paired oracle (Phase 4, FN-1).
-                if (arming.armed or self.inject_in == "json-body") and name == "sqli_blind_false" and sqli_blind_true_snap is not None:
+                if (
+                    (arming.armed or self.inject_in == "json-body")
+                    and name == "sqli_blind_false"
+                    and sqli_blind_true_snap is not None
+                ):
                     blind_raw = check_blind_sqli_oracle(
                         true_snapshot=sqli_blind_true_snap,
                         true_status=sqli_blind_true_status,
@@ -1577,7 +1647,9 @@ class Scanner:
                     # ADR-028 D5: --verbose explains why this payload didn't contribute
                     # to the existence oracle. Emitted only on non-2xx; if a later payload
                     # is 2xx, the diagnostic is not emitted because traversal_snap is set.
-                elif category == "traversal" and self.verbose and traversal_snap is None:
+                elif (
+                    category == "traversal" and self.verbose and traversal_snap is None
+                ):
                     _say(
                         f"  [{param}] traversal {name} returned {r.status_code}, "
                         f"not captured for existence oracle (2xx required)"
@@ -1824,7 +1896,9 @@ class Scanner:
             # Paired-probe: pathtraver existence oracle.
             if traversal_snap is not None and traversal_snap_payload is not None:
                 noexist_path = (
-                    traversal_snap_payload + "_janissary_noexist_" + self._traversal_nonce
+                    traversal_snap_payload
+                    + "_janissary_noexist_"
+                    + self._traversal_nonce
                 )
                 try:
                     r2 = self._paced_request(self.target, param, noexist_path)
@@ -1832,7 +1906,9 @@ class Scanner:
                     r2 = None
                 summary.total_requests += 1
                 if r2 is not None:
-                    snap2 = ResponseSnapshot.from_response(r2, normalizer=self.normalizer)
+                    snap2 = ResponseSnapshot.from_response(
+                        r2, normalizer=self.normalizer
+                    )
                     oracle = check_pathtraver_oracle(
                         baseline=baseline,
                         snapshot_exists=traversal_snap,

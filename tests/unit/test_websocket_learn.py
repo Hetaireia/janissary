@@ -1,4 +1,5 @@
 """Tests for WebSocket learning algorithms (Phase 2.2 + FN-16 part 2)."""
+
 import json
 
 import pytest
@@ -27,17 +28,17 @@ def _s2c(payload: str) -> WebSocketMessage:
 
 
 def test_wire_format_json_when_all_c2s_parse():
-    s = _seq(_c2s('{"a":1}'), _c2s('[1,2]'))
+    s = _seq(_c2s('{"a":1}'), _c2s("[1,2]"))
     assert detect_wire_format(s) == "json"
 
 
 def test_wire_format_json_majority():
-    s = _seq(_c2s('{"a":1}'), _c2s('not json'))
+    s = _seq(_c2s('{"a":1}'), _c2s("not json"))
     assert detect_wire_format(s) == "json"
 
 
 def test_wire_format_text_when_minority_json():
-    s = _seq(_c2s('{"a":1}'), _c2s('hello'), _c2s('world'))
+    s = _seq(_c2s('{"a":1}'), _c2s("hello"), _c2s("world"))
     assert detect_wire_format(s) == "text"
 
 
@@ -47,17 +48,17 @@ def test_wire_format_xml():
 
 
 def test_wire_format_unknown_when_no_c2s():
-    s = _seq(_s2c('{"a":1}'), _s2c('hello'))
+    s = _seq(_s2c('{"a":1}'), _s2c("hello"))
     assert detect_wire_format(s) == "unknown"
 
 
 def test_wire_format_unknown_when_empty():
-    s = _seq(_c2s(''), _c2s('   '))
+    s = _seq(_c2s(""), _c2s("   "))
     assert detect_wire_format(s) == "unknown"
 
 
 def test_wire_format_ignores_s2c_when_scoring():
-    s = _seq(_c2s('{"a":1}'), _s2c('not json'), _s2c('also not'))
+    s = _seq(_c2s('{"a":1}'), _s2c("not json"), _s2c("also not"))
     assert detect_wire_format(s) == "json"
 
 
@@ -130,7 +131,7 @@ def test_find_deterministic_order_ignores_json_key_order():
 
 
 def test_find_multiple_messages_index_recorded():
-    s = _seq(_c2s('{"a":"x"}'), _s2c('{}'), _c2s('{"b":"y"}'))
+    s = _seq(_c2s('{"a":"x"}'), _s2c("{}"), _c2s('{"b":"y"}'))
     fields = find_injectable_fields(s)
     by_index = {f.message_index: f.path for f in fields}
     assert by_index[0] == "a"
@@ -138,7 +139,7 @@ def test_find_multiple_messages_index_recorded():
 
 
 def test_find_empty_when_no_c2s_json():
-    s = _seq(_s2c('{"a":"x"}'), _c2s('plain text'))
+    s = _seq(_s2c('{"a":"x"}'), _c2s("plain text"))
     assert find_injectable_fields(s) == []
 
 

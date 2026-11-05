@@ -17,6 +17,7 @@ Design note:
 
 See docs/PHASE-6-PLAN.md FN-16.
 """
+
 from __future__ import annotations
 
 import json
@@ -55,10 +56,19 @@ class MessageSequence:
     protocol: str = "websocket"
 
 
-_VOLATILE_MESSAGE_KEYS = frozenset({
-    "timestamp", "ts", "time", "sent_at", "received_at",
-    "session_id", "sessionId", "request_id", "requestId",
-})
+_VOLATILE_MESSAGE_KEYS = frozenset(
+    {
+        "timestamp",
+        "ts",
+        "time",
+        "sent_at",
+        "received_at",
+        "session_id",
+        "sessionId",
+        "request_id",
+        "requestId",
+    }
+)
 
 
 def _canonical_json(obj: Any) -> str:
@@ -80,6 +90,7 @@ def _normalize_payload(payload: str, stripped: list[str]) -> str:
     except (ValueError, TypeError):
         # Not JSON; treat as opaque text, collapse whitespace.
         import re as _re
+
         return _re.sub(r"\s+", " ", text)
     cleaned = _strip_volatile_keys(parsed, stripped)
     return _canonical_json(cleaned)
@@ -129,10 +140,12 @@ class WebSocketNormalizer:
         frames = []
         for msg in response.messages:
             norm_payload = _normalize_payload(msg.payload, stripped)
-            frames.append({
-                "direction": msg.direction,
-                "payload": norm_payload,
-            })
+            frames.append(
+                {
+                    "direction": msg.direction,
+                    "payload": norm_payload,
+                }
+            )
 
         # Per-frame timing is always dropped from the canonical form;
         # record its presence once (not per frame) to avoid noise.

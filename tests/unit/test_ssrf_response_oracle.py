@@ -26,8 +26,10 @@ def _baseline_of(body, count=3):
     return b
 
 
-MAILHOG_BODY = '<html><head><title>MailHog</title></head><body>Inbox messages</body></html>'
-CLEAN_BODY = '<html><body>Welcome to crAPI shop</body></html>'
+MAILHOG_BODY = (
+    "<html><head><title>MailHog</title></head><body>Inbox messages</body></html>"
+)
+CLEAN_BODY = "<html><body>Welcome to crAPI shop</body></html>"
 URL_PAYLOAD = "http://mailhog:8025/"
 
 
@@ -96,7 +98,7 @@ def test_no_fire_on_empty_body():
 
 
 def test_multiple_markers_reported():
-    body = '<title>MailHog</title><p>Powered by mailhog</p>'
+    body = "<title>MailHog</title><p>Powered by mailhog</p>"
     out = check_ssrf_response_oracle(
         baseline=_baseline_of(CLEAN_BODY),
         snapshot=_snap(body),

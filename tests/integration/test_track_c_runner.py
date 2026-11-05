@@ -1,4 +1,5 @@
 """Tests for runner --sessions-file support (M43.5, ADR-026)."""
+
 from __future__ import annotations
 
 import subprocess
@@ -37,12 +38,18 @@ def _minimal_cfg():
 
 def _run_scan_case(tmp_path, session, sessions_file=None, sessions_count=None):
     captured = []
+
     def _fake_run(cmd, **kwargs):
         captured.append(cmd)
         return MagicMock(returncode=0)
+
     with patch("subprocess.run", side_effect=_fake_run):
         record = scan_case(
-            _minimal_cfg(), session, _minimal_case(), tmp_path, 0,
+            _minimal_cfg(),
+            session,
+            _minimal_case(),
+            tmp_path,
+            0,
             sessions_file=sessions_file,
             sessions_count=sessions_count,
         )
@@ -60,7 +67,8 @@ def test_no_sessions_file_no_sessions_flag(tmp_path):
 def test_sessions_file_adds_sessions_flag_and_sessions_used(tmp_path):
     s = requests.Session()
     cmd, record = _run_scan_case(
-        tmp_path, s,
+        tmp_path,
+        s,
         sessions_file="/tmp/sess.json",
         sessions_count=2,
     )
@@ -77,8 +85,10 @@ def test_sessions_file_drops_bearer_and_cookie(tmp_path):
 
     # With sessions_file: --bearer/--cookie must be ABSENT (mutual exclusion)
     cmd_with, _ = _run_scan_case(
-        tmp_path, s,
-        sessions_file="/tmp/sess.json", sessions_count=2,
+        tmp_path,
+        s,
+        sessions_file="/tmp/sess.json",
+        sessions_count=2,
     )
     assert "--bearer" not in cmd_with
     assert "--cookie" not in cmd_with
@@ -98,9 +108,18 @@ def test_no_sessions_file_omits_sessions_used(tmp_path):
 def test_main_rejects_missing_sessions_file():
     missing = "C:\\\\definitely_not_here_9c3f1a.json"
     result = subprocess.run(
-        [sys.executable, "-m", "benchmark.track_c.runner",
-         "--app", "crapi", "--sessions-file", missing],
-        capture_output=True, text=True, timeout=30,
+        [
+            sys.executable,
+            "-m",
+            "benchmark.track_c.runner",
+            "--app",
+            "crapi",
+            "--sessions-file",
+            missing,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
         cwd=str(_REPO_ROOT),
     )
     assert result.returncode != 0

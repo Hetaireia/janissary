@@ -70,6 +70,7 @@ def _encrypt_aes_key(client, aes_key):
 def _encrypt_entry(aes_key, entry):
     """AES-CFB encrypt an entry dict as iv(16) || ct, base64-encoded."""
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+
     try:
         from cryptography.hazmat.decrepit.ciphers.modes import CFB
     except ImportError:
