@@ -1,9 +1,8 @@
 """Tests for Scanner.scan_ws() (FN-16 part 6a)."""
 
-import asyncio
 from unittest.mock import patch
 
-from janissary.engine.scanner import Scanner, _ENGINE
+from janissary.engine.scanner import Scanner
 from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
 from janissary.protocols.websocket import (
     InjectableField,
@@ -11,7 +10,6 @@ from janissary.protocols.websocket import (
     MessageSequence,
     WebSocketMessage,
 )
-from janissary.verification import VerifiedFinding
 
 
 def _scanner(target="ws://127.0.0.1:1/socket"):

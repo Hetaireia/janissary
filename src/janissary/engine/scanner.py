@@ -8,9 +8,9 @@ later passes.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import sys
-import asyncio
 import time
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -29,40 +29,38 @@ from janissary.detection import (
     check_weakrand_oracle,
     check_xpath_error_oracle,
 )
+from janissary.detection.blind_sqli_oracle import check_blind_sqli_oracle
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
 from janissary.detection.lfi_oracle import check_lfi_content_oracle
-from janissary.detection.blind_sqli_oracle import check_blind_sqli_oracle
 from janissary.detection.ssrf_response_oracle import check_ssrf_response_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
+from janissary.heuristic.types import Observation
+from janissary.integrations.graphql import GraphQLClient, detect
+from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
+from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
+from janissary.integrations.websocket_learn import learn
 from janissary.output.raw_http import (
     serialize_request,
     serialize_response,
 )
+from janissary.protocols import BaselineNormalizer, HTTPNormalizer
 from janissary.recon import (
     AdaptivePacer,
     PacerConfig,
     WAFDetector,
     WAFProfile,
 )
-
-from janissary.protocols import BaselineNormalizer, HTTPNormalizer
-from janissary.heuristic.types import Observation
-from janissary.integrations.graphql import GraphQLClient, detect
-from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
-from janissary.integrations.websocket_discovery import WebSocketDiscoveryModule
-from janissary.integrations.websocket_learn import learn
-from janissary.verification.confirmers import HeuristicConfirmer, IdorConfirmer
 from janissary.verification import (
-    CorroboratorConfirmer,
-    GraphQLReconConfirmer,
-    WebSocketReconConfirmer,
     AnalyzerImplicitConfirmer,
     CandidateFinding,
+    CorroboratorConfirmer,
+    GraphQLReconConfirmer,
     VerificationEngine,
     VerifiedFinding,
+    WebSocketReconConfirmer,
 )
-
+from janissary.verification.confirmers import HeuristicConfirmer, IdorConfirmer
 
 # -------------------------------------------------------------------
 # PAYLOAD LIBRARY
@@ -465,7 +463,7 @@ class Scanner:
         ssrf_timeout: float = 10.0,
         json_template: dict | None = None,
         baseline_value: str = "",
-        normalizer: "BaselineNormalizer | None" = None,
+        normalizer: BaselineNormalizer | None = None,
         collect_observations: bool = False,
         verbose: bool = False,
         auth_sessions: list | None = None,
@@ -1148,10 +1146,13 @@ class Scanner:
         """
         if not self._observations or alt_session_spec is None:
             return []
-        from janissary.auth import apply_to_session, AuthConfig as _AC
-        from janissary.detection.idor import is_idor_testable_url, is_idor_candidate
+        from janissary.auth import AuthConfig as _AC
+        from janissary.auth import apply_to_session
+        from janissary.detection.idor import is_idor_candidate, is_idor_testable_url
         from janissary.verification.types import (
             CandidateFinding as _CF,
+        )
+        from janissary.verification.types import (
             VerifiedFinding as _VF,
         )
 

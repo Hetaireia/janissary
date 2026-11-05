@@ -5,7 +5,10 @@ Kinds: file_exists, dir_exists, dir_has_children, glob_exists,
        file_newer_than, grep_any, grep_all, pypi_version_gte, http_200, any_of
 """
 
-import json, re, subprocess, sys
+import json
+import re
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

@@ -120,6 +120,7 @@ def test_merge_ws_propagates_aborted():
 def test_ws_flags_registered_in_scan_subparser(tmp_path):
     """Argparse must accept --ws and --ws-payloads on scan."""
     import sys
+
     from janissary.cli import main
 
     pf = _payload_file(tmp_path, "PAY1\n")

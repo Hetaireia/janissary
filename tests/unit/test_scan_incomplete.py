@@ -6,8 +6,6 @@ findings are partial). CI needs the distinction; exit code 2 alone cannot
 express it.
 """
 
-from unittest.mock import MagicMock
-
 from janissary.engine.scanner import ScanSummary
 
 

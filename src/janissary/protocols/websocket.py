@@ -26,7 +26,6 @@ from typing import Any, Literal
 
 from .base import NormalizedResponse
 
-
 Direction = Literal["c2s", "s2c"]  # client-to-server or server-to-client
 
 

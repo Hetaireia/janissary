@@ -17,7 +17,6 @@ from janissary.detection.analyzer import normalize_body
 
 from .base import NormalizedResponse
 
-
 _VOLATILE_HEADER_NAMES = frozenset(
     {
         "set-cookie",

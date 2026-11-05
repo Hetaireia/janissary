@@ -1,8 +1,6 @@
 """Tests for Scanner.scan_graphql() (Phase 2.1 + FN-15 part 3b)."""
 
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from janissary.engine.scanner import Scanner
 from janissary.integrations.graphql import GraphQLProfile

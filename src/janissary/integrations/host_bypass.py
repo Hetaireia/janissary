@@ -12,7 +12,6 @@ import requests
 
 from janissary.verification import CandidateFinding
 
-
 # Baseline must be denied; variant must be accepted for a bypass.
 _BLOCKED_STATUSES = frozenset({401, 403})
 _ACCEPTED_STATUSES = frozenset({200, 201, 202, 204})

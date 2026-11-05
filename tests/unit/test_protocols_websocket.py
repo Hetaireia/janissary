@@ -1,6 +1,6 @@
 """Tests for WebSocketNormalizer (Phase 2.2 + FN-16 part 1)."""
 
-from janissary.protocols import BaselineNormalizer, NormalizedResponse
+from janissary.protocols import BaselineNormalizer
 from janissary.protocols.websocket import (
     MessageSequence,
     WebSocketMessage,

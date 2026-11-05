@@ -5,22 +5,22 @@ never sets verification_status. Candidates route through
 _ENGINE.verify() in the caller (scanner.scan()).
 """
 
-from janissary.heuristic.types import Observation
+from janissary.heuristic.engine import (
+    HeuristicEngine,
+    HeuristicMatch,
+)
 from janissary.heuristic.signatures import (
     HEURISTIC_SIGNATURES,
     VALID_TARGET_LAYERS,
     HeuristicSignature,
 )
-from janissary.heuristic.engine import (
-    HeuristicEngine,
-    HeuristicMatch,
-)
+from janissary.heuristic.types import Observation
 
 __all__ = [
-    "Observation",
     "HEURISTIC_SIGNATURES",
     "VALID_TARGET_LAYERS",
-    "HeuristicSignature",
     "HeuristicEngine",
     "HeuristicMatch",
+    "HeuristicSignature",
+    "Observation",
 ]

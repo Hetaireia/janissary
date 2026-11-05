@@ -25,7 +25,6 @@ from typing import Any
 from .base import NormalizedResponse
 from .http import HTTPNormalizer, _get_headers, _get_status, _get_text
 
-
 _TIMING_KEYS = frozenset(
     {
         "time",

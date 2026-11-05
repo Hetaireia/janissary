@@ -27,8 +27,6 @@ Contract:
 
 from __future__ import annotations
 
-from typing import Any
-
 from janissary.verification.types import CandidateFinding
 
 from .graphql import (
@@ -40,7 +38,6 @@ from .graphql import (
     depth_probe,
     fuzz_arguments,
 )
-
 
 _DEPTH_THRESHOLD = 10
 _ALIAS_THRESHOLD = 100

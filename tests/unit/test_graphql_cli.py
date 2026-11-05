@@ -3,11 +3,8 @@
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from janissary.cli import _merge_graphql_into_scan, cmd_scan
 from janissary.engine.scanner import ScanFinding, ScanSummary
-from janissary.verification import CandidateFinding
 
 
 def _scan_finding(**kw) -> ScanFinding:
@@ -59,7 +56,7 @@ def _summary(findings=None, **kw):
     s.finding_count = len(s.findings)
     s.total_requests = kw.get("total_requests", 10)
     s.aborted = kw.get("aborted", False)
-    s.abort_reason = kw.get("abort_reason", None)
+    s.abort_reason = kw.get("abort_reason")
     s.scan_incomplete = kw.get("scan_incomplete", False)
     return s
 
@@ -116,9 +113,10 @@ def test_merge_findings_pass_verified_findings_list_assertion():
 
 def test_graphql_flag_registered_in_scan_subparser():
     """Argparse must accept --graphql on scan."""
-    from janissary.cli import main  # noqa: F401
     import sys
     from unittest.mock import patch as _p
+
+    from janissary.cli import main
 
     test_argv = ["janissary", "scan", "-u", "http://x/", "--graphql", "--json"]
     with _p.object(sys, "argv", test_argv):

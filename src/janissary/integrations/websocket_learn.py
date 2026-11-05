@@ -38,7 +38,6 @@ from janissary.verification import CandidateFinding
 
 from .websocket import _connect
 
-
 _XML_PREFIX_RE = re.compile(r"^\s*<\?xml", re.IGNORECASE)
 
 

@@ -21,8 +21,7 @@ def _stub_preflight_ok(scanner):
 
 
 def _stub_learn_empty():
-    from janissary.integrations.websocket_learn import LearnedModel
-    from janissary.integrations.websocket_learn import MessageSequence
+    from janissary.integrations.websocket_learn import LearnedModel, MessageSequence
 
     return LearnedModel(
         wire_format="unknown",

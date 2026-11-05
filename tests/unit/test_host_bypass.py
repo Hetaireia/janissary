@@ -1,7 +1,7 @@
 """Tests for Host-header ACL bypass detection (FN-20)."""
 
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class _VulnerableServer(BaseHTTPRequestHandler):
@@ -156,6 +156,7 @@ def test_host_bypass_subcommand_invokes_helper(capsys):
     """`janissary host-bypass -u URL` invokes test_host_bypass with args."""
     import sys
     from unittest.mock import patch
+
     from janissary.cli import main
 
     called = {}
@@ -176,15 +177,17 @@ def test_host_bypass_subcommand_invokes_helper(capsys):
         "--timeout",
         "2.5",
     ]
-    with patch.object(sys, "argv", argv):
-        with patch(
+    with (
+        patch.object(sys, "argv", argv),
+        patch(
             "janissary.integrations.host_bypass.test_host_bypass",
             side_effect=fake,
-        ):
-            try:
-                rc = main()
-            except SystemExit as exc:
-                rc = exc.code
+        ),
+    ):
+        try:
+            rc = main()
+        except SystemExit as exc:
+            rc = exc.code
 
     assert rc == 0, f"expected rc=0, got {rc}"
     assert called["url"] == "http://example.com/"
@@ -196,6 +199,7 @@ def test_host_bypass_subcommand_prints_findings(capsys):
     """Findings print to stdout in expected format."""
     import sys
     from unittest.mock import MagicMock, patch
+
     from janissary.cli import main
 
     f = MagicMock()
@@ -208,15 +212,17 @@ def test_host_bypass_subcommand_prints_findings(capsys):
     f.detail = "bypass via trailing_dot"
 
     argv = ["janissary", "host-bypass", "-u", "http://example.com/"]
-    with patch.object(sys, "argv", argv):
-        with patch(
+    with (
+        patch.object(sys, "argv", argv),
+        patch(
             "janissary.integrations.host_bypass.test_host_bypass",
             return_value=[f],
-        ):
-            try:
-                rc = main()
-            except SystemExit as exc:
-                rc = exc.code
+        ),
+    ):
+        try:
+            rc = main()
+        except SystemExit as exc:
+            rc = exc.code
 
     assert rc == 0
     out = capsys.readouterr().out
@@ -228,18 +234,21 @@ def test_host_bypass_subcommand_clean_when_no_findings(capsys):
     """No findings prints a clean message and returns 0."""
     import sys
     from unittest.mock import patch
+
     from janissary.cli import main
 
     argv = ["janissary", "host-bypass", "-u", "http://example.com/"]
-    with patch.object(sys, "argv", argv):
-        with patch(
+    with (
+        patch.object(sys, "argv", argv),
+        patch(
             "janissary.integrations.host_bypass.test_host_bypass",
             return_value=[],
-        ):
-            try:
-                rc = main()
-            except SystemExit as exc:
-                rc = exc.code
+        ),
+    ):
+        try:
+            rc = main()
+        except SystemExit as exc:
+            rc = exc.code
 
     assert rc == 0
     out = capsys.readouterr().out
@@ -331,6 +340,7 @@ def test_cmd_scan_invokes_scan_host_bypass_when_flag_set():
     """`scan -u URL --host-bypass` calls Scanner.scan_host_bypass."""
     import sys
     from unittest.mock import patch
+
     from janissary.cli import main
 
     argv = [
@@ -397,6 +407,7 @@ def test_scan_passes_baseline_host_to_scanner():
     """cmd_scan threads args.baseline_host into scan_host_bypass."""
     import sys
     from unittest.mock import patch
+
     from janissary.cli import main
     from janissary.engine.scanner import ScanSummary
 
