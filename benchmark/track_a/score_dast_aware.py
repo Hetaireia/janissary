@@ -116,8 +116,9 @@ def score(run_dir, cases_csv, label="full"):
     for label, filt in [("FULL CORPUS", False), ("DAST-APPLICABLE", True), ("SUPPORTED-CLASSES", load_supported_excluded())]:
         TP, FP, FN, TN, P, R, F1, per_cat = tally(filt)
         if filt:
-            dast_metrics = (TP, FP, FN, TN, P, R, F1)
-            dast_per_cat = per_cat
+            if label == "DAST-APPLICABLE":
+                dast_metrics = (TP, FP, FN, TN, P, R, F1)
+                dast_per_cat = per_cat
         print(f"=== {label} ===")
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")
