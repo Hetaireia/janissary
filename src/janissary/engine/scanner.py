@@ -414,6 +414,7 @@ class Scanner:
         baseline_value: str = "",
         normalizer: "BaselineNormalizer | None" = None,
         collect_observations: bool = False,
+        verbose: bool = False,
         auth_sessions: list | None = None,
     ):
         self.target = repair_url(target)
@@ -436,6 +437,7 @@ class Scanner:
         self._ua = DEFAULT_USER_AGENT
         self.detect_waf = detect_waf
         self._collect_observations = collect_observations
+        self.verbose = verbose
         self._observations: list[Observation] = []
         self._session_rotator = None
         if auth_sessions:
@@ -1569,6 +1571,14 @@ class Scanner:
                 if category == "traversal" and traversal_snap is None and 200 <= r.status_code < 300:
                     traversal_snap = snapshot
                     traversal_snap_payload = value
+                    # ADR-028 D5: --verbose explains why this payload didn't contribute
+                    # to the existence oracle. Emitted only on non-2xx; if a later payload
+                    # is 2xx, the diagnostic is not emitted because traversal_snap is set.
+                elif category == "traversal" and self.verbose and traversal_snap is None:
+                    _say(
+                        f"  [{param}] traversal {name} returned {r.status_code}, "
+                        f"not captured for existence oracle (2xx required)"
+                    )
 
                 if name == "sqli_blind_true":
                     sqli_blind_true_snap = snapshot

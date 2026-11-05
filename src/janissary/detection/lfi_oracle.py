@@ -39,12 +39,26 @@ _GROUP_LINE = re.compile(
     re.I,
 )
 
+# ADR-028 D1: four additional LFI signatures, each validated 0% FP
+# against the 300-sample 20261024T130735Z baseline (ADR-028 probe).
+# The loose [a-z0-9][a-z0-9-]{2,62}$ /etc/hostname variant was
+# rejected at 15.67% FP (matched ordinary words like 'boolean').
+_HOSTNAME_STRICT = re.compile(r"(?m)^[a-z0-9][a-z0-9-]{2,62}$")
+_OS_RELEASE = re.compile(r"(?m)^(PRETTY_NAME|NAME|ID)=.*$")
+_PROC_VERSION = re.compile(r"(?m)^Linux version \d+\.\d+\.\d+")
+_BOOT_INI = re.compile(r"(?m)^\[boot loader\]")
+
 _SIGNATURES: dict[str, re.Pattern] = {
     "passwd": _PASSWD_LINE,
     "shadow": _SHADOW_LINE,
     "hosts": _HOSTS_LINE,
     "win_ini": _WIN_INI,
     "group": _GROUP_LINE,
+    # ADR-028 D1: 4 additional signatures
+    "hostname": _HOSTNAME_STRICT,
+    "os_release": _OS_RELEASE,
+    "proc_version": _PROC_VERSION,
+    "boot_ini": _BOOT_INI,
 }
 
 
