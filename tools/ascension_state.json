@@ -292,7 +292,8 @@
     },
     "M38": {
       "label": "heuristic/engine.py + --heuristic CLI flag",
-      "proposed": "28-FEB-2027"
+      "proposed": "28-FEB-2027",
+      "delivered": "2026-11-05"
     },
     "M39": {
       "label": "SSRF cloud metadata payloads (4)",
