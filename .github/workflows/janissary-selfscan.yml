@@ -112,6 +112,14 @@ jobs:
 
       - name: Upload SARIF to code scanning
         if: always() && hashFiles('janissary.sarif') != ''
+        # Best-effort: github/codeql-action/upload-sarif requires GitHub
+        # Advanced Security on private repos (or a public repo). The
+        # workflow cannot detect or enable GHAS — it's a repo-settings
+        # precondition. The self-scan's purpose (dogfood the scanner
+        # against Juice Shop and verify the scan+SARIF-export path works)
+        # succeeds before this step. Upload is enrichment. If GHAS is
+        # enabled later, remove continue-on-error to make uploads blocking.
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: janissary.sarif
