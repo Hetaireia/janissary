@@ -223,3 +223,48 @@ def test_load_sessions_file_rejects_non_list(tmp_path):
     p.write_text(_json.dumps({"cookie": "a"}), encoding="utf-8")
     with pytest.raises(ValueError, match="expected JSON array"):
         load_sessions_file(str(p))
+
+
+# --- M41: --sessions flag + auth_from_args session loading ---
+
+
+def test_add_auth_flags_registers_sessions():
+    import argparse
+    from janissary.auth import add_auth_flags
+    p = argparse.ArgumentParser()
+    add_auth_flags(p)
+    args = p.parse_args([])
+    assert hasattr(args, "sessions")
+    assert args.sessions is None
+
+
+def test_add_auth_flags_parses_sessions_path():
+    import argparse
+    from janissary.auth import add_auth_flags
+    p = argparse.ArgumentParser()
+    add_auth_flags(p)
+    args = p.parse_args(["--sessions", "/tmp/s.json"])
+    assert args.sessions == "/tmp/s.json"
+
+
+def test_auth_from_args_with_sessions_loads_file(tmp_path):
+    import json as _json
+    from types import SimpleNamespace
+    from janissary.auth import auth_from_args
+    p = tmp_path / "s.json"
+    p.write_text(_json.dumps([{"cookie": "a"}, {"cookie": "b"}]), encoding="utf-8")
+    args = SimpleNamespace(sessions=str(p), cookie=None, bearer=None)
+    cfg = auth_from_args(args)
+    assert cfg.sessions is not None
+    assert len(cfg.sessions) == 2
+    assert cfg.sessions[0].cookie == "a"
+
+
+def test_auth_from_args_without_sessions_preserves_cookie_bearer():
+    from types import SimpleNamespace
+    from janissary.auth import auth_from_args
+    args = SimpleNamespace(sessions=None, cookie="c=1", bearer="tok")
+    cfg = auth_from_args(args)
+    assert cfg.cookie == "c=1"
+    assert cfg.bearer == "tok"
+    assert cfg.sessions is None

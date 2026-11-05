@@ -296,6 +296,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
         print("[!] scan requires --url", file=sys.stderr)
         return 64
 
+    if getattr(args, "sessions", None) and (getattr(args, "cookie", None) or getattr(args, "bearer", None)):
+        print("[!] --sessions is mutually exclusive with --cookie/--bearer", file=sys.stderr)
+        return 64
+
     if getattr(args, "ws", False) and not getattr(args, "ws_payloads", None):
         print("[!] --ws requires --ws-payloads PATH", file=sys.stderr)
         return 64
@@ -350,7 +354,11 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if args.proxy:
         proxies = {"http": args.proxy, "https": args.proxy}
 
-    auth_cfg = auth_from_args(args)
+    try:
+        auth_cfg = auth_from_args(args)
+    except (ValueError, OSError) as exc:
+        print(f"[!] auth: {exc}", file=sys.stderr)
+        return 64
     auth_session = None
     if not auth_cfg.is_empty:
         auth_session = requests.Session()
@@ -435,6 +443,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         session=auth_session,
         inject_in=args.inject_in,
         auth_configured=not auth_cfg.is_empty,
+        auth_sessions=auth_cfg.sessions,
         collaborator=collaborator_client,
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
         json_template=_json_template,
