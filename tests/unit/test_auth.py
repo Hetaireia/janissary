@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from janissary.auth import (
     REDACTED,
     AuthConfig,
@@ -130,3 +132,94 @@ class TestAuthFromArgs:
         a = auth_from_args(A())
         assert a.cookie is None
         assert a.bearer is None
+
+
+# --- M41: tri-session AuthConfig + SessionSpec + load_sessions_file ---
+
+
+def test_sessionspec_is_frozen():
+    from dataclasses import FrozenInstanceError
+    from janissary.auth import SessionSpec
+    s = SessionSpec(cookie="a=1")
+    with pytest.raises(FrozenInstanceError):
+        s.cookie = "b=2"
+
+
+def test_sessionspec_headers_cookie_only():
+    from janissary.auth import SessionSpec
+    s = SessionSpec(cookie="x=1; y=2")
+    assert s.headers() == {"Cookie": "x=1; y=2"}
+
+
+def test_sessionspec_headers_both():
+    from janissary.auth import SessionSpec
+    s = SessionSpec(cookie="c=1", bearer="tok")
+    h = s.headers()
+    assert h["Cookie"] == "c=1"
+    assert h["Authorization"] == "Bearer tok"
+
+
+def test_authconfig_sessions_is_empty_false():
+    from janissary.auth import AuthConfig, SessionSpec
+    a = AuthConfig(sessions=[SessionSpec(cookie="a"), SessionSpec(cookie="b")])
+    assert a.is_empty is False
+
+
+def test_authconfig_sessions_headers_from_first():
+    from janissary.auth import AuthConfig, SessionSpec
+    a = AuthConfig(sessions=[SessionSpec(cookie="first"), SessionSpec(cookie="second")])
+    assert a.headers() == {"Cookie": "first"}
+
+
+def test_apply_to_session_clears_stale_cookie():
+    from janissary.auth import AuthConfig, apply_to_session
+    s = _FakeSession()
+    s.headers["Cookie"] = "stale=1"
+    apply_to_session(s, AuthConfig(bearer="tok"))
+    assert "Cookie" not in s.headers
+    assert s.headers["Authorization"] == "Bearer tok"
+
+
+def test_apply_to_session_clears_stale_authorization():
+    from janissary.auth import AuthConfig, apply_to_session
+    s = _FakeSession()
+    s.headers["Authorization"] = "Bearer old"
+    apply_to_session(s, AuthConfig(cookie="new=1"))
+    assert "Authorization" not in s.headers
+    assert s.headers["Cookie"] == "new=1"
+
+
+def test_to_dict_sessions_redacted_by_count():
+    from janissary.auth import AuthConfig, REDACTED, SessionSpec
+    a = AuthConfig(sessions=[SessionSpec(cookie="x"), SessionSpec(cookie="y"), SessionSpec(cookie="z")])
+    d = a.to_dict()
+    assert d["sessions"] == [REDACTED, REDACTED, REDACTED]
+
+
+def test_load_sessions_file_ok(tmp_path):
+    import json as _json
+    from janissary.auth import load_sessions_file
+    p = tmp_path / "sessions.json"
+    p.write_text(_json.dumps([{"cookie": "a=1"}, {"bearer": "tok"}]), encoding="utf-8")
+    specs = load_sessions_file(str(p))
+    assert len(specs) == 2
+    assert specs[0].cookie == "a=1" and specs[0].bearer is None
+    assert specs[1].cookie is None and specs[1].bearer == "tok"
+
+
+def test_load_sessions_file_rejects_single_entry(tmp_path):
+    import json as _json
+    from janissary.auth import load_sessions_file
+    p = tmp_path / "sessions.json"
+    p.write_text(_json.dumps([{"cookie": "a=1"}]), encoding="utf-8")
+    with pytest.raises(ValueError, match="at least 2"):
+        load_sessions_file(str(p))
+
+
+def test_load_sessions_file_rejects_non_list(tmp_path):
+    import json as _json
+    from janissary.auth import load_sessions_file
+    p = tmp_path / "sessions.json"
+    p.write_text(_json.dumps({"cookie": "a"}), encoding="utf-8")
+    with pytest.raises(ValueError, match="expected JSON array"):
+        load_sessions_file(str(p))
