@@ -1,0 +1,189 @@
+JANISSARY -- Session Handover (2026-11-06, v7.11.0 release)
+Successor to session-2026-11-05-d8.txt. State at session close.
+
+## Standing order
+
+The assistant holds delegated authority to make decisions advancing JANISSARY
+toward the best DAST tool on the current and future markets, with explicit
+priority on enterprise readiness. The operator's role is execution and
+course-correction; routine scope decisions do not require operator approval.
+
+This session, the operator granted full decision authority explicitly. The
+assistant decided: L65 = NARROW, v7.11.0 release tag, release notes scope,
+pre-commit framework activation. All verified against tools, not asserted.
+
+See docs/handover/STANDING-ORDER.md for the full order.
+
+## State of record
+
+HEAD:               ff47d0007071cd3880a2f00281a86170a6bd7c3d
+origin/main:        ff47d00 (in sync)
+Tag v7.11.0:        object fe305edd1c7c1ed7b1ab1097968665e6bca1d5b2
+                    peels to ff47d00 (verified via remote peel + rev-list)
+GitHub release:     published 2026-11-05T14:22:02Z, not draft, not prerelease
+CI on ff47d00:      ALL THREE WORKFLOWS GREEN
+                    - CI              success
+                    - Benchmark Gate  success
+                    - Self-Scan       success
+Ruff:               0 violations, format clean (270 files)
+Tests:              1119 passed (Windows local)
+Benchmark:          DAST-applicable 0.921 (headline, unchanged)
+                    supported-classes 0.977 (supplemental, derived)
+Runtime __version__: 7.11.0 (importlib.metadata; refreshed via pip install -e .)
+Work tree:          clean
+
+## What shipped
+
+v7.11.0 -- 241 commits since v7.10.2. Release commit ff47d00:
+  - BENCHMARK.md: Amendment 27 (dual-scope reporting, ADR-027 D8 Path Z)
+  - ADR-001: Addendum -- L65 interpretation NARROW
+  - CHANGELOG.md: v7.11.0 entry
+  - README.md: 7.11.0 pins and date
+  - pyproject.toml: version 7.10.2 -> 7.11.0
+
+The 241-commit body of work (full list in git log v7.10.2..HEAD) is
+grouped into v7.11.0 release notes at:
+  https://github.com/Hetaireia/janissary/releases/tag/v7.11.0
+
+## ADR-001 L65 decision (NARROW) -- recorded
+
+"The exclusion set" in L65 = dast_excluded.txt specifically.
+dast_supported_excluded.txt is a new scope, amendment-eligible under L62-63.
+Grounds and guardrails in the ADR-001 addendum and Amendment 27.
+
+Escalation triggers: changes to dast_excluded.txt, corpus, protocol, or
+the 0.921 measurement = ADR-level + fresh 3-run. Promoting 0.977 to
+headline or replacing 0.921 = ADR-level.
+
+## Discipline lessons -- five false-successes this session, all assistant-side
+
+1. Issued git tag/push for a release whose content edits existed only as
+   prose. Nothing was committed; git ls-remote was empty, so the false tag
+   never published. But the tag was described as "damage" before that was
+   verified. Rule: never issue commit/tag/push for content that hasn't
+   been written and value-asserted first. A "nothing to commit" result
+   when a commit was expected is a failure signal, not a clean pass.
+
+2. Asserted readback on a needle constructed from memory that didn't match
+   the actual write (Amendment 27 heading has a date between em-dashes).
+   Rule: assert on the value the tool reports via repr() on raw bytes,
+   not on a pattern-match I expect.
+
+3. `git commit -m "<long string with ; -> ()>"` under PowerShell failed
+   silently on native argument marshalling. Short -m succeeded; -F file
+   succeeded with full message. Rule: ALL multi-word git messages go
+   through -F <file>. No exceptions.
+
+4. `git rev-parse v7.11.0^{commit}` under PowerShell parsed ^{...} as a
+   subexpression and launched a child pwsh with -encodedCommand. Rule: no
+   ^{} forms in PowerShell command position. Use git rev-list -n1 <ref>
+   (clean) or grep for ^{} in git output.
+
+5. Handover content referenced but not provided in-line; user pasted the
+   literal placeholder, resulting in a 32-byte file. Rule: if instructing
+   a write, provide the actual content in the instruction. No placeholders
+   for content that must be committed.
+
+Near-miss (operator-caught): proposed gate `$remoteTag -notmatch $h` would
+have falsely failed any annotated-tag push, because the remote ref is the
+tag object, not the commit. Same class as #2. Corrected approach:
+verify peel via `git ls-remote origin | Select-String 'v7.11.0'` and check
+that the second line (the ^{} line in the output) matches HEAD, or
+cross-check `git rev-list -n1 <tag>` against HEAD.
+
+## Environment gotchas added this session
+
+- PowerShell 7.6.9 and 5.1 both mangle long -m args containing ; -> ()
+  to native commands (git, gh). Use -F <file>.
+- ^{commit}, ^{}, and similar brace forms become subexpressions in
+  PowerShell. Never pass them as arguments. Grep for them in output instead.
+- Pager can swallow `git show --stat` output in PS 7. Use `git --no-pager`
+  or `--name-only` + count.
+- pip editable-install metadata is STALE after pyproject.toml version bump.
+  janissary.__version__ reads importlib.metadata, which reads the
+  installed distribution, not pyproject. Refresh with `pip install -e .`
+  on any dev machine after a version change. CI is unaffected (fresh
+  install every run). This caused test_runtime_version_matches_pyproject
+  to fail post-bump until refreshed.
+- Windows git.exe flake: 0xC0000005 on git tag --list subprocess
+  (test_pyproject_not_behind_newest_tag). Passes on retry. Linux CI
+  unaffected. Recurred this session; also observed on
+  `pre-commit install --hook-type pre-push` -- retry needed.
+- .NET statics ([System.IO.File]::ReadAllBytes/ReadAllText) resolve
+  relative paths against process CWD, not PowerShell's $PWD. Use absolute
+  paths, or use Get-Content -Raw / Set-Content which respect PS provider.
+- PS 7 may return exit code 130 (SIGINT) from `git commit` if the terminal
+  receives an unexpected interrupt during pre-commit hook execution. Retry
+  is safe if HEAD did not move; no commit landed.
+
+## Gap closed / partial / open
+
+CLOSED: the release exists, is verified, and is published. The 241-commit
+drift is resolved: tag v7.11.0 is at HEAD, pyproject matches.
+
+PARTIAL: pre-commit framework. `pre-commit install` succeeded (pre-commit
+stage active). `pre-commit install --hook-type pre-push` FAILED with the
+documented 0xC0000005 flake and was not retried to success. Pre-push
+stage (pytest-full hook) is NOT WIRED. Retry on next session:
+
+    pre-commit install --hook-type pre-push
+    Test-Path .git/hooks/pre-push       # expect True
+    pre-commit run --all-files --hook-stage pre-push   # expect 1119 passed
+
+## Deferred / open questions
+
+1. JANISSARY-ASCENSION.md is gitignored. Version claims in it are
+   local-only and were NOT updated this release. If it should be tracked
+   and published, that's an operator decision.
+
+2. Framework-Specific SQLi specificity (Docker-gated, unchanged).
+
+3. CLI terms-gate testability redesign (deferred, unchanged).
+
+4. CRLF renormalization: .gitattributes is present and correct
+   (* text=auto eol=lf + explicit types). git ls-files --eol shows 461
+   i/lf, 1 i/-text (binary), 98 i/none. No renormalize needed in tracked
+   tree.
+
+5. docs/HANDOVER-2026-11-05.md is signed off and 30+ commits behind; do
+   not append. Left intact as audit trail.
+
+## First actions in new window
+
+1. Read this file. Verify CI still green on ff47d00 or later via gh run list.
+2. Verify pre-push hook installed: Test-Path .git/hooks/pre-push
+   If absent, retry install and verify with pre-commit run --hook-stage pre-push.
+3. Ask operator about JANISSARY-ASCENSION.md tracking.
+4. Next-scope: Framework-Specific SQLi (Docker) or terms-gate testability.
+
+## Do NOT
+
+- Do not commit a claim that isn't runtime-verified. Five false-successes
+  this session (list above). Assert on observable values, not patterns.
+- Do not reorder README benchmark row to put 0.977 before 0.921.
+- Do not regenerate committed benchmark artifacts.
+- Do not force-push or rewrite published history. Release tag v7.11.0 is
+  published; do not move it.
+- Do not pass long -m strings to git/gh under PowerShell. Use -F <file>.
+- Do not pass ^{...} forms as PowerShell arguments. Use git rev-list.
+- Do not add a global JANISSARY_ACCEPT_TERMS env var to CI or test setup.
+- Do not remove continue-on-error from self-scan upload unless GHAS enabled.
+
+## Next-scope menu
+
+- pre-push hook install retry + verify -- ~2 min, blocking
+- Framework-Specific SQLi specificity (Docker-gated)
+- CLI terms-gate testability redesign (deferred)
+- Operator: decide ASCENSION.md tracking
+
+## What this session delivered
+
+Published v7.11.0 at HEAD ff47d00 with CI verified green across all three
+workflows, tag verified to peel to the release commit, and release
+verified not-draft. Closed the 241-commit drift. Decided ADR-001 L65
+NARROW and recorded it in ADR-001 and Amendment 27. Enumerated five
+false-successes in verification, all assistant-side, each with a rule
+the next session inherits. Corrected one published claim (the false tag
+was never published; git ls-remote confirmed). Pre-commit framework
+partially installed (pre-commit stage active; pre-push stage pending
+retry).
