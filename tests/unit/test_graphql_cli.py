@@ -1,11 +1,11 @@
 """Tests for --graphql CLI flag and _merge_graphql_into_scan (FN-15 3c)."""
 
+import contextlib
 from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 from janissary.cli import _merge_graphql_into_scan, cmd_scan
 from janissary.engine.scanner import ScanFinding, ScanSummary
-import contextlib
 
 
 def _scan_finding(**kw) -> ScanFinding:

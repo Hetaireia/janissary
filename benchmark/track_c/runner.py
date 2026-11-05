@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import json
 import re
@@ -12,7 +13,6 @@ import time
 from pathlib import Path
 
 import requests
-import contextlib
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
