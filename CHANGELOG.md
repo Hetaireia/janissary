@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.0] - 2026-11-06
+
+241 commits since v7.10.2.
+
+### Added
+- WebSocket scanning (Phase 2.2 / FN-16): normalizer, learn/probe/verify,
+  delta taxonomy, timing-delta, `--ws`, `--ws-payloads`.
+- Host-header ACL bypass detection (FN-20): `--baseline-host`.
+- Heuristic engine (M37/M38): signature registry, Observation bridge,
+  confirmer, `--heuristic`, Track-B candidate emission.
+- SARIF two-run emission (M40): verified + discovery tracks.
+- Tri-session auth rotation (M41): SessionSpec, SessionRotator, `--sessions`.
+- IDOR candidate probe (M42): detection module, confirmer, alt-auth flags.
+- crAPI end-to-end (M43/M43.5): CLASS_MAP.ssrf, `--sessions-file`.
+- SSRF cloud metadata (M39): AWS/GCP/Azure payloads + body markers.
+- Dual-scope benchmark reporting (ADR-027 D8, Path Z): DAST-applicable
+  F1 0.921 (headline, unchanged) plus supported-classes F1 0.977
+  (supplemental). See BENCHMARK.md Amendment 27 and ADR-027.
+
+### Changed
+- Pathtraver scoring scope: findings still emit; headline unchanged at
+  0.921; supported-classes supplemental added at 0.977.
+
+### Fixed
+- Scorer `dast_metrics` leaked SUPPORTED-CLASSES to the DAST-APPLICABLE gate
+  for two commits; guarded (`8c0dc26`).
+- Supported-classes exclusion was a no-op glob against `pathtraver-NN`;
+  corrected to per-category names (`85f5097`).
+- HTML/PDF reports (M19), explain/replay (M15), native Interactsh (M14),
+  negative-results reporting (M18).
+
+### Release process
+- Ruff 251 -> 0; format clean (270 files).
+- Tests 1119 passed (Windows local); 1089 passed + 19 skipped (Linux Docker).
+- CI, Benchmark Gate, Self-Scan green on the pre-release tree.
+- Pytest terms-gate failures fixed via per-file-scoped conftest fixture;
+  Self-Scan SARIF upload tolerated under GHAS-unavailable precondition.
+
 ## [7.10.2] - 2026-10-30
 
 Version-string catch-up: pyproject.toml was still 7.7.1 while five git
