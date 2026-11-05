@@ -151,7 +151,7 @@ class GraphQLDiscoveryModule:
             # depth_probe would return None (validation error on __typename),
             # so no candidate fires.
             depth_field_desc = "__typename"
-            depth, refusal = depth_probe(self.client)
+            depth, _refusal = depth_probe(self.client)
 
         if depth is not None and depth >= _DEPTH_THRESHOLD:
             out.append(
@@ -168,7 +168,7 @@ class GraphQLDiscoveryModule:
                 )
             )
 
-        aliases, alias_refusal = alias_probe(self.client)
+        aliases, _alias_refusal = alias_probe(self.client)
         if aliases is not None and aliases >= _ALIAS_THRESHOLD:
             out.append(
                 self._candidate(

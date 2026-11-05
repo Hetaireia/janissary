@@ -71,5 +71,5 @@ def test_preflight_does_not_abort_on_4xx():
         return r
 
     scanner._request = fake_request
-    ok, reason = scanner.preflight()
+    ok, _reason = scanner.preflight()
     assert ok is True

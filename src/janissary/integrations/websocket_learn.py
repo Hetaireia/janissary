@@ -706,10 +706,7 @@ def _timing_differs(
     delta = probe.response_time - baseline_mean
     if delta < TIMING_DELTA_MIN_ABSOLUTE_S:
         return False
-    if baseline_stddev > 0:
-        if delta / baseline_stddev < TIMING_DELTA_MIN_Z:
-            return False
-    return True
+    return not (baseline_stddev > 0 and delta / baseline_stddev < TIMING_DELTA_MIN_Z)
 
 
 def _classify_delta(

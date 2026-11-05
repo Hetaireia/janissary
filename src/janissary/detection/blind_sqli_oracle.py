@@ -36,9 +36,7 @@ _SQL_ERROR_SIGNATURES = re.compile(
 def _coherent(status: int, body: str) -> bool:
     if status >= 500:
         return False
-    if len(body) < MIN_BODY_BYTES:
-        return False
-    return True
+    return not len(body) < MIN_BODY_BYTES
 
 
 def _coherent_for_length(status: int, body: str) -> bool:
@@ -50,9 +48,7 @@ def _coherent_for_length(status: int, body: str) -> bool:
     """
     if status >= 500:
         return False
-    if len(body) < MIN_BODY_BYTES_LEN_DELTA:
-        return False
-    return True
+    return not len(body) < MIN_BODY_BYTES_LEN_DELTA
 
 
 def check_blind_sqli_oracle(
