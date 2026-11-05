@@ -118,13 +118,11 @@ def score(run_dir, cases_csv, label="full"):
         if filt:
             if label == "DAST-APPLICABLE":
                 dast_metrics = (TP, FP, FN, TN, P, R, F1)
-                dast_per_cat = per_cat
         print(f"=== {label} ===")
         print(f"  TP={TP} FP={FP} FN={FN} TN={TN}")
         print(f"  P={P:.3f}  R={R:.3f}  F1={F1:.3f}")
         print()
 
-    per_cat = dast_per_cat
 
     # per-category for DAST-applicable only
     _, _, _, _, _, _, _, per_cat = tally(True)
