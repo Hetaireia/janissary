@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 import requests
+import contextlib
 
 HERE = Path(__file__).resolve().parent
 RUNS = HERE / "runs"
@@ -237,10 +238,8 @@ def scan_case(
         ):
             proc = subprocess.run(cmd, stdout=fout, stderr=ferr, timeout=180)
         err_text = ""
-        try:
+        with contextlib.suppress(OSError):
             err_text = err.read_text(encoding="utf-8")
-        except OSError:
-            pass
         dropped = _dedupe_jsonl(out)
         sz = out.stat().st_size
         aborted = proc.returncode == 2 or "aborted" in err_text

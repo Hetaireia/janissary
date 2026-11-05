@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from janissary.cli import _load_ws_payloads, _merge_ws_into_scan, cmd_scan
 from janissary.engine.scanner import ScanFinding, ScanSummary
+import contextlib
 
 
 def _ws_finding(**kw) -> ScanFinding:
@@ -139,10 +140,8 @@ def test_ws_flags_registered_in_scan_subparser(tmp_path):
             inst = MockScanner.return_value
             inst.scan.return_value = _summary([])
             inst.scan_ws.return_value = _summary([])
-            try:
+            with contextlib.suppress(SystemExit):
                 main()
-            except SystemExit:
-                pass
     assert MockScanner.called, "--ws / --ws-payloads rejected by argparse"
     inst.scan_ws.assert_called_once()
 

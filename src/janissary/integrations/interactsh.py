@@ -28,6 +28,7 @@ from janissary.integrations.collaborator import (
     SsrfHit,
     SsrfPayload,
 )
+import contextlib
 
 try:
     from cryptography.hazmat.primitives import hashes, serialization
@@ -265,7 +266,5 @@ class InteractshClient:
         return ""
 
     def close(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.session.close()
-        except Exception:
-            pass

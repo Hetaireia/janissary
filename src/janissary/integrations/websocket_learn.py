@@ -454,7 +454,7 @@ async def learn(
         notes_list.append("no_injectable_fields_found")
 
     baseline_rtt: dict[int, tuple[float, float, int]] = {}
-    try:
+    with contextlib.suppress(Exception):
         baseline_rtt = await _capture_baseline_timing(
             url,
             sequence,
@@ -464,8 +464,6 @@ async def learn(
             origin=origin,
             headers=headers,
         )
-    except Exception:
-        pass
 
     return LearnedModel(
         wire_format=wire_format,
