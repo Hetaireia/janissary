@@ -436,3 +436,31 @@ Claims:
   and the headline no longer contradict each other
 
 **Status:** Accepted (2026-11-05). D8 amended as above; both metrics reported.
+
+### D8 AMENDED — CORRECTION 2026-11-05
+
+The above claim that "`dast_metrics` (return contract) continues to be
+DAST-APPLICABLE, so the benchmark-gate threshold checks are unaffected"
+was **wrong at the time it was written**. The assignments to
+`dast_metrics` (and `dast_per_cat`) inside `score_dast_aware.py`'s label
+loop were unguarded, so the last iteration won. With SUPPORTED-CLASSES
+appended last, both held SUPPORTED-CLASSES values.
+
+Observable effect: the gate check at `benchmark-gate.yml` L28-35
+(`--min-f1 0.92 --max-fp 0`) reads the returned `dast_metrics` tuple.
+From 85f5097 onward — the first commit where SUPPORTED-CLASSES started
+reporting 0.977 instead of 0.921 — the gate has been checking F1=0.977
+rather than F1=0.921. It still passed (0.977 > 0.92), so no CI break,
+but it was gating on the wrong metric. The leak existed from 7ab8083
+onward but was unobservable there because the SUPPORTED-CLASSES filter
+was a no-op at that commit.
+
+Fix (new commit, immediate follow-up to ecec4fa): both `dast_metrics`
+and `dast_per_cat` are now guarded on `label == "DAST-APPLICABLE"`.
+Verified: gate reports `THRESHOLD PASS: F1=0.921, FP=0`, matching the
+pre-7ab8083 baseline, and the per-category table still shows all 4
+pathtraver rows.
+
+The claim in the D8 AMENDED section above is now actually true — but
+only because of the fix in the follow-up commit. It was inaccurate
+from 7ab8083 through ecec4fa.
