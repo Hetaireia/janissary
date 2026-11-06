@@ -400,6 +400,52 @@ class _VerifiedFindingsList(list):
         super().extend(items)
 
 
+class _DedupedFindingsList(_VerifiedFindingsList):
+    """Findings list that rejects duplicate fingerprints on append.
+
+    ADR-007's finding identity scheme is designed for cross-scan stability:
+    a DB error triggered by any payload on the same case classifies as the
+    same sqli finding and computes the same fingerprint. Emitting one
+    finding per payload therefore produces N identical findings for the
+    same bug (N=39 on OWASP Benchmark worst case).
+
+    Deduplicating does not change TP/FP/FN: the OWASP scorer
+    (score_dast_aware.py) is case-based, not finding-based. Verified by
+    scoring the v7.11.0 5632-finding run as-is vs a fingerprinted-deduped
+    copy (5632 -> 2062 findings, identical TP/FP/FN/F1).
+
+    Fingerprint-less findings (legacy paths, defensive) are preserved
+    unchanged. Existing Phase 0.1 invariant enforcement is inherited.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._seen_fingerprints = set()
+
+    def append(self, item):
+        fp = getattr(item, "fingerprint", None)
+        if fp and isinstance(fp, str):
+            if fp in self._seen_fingerprints:
+                return
+            self._seen_fingerprints.add(fp)
+        super().append(item)
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+    def insert(self, index, item):
+        self.append(item)
+
+    def __setitem__(self, index, value):
+        super().__setitem__(index, value)
+        self._seen_fingerprints = {
+            getattr(f, "fingerprint", None)
+            for f in self
+            if getattr(f, "fingerprint", None)
+        }
+
+
 @dataclass
 class ScanSummary:
     target: str
@@ -411,7 +457,7 @@ class ScanSummary:
     abort_reason: str | None = None
     scan_incomplete: bool = False  # True if aborted mid-scan (partial results present)
     baselines: dict = field(default_factory=dict)
-    findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)
+    findings: list[ScanFinding] = field(default_factory=_DedupedFindingsList)
     groups: list = field(default_factory=list)
     waf: dict | None = None
     pacer: dict | None = None

@@ -103,15 +103,34 @@ def test_scan_summary_findings_is_verified_findings_list():
 
 def test_source_uses_verified_findings_list_and_marker():
     """Source-level tripwire: removing the invariant from scanner.py
-    must fail this test even if the 670 behavior tests still pass."""
+    must fail this test even if the 670 behavior tests still pass.
+
+    Updated 2026-11-07 (Phase 1 dedup): ScanSummary.findings now defaults
+    to _DedupedFindingsList, a subclass of _VerifiedFindingsList that adds
+    fingerprint dedup on top of the Phase 0.1 invariant. This test accepts
+    either factory, provided the subclass relationship is explicit in
+    source (so the invariant cannot be silently bypassed by swapping in
+    an unrelated list type)."""
     src = Path("src/janissary/engine/scanner.py").read_text(encoding="utf-8")
-    assert (
-        "findings: list[ScanFinding] = field(default_factory=_VerifiedFindingsList)"
-        in src
-    ), "ScanSummary.findings no longer uses _VerifiedFindingsList default factory"
+    # Phase 0.1 marker must still be set by _to_scan_finding
     assert "finding._engine_emitted = True" in src, (
         "_to_scan_finding no longer sets _engine_emitted marker"
     )
+    # The invariant class must still exist
     assert "class _VerifiedFindingsList(list):" in src, (
         "_VerifiedFindingsList class definition removed"
     )
+    # ScanSummary.findings factory must be a verified-findings list
+    uses_verified = (
+        "field(default_factory=_VerifiedFindingsList)" in src
+        or "field(default_factory=_DedupedFindingsList)" in src
+    )
+    assert uses_verified, (
+        "ScanSummary.findings no longer uses a verified-findings factory"
+    )
+    # If deduped factory, subclass relationship must be explicit
+    if "field(default_factory=_DedupedFindingsList)" in src:
+        assert "class _DedupedFindingsList(_VerifiedFindingsList):" in src, (
+            "_DedupedFindingsList must inherit from _VerifiedFindingsList "
+            "to preserve the Phase 0.1 invariant"
+        )

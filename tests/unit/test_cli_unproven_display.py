@@ -128,6 +128,14 @@ def test_severity_line_shows_unproven_when_findings_not_grouped(capsys):
         )
         for i in range(3)
     ]
+    # Phase 1 dedup collapses findings sharing a fingerprint. ``_base``
+    # produces the same fingerprint for all three (same param / category /
+    # finding_type / url; only payload_name differs, which is not a
+    # fingerprint input per ADR-007). Give each a distinct fingerprint so
+    # this test still exercises "3 unproven findings in the MEDIUM
+    # severity line", which is what the assertion targets.
+    for i, f in enumerate(findings):
+        f.fingerprint = f"test-sevline-unproven-{i}"
     _print_summary(_summary_ungrouped(findings))
     out = capsys.readouterr().out
     medium_lines = [ln for ln in out.splitlines() if "MEDIUM" in ln]
