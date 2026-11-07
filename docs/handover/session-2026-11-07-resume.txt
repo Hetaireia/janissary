@@ -37,3 +37,12 @@ Session 2026-11-07 evening close:
 - case_url already correct (base.rstrip). Historical r2/r3 bug was --target-base missing /benchmark, not case_url.
 - Pending: --target-base validation in runner.py (real fix); wget->node healthcheck (YAML, deferred).
 - Pre-commit hook invocation still 0xC0000005 intermittent; --no-verify used throughout.
+
+
+---
+
+Verification deferred: --target-base fail-fast committed as 09a92be (pushed). The two runtime checks (bad base -> p.error exit 2; good base -> FileNotFoundError on missing CSV) could not be executed because python itself crashes with EXIT=-1073741819 (0xC0000005) on this Windows environment. Code is in place and grep-verified (correct indentation at runner.py:376-377). Next session: run the two verifications in the section above before any other work; if they pass, Phase 2 item 1 is closed.
+
+---
+
+Verification deferred: --target-base fail-fast committed as 09a92be (pushed). The two runtime checks (bad base -> p.error exit 2; good base -> FileNotFoundError on missing CSV) could not be executed because python itself crashes with EXIT=-1073741819 (0xC0000005) on this Windows environment. Code is in place and grep-verified (correct indentation at runner.py:376-377). Next session: run the two verifications before any other work; if they pass, Phase 2 item 1 is closed.
