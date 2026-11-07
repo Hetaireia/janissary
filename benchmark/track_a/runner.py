@@ -382,7 +382,7 @@ def _retry_zero_pass(run_dir, cases, base, env, driver) -> None:
     zero = [
         c for c in cases
         if c["testname"] not in fired
-        and (c.get("vulnerable") or "").strip().lower() == "true"
+        and str(c.get("vulnerable") or "").strip().lower() == "true"
     ]
     if not zero:
         print("[runner] retry-zero: no zero-finding vulnerable cases")
