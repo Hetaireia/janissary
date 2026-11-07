@@ -312,8 +312,8 @@
         </div>
         <div class="bar-row">
           <div class="bar-lbl">Work complete</div>
-          <div class="bar-track"><div class="bar-fill-work"></div></div>
-          <div class="bar-val">62.0%</div>
+          <div class="bar-track"><div class="bar-fill-work" id="bar-work"></div></div>
+          <div class="bar-val" id="pct-work">62.0%</div>
         </div>
       </div>
     </section>
@@ -531,7 +531,10 @@
   var TOTAL_MS = TARGET - CREATION;
   var TOTAL_DAYS = TOTAL_MS / 86400000;
   var MS_PER_DAY = 86400000;
-  var WORK_PCT = 62.0;
+  // Work delivered = ticked milestones / total milestones
+  var _totalRows = document.querySelectorAll(".row.data").length;
+  var _tickedRows = document.querySelectorAll(".row.data .tick.on").length;
+  var WORK_PCT = _totalRows > 0 ? (_tickedRows / _totalRows) * 100 : 0;
 
   var els = {
     days:    document.getElementById('cd-days'),
@@ -541,7 +544,9 @@
     timeBar: document.getElementById('bar-time'),
     timePct: document.getElementById('pct-time'),
     aheadNum:document.getElementById('ahead-days'),
-    aheadLbl:document.getElementById('ahead-lbl')
+    aheadLbl:document.getElementById('ahead-lbl'),
+    workBar: document.getElementById('bar-work'),
+    workPct: document.getElementById('pct-work')
   };
 
   function pad(n, w) {
@@ -583,6 +588,8 @@
     // 6. Render time-elapsed bar/percent (nominal, unchanged)
     els.timeBar.style.width = elapsedPct.toFixed(2) + '%';
     els.timePct.textContent = elapsedPct.toFixed(2) + '%';
+    els.workBar.style.width = WORK_PCT.toFixed(2) + '%';
+    els.workPct.textContent = WORK_PCT.toFixed(2) + '%';
 
     // 7. Render ahead/behind label with adjusted target date
     var rounded = Math.round(Math.abs(aheadDays));
