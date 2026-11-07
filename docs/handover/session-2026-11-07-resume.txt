@@ -56,3 +56,7 @@ UPDATE (same session, after retry): both deferred verifications were run and PAS
 09a92be is runtime-verified. Phase 2 item 1 (--target-base fail-fast) is CLOSED.
 The earlier 'verification deferred' note in this file is superseded by this UPDATE.
 The transient EXIT=-1073741819 was a one-off interpreter crash, not a persistent failure.
+
+---
+
+Verification deferred: --target-base fail-fast committed as 09a92be (pushed). The two runtime checks (bad base -> p.error exit 2; good base -> FileNotFoundError on missing CSV) could not be executed because python itself crashes with EXIT=-1073741819 (0xC0000005) on this Windows environment. Code is in place and grep-verified (correct indentation at runner.py:376-377). Next session: run the two verifications before any other work; if they pass, Phase 2 item 1 is closed.
