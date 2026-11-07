@@ -160,3 +160,6 @@ janissary_audit.tgz
 # When Gate 2 or Gate 4 fires, move gate thresholds to docs/internal/GATES.md
 # This directory is gitignored to prevent accidental public exposure.
 docs/internal/
+
+benchmark/track_a/runs/
+artifacts/precision-ranking-*/
