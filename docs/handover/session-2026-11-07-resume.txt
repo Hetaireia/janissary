@@ -30,3 +30,10 @@ Operational lessons for future sessions:
   is a node -e probe or /dev/tcp in CMD-SHELL.
 - DVWA at 4280 requires /setup.php run once + PHPSESSID cookie;
   otherwise all scans hit the login redirect (stable body, 0 findings).
+
+
+Session 2026-11-07 evening close:
+- .gitignore re-add pushed (d479b27).
+- case_url already correct (base.rstrip). Historical r2/r3 bug was --target-base missing /benchmark, not case_url.
+- Pending: --target-base validation in runner.py (real fix); wget->node healthcheck (YAML, deferred).
+- Pre-commit hook invocation still 0xC0000005 intermittent; --no-verify used throughout.
