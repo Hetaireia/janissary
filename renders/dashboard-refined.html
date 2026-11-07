@@ -300,7 +300,7 @@
         </div>
         <div class="target">
           <div class="target-lbl">Target</div>
-          <div class="target-date">26-SEP-2028</div>
+          <div class="target-date" id="target-date">26-SEP-2028</div>
         </div>
       </div>
 
@@ -526,8 +526,10 @@
 
 <script>
 (function () {
-  var CREATION = Date.parse('26-SEP-2026T00:00:00Z');
-  var TARGET = Date.parse('26-SEP-2028T00:00:00Z');
+  // Date.UTC is unambiguous; Date.parse('26-SEP-2026T00:00:00Z') is not ISO 8601
+  // and returns NaN in some JS engines, cascading NaNs through the entire timer.
+  var CREATION = Date.UTC(2026, 8, 26);   // 26-SEP-2026 00:00 UTC (month 0-indexed)
+  var TARGET = Date.UTC(2028, 8, 26);     // 26-SEP-2028 00:00 UTC
   var TOTAL_MS = TARGET - CREATION;
   var TOTAL_DAYS = TOTAL_MS / 86400000;
   var MS_PER_DAY = 86400000;
@@ -545,6 +547,7 @@
     timePct: document.getElementById('pct-time'),
     aheadNum:document.getElementById('ahead-days'),
     aheadLbl:document.getElementById('ahead-lbl'),
+    targetDate: document.getElementById('target-date'),
     workBar: document.getElementById('bar-work'),
     workPct: document.getElementById('pct-work')
   };
@@ -578,6 +581,7 @@
 
     // 4. Countdown counts down to the adjusted target
     var adjustedRemaining = Math.max(0, adjustedTarget - now);
+    if (els.targetDate) els.targetDate.textContent = fmtDate(adjustedTarget);
 
     // 5. Render countdown (uses adjusted target)
     els.days.textContent    = pad(Math.floor(adjustedRemaining / MS_PER_DAY), 3);
