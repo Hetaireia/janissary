@@ -148,10 +148,8 @@ tools/*.bak-*
 !benchmark/track_c/runs/**/agent.log
 
 # Ascension (hyphenated + inputs — untracked 2026-11-01)
-JANISSARY-ASCENSION.md
 
 # Ascension rendered dashboards (regenerable from local state)
-renders/
 
 audit_out/
 janissary_audit.tgz
