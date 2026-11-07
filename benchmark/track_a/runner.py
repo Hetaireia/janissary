@@ -373,7 +373,8 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional env file with binary paths and timeouts.",
     )
     args = p.parse_args(argv)
-
+    if not args.target_base.rstrip("/").endswith("/benchmark"):
+        p.error("--target-base must end with /benchmark (e.g. http://host:8080/benchmark)")
     cases = load_cases(args.cases_csv)
     if not cases:
         print(f"[runner] no cases loaded from {args.cases_csv}", file=sys.stderr)
