@@ -170,6 +170,7 @@ def _run_subprocess_tree(
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
         creationflags=creationflags,
@@ -240,7 +241,7 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             "--inject-in",
             inject_in,
             "--jsonl",
-            "--quiet",
+            # removed: "--quiet",  # suppresses JSONL
             "--baseline-count",
             "5",
         ]

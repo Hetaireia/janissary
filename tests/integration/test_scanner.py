@@ -95,8 +95,12 @@ def test_scanner_emits_db_error_on_mysql_payload():
     )
     summary = scanner.scan(quiet=True)
 
+    # Phase 1 dedup collapses same-fingerprint findings. The docstring's
+    # intent is "one payload triggers -> exactly one db_error"; pre-dedup,
+    # two SQL payloads both triggered the handler and both were emitted.
+    # Post-dedup, same (param, category, finding_type, url) -> 1 finding.
     db_errors = [f for f in summary.findings if f.finding_type == "db_error"]
-    assert len(db_errors) == 2, (
+    assert len(db_errors) == 1, (
         f"expected exactly one db_error, got {len(db_errors)}; "
         f"all types: {[f.finding_type for f in summary.findings]}"
     )
@@ -132,8 +136,11 @@ def test_scanner_emits_one_finding_per_param_that_triggers():
         delay=0.0,
     )
     summary = scanner.scan(quiet=True)
+    # Phase 1 dedup: one finding per (param, class) pair. Two params
+    # -> two findings. The test name's intent is "one finding per
+    # param that triggers", not "one per (param, payload)".
     db_errors = [f for f in summary.findings if f.finding_type == "db_error"]
-    assert len(db_errors) == 4
+    assert len(db_errors) == 2
     assert {f.param for f in db_errors} == {"a", "b"}
 
 

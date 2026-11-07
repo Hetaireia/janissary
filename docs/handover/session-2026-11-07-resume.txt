@@ -1,0 +1,32 @@
+
+## Session 2026-11-07 — Phase 4 validation + Track bring-up
+
+Phase 4 (track A dedup validation) — RESULT: PASS with variance caveat
+- Baseline (v7.11.0, 20261105T225211Z): 5632 findings, DAST TP=981 FP=0 FN=175
+- HEAD (77f0576, 20261107T044811Z):    2029 findings, DAST TP=970 FP=0 FN=186
+- Findings -64%, FP unchanged, TP -1.1%
+
+Handover's "TP=981 unchanged" claim was verified against an offline
+fingerprint-dedup of the v7.11.0 artifact (5632→2062), not a fresh
+runtime run. The runtime delta is ±1% variance spread across 10
+categories (3 gains, 11 losses, net -11). Dedup mechanism is TP-safe
+by construction: scanner.py L297-303 includes category + finding_type
+in the fingerprint, so dedup cannot cross-family collapse.
+
+Corrected target for future runs: TP=970±5, FP=0, findings≈2030±40.
+
+Operational lessons for future sessions:
+- runner.py --target-base MUST end with /benchmark; case_url() concatenates
+  base+urlpath, so http://host:8080 (missing /benchmark) silently scans
+  404s and produces 0 findings for all 2740 cases. Fix pending: normalize
+  slashes in case_url().
+- runner.py --quiet swallows JSONL on Windows shim; use
+  JANISSARY_USE_MODULE=1 (or --jsonl without --quiet).
+- janissary.exe (shim) has intermittent stdout-capture race with the
+  grandchild python.exe. Always use `python -m janissary` for scripts.
+- bkimmich/juice-shop (track_b) healthcheck uses wget, which isn't in
+  the Node-slim image; docker compose up -d fails until bypassed with
+  `up -d --no-deps nginx` + condition: service_started. Permanent fix
+  is a node -e probe or /dev/tcp in CMD-SHELL.
+- DVWA at 4280 requires /setup.php run once + PHPSESSID cookie;
+  otherwise all scans hit the login redirect (stable body, 0 findings).
