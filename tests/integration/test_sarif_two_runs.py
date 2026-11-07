@@ -227,15 +227,24 @@ def test_signals_absent_on_non_heuristic_unproven(tmp_path):
 
 
 def test_finding_count_is_per_run_not_total(tmp_path):
+    # This test verifies SARIF `findingCount` semantics (per-run vs. total),
+    # not dedup behavior. Phase 1 dedup would collapse the two verified
+    # db_error findings because they share a fingerprint (differ only by
+    # payload_name, which is not an ADR-007 fingerprint input). Force
+    # distinct fingerprints so the test's scenario — two surviving
+    # findings in run 0 — is preserved.
+    f1 = _finding(verification_status="verified", finding_type="db_error")
+    f2 = _finding(
+        verification_status="verified",
+        finding_type="db_error",
+        payload_name="p2",
+    )
+    f2.fingerprint = f1.fingerprint + "-run0-second"
     doc = _read(
         tmp_path,
         _summary(
-            _finding(verification_status="verified", finding_type="db_error"),
-            _finding(
-                verification_status="verified",
-                finding_type="db_error",
-                payload_name="p2",
-            ),
+            f1,
+            f2,
             _finding(
                 verification_status="unproven",
                 verification_reason="heuristic:HEUR-001",

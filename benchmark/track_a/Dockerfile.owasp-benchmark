@@ -14,7 +14,7 @@
 FROM eclipse-temurin:17-jdk-jammy
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends unzip \
         git maven wget ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
@@ -27,14 +27,15 @@ WORKDIR /owasp/BenchmarkJava
 RUN git config --global --add safe.directory /owasp/BenchmarkJava || true
 
 # Mirror-only change: downloads.apache.org rotates old patch versions off
-# within days; v9.0.120 already 404s. archive.apache.org keeps everything.
+# within days; v9.0.120 already 404s. dlcdn.apache.org keeps everything.
 # Pinned SHA + this sed fully determine the build.
-RUN sed -i 's|https://downloads.apache.org/tomcat/|https://archive.apache.org/dist/tomcat/|' pom.xml \
-    && grep -q 'archive.apache.org' pom.xml
-
 # Build WAR + install Tomcat (extract only; no deploy, no watchdog).
 # The install phase places Tomcat at target/cargo/installs/apache-tomcat-9.0.120/apache-tomcat-9.0.120
-RUN mvn -q clean package cargo:install -Pdeploy -DskipTests
+COPY apache-tomcat-9.0.120.zip /opt/apache-tomcat-9.0.120.zip
+RUN mvn -q clean package -Pdeploy -DskipTests
+RUN mkdir -p target/cargo/installs && \
+    unzip -q /opt/apache-tomcat-9.0.120.zip -d target/cargo/installs/apache-tomcat-9.0.120 && \
+    test -f target/cargo/installs/apache-tomcat-9.0.120/apache-tomcat-9.0.120/conf/server.xml
 
 ENV CATALINA_HOME=/owasp/BenchmarkJava/target/cargo/installs/apache-tomcat-9.0.120/apache-tomcat-9.0.120
 ENV JAVA_OPTS="-Xms1G -Xmx4G --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED -Djava.awt.headless=true"
