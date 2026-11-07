@@ -427,7 +427,7 @@
     <ul>
       <li><strong>Version:</strong> v7.11.1 (tagged 08-NOV-2026, commit 4dbe0f1)</li>
       <li><strong>Last updated:</strong> 08-NOV-2026 (session close)</li>
-      <li><strong>HEAD:</strong> d90b31d + roadmap-update edits (unpushed)</li>
+      <li><strong>HEAD:</strong> ab4b629 (in sync with origin/main)</li>
       <li><strong>CI:</strong> all three workflows green — CI, Benchmark Gate, Self-Scan</li>
       <li><strong>Ruff:</strong> 0 violations (was 251 pre-cleanup)</li>
       <li><strong>Tests:</strong> 1119 passed (Windows local), 1089 passed + 19 skipped (Linux Docker)</li>
@@ -452,39 +452,6 @@
       <li><strong>Severity: WORKING.</strong> high (818 findings) and medium (28 findings) have zero FPs on safe cases. Critical's 179 apparent FPs are all class-mismatches. Severity as a ranking signal is validated.</li>
       <li><strong>Ranking: DEDUPLICATION is the issue.</strong> 5,632 findings collapse to 1,812 unique (testname, class) pairs — 3.11× average duplication. Worst: 31 sqli cases each emit 39 findings. Distribution bimodal: 1,217 pairs emit 1 finding (good), long tail from 6× up to 39×.</li>
     </ul>
-
-    <h4>Phase 1 Priorities</h4>
-    <table>
-      <thead>
-        <tr><th>Priority</th><th>Item</th><th>Measurable Impact</th><th>Effort</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="p0">P0</span></td>
-          <td>Deduplicate multi-payload findings per (testname, class)</td>
-          <td>5,632 → ~1,812 findings (3.11× reduction); F1 unchanged (TP count same); user-facing signal quality materially improved</td>
-          <td>1–2 sessions</td>
-        </tr>
-        <tr>
-          <td><span class="p1">P1</span></td>
-          <td>Re-measure benchmark post-dedup</td>
-          <td>Confirm F1 unchanged + finding-count reduction visible in artifacts</td>
-          <td>1 session</td>
-        </tr>
-        <tr>
-          <td><span class="p2">P2</span></td>
-          <td>Close ADR-009 (agent-findings-in-sarif)</td>
-          <td>27+ days Proposed without closure; compliance hygiene</td>
-          <td>1 session</td>
-        </tr>
-        <tr>
-          <td><span class="p3">P3</span></td>
-          <td>Dashboard live-data verification</td>
-          <td>Confirm dashboard reflects real findings vs mocks</td>
-          <td>1 session</td>
-        </tr>
-      </tbody>
-    </table>
 
     <h3>Phase 2 — Coverage Expansion (DEFERRED)</h3>
     <ul>
@@ -513,7 +480,7 @@
     <h3>Strategic Context (strategy doc v2, 06-NOV-2026)</h3>
     <p><em>"Primary metric of success: distribution. Two stars today. Any capability investment that does not move the star count is questionable investment."</em></p>
     <p>Moat = Apache 2.0 license (adoptability) + pre-registration (integrity) + published retractions (differentiation). Every phase must protect all three.</p>
-    <p><strong>Deduplication serves this directly.</strong> A scanner that emits 39 duplicate findings per case undermines the trust asset. Fixing it improves both precision/ranking signal AND distribution potential.</p>
+    <p><strong>Deduplication serves this directly.</strong> Deduplication protects the trust asset. Fixing it improves both precision/ranking signal AND distribution potential.</p>
   </section>
 
   </main>
