@@ -42,15 +42,15 @@ the path we gave it.
 
 ## What the target actually does
 
-We probed the OWASP Benchmark target directly across all 72 pathtraver
-cases (four subcategories x 18 cases each) that are marked vulnerable in
-the ground-truth CSV. The cases split three ways:
+We probed the OWASP Benchmark target directly across a sample of 72 pathtraver cases (four subcategories). The current ground-truth CSV (`benchmark/track_a/case_vectors.csv`) marks 133 pathtraver cases vulnerable; the 72 we sampled split three ways:
 
 | Shape | Count | Behavior |
 |---|---|---|
 | Existence divergence | 4 / 72 | Response differs between exists and nonexistent payloads. Oracle fires. |
 | Fixed-string scaffold | 22 / 72 | Response contains `Access to file:` followed by a fixed string `already exists` on **both** payloads. No divergence possible. |
 | Write-sink scaffold | 46 / 72 | Response echoes the resolved path but is otherwise identical on both payloads. No observable outcome beyond the echo. |
+
+**Provenance note.** The shape counts above come from a 72-case hand sample whose selection is not preserved in this repo. What *is* verifiable from committed artefacts: `benchmark/track_a/case_vectors.csv` marks 133 pathtraver cases vulnerable; the full run (`artifacts/7.5.0-baseline/summary/run-1-recovery-score.txt`) reports TP=10 across the four pathtraver subcategories, i.e. recall 0.075, with the remaining 123 cases producing no finding. The 4/22/46 split should be read as a representative sample, not an exhaustive census. The conclusion — that the dominant loss mode is a scaffold with no observable outcome — holds on the full corpus: 123 of 123 non-firing cases fall into the "no divergence" bucket by construction of the oracle.
 
 The 22 "fixed-string scaffold" cases are the interesting ones. Their
 response contains the word "already exists" regardless of whether the
@@ -120,9 +120,7 @@ We report them, we document why they're low, we don't hide them.
 ## What this costs us
 
 Current DAST-applicable F1 is **0.920** (TP 984, FP 0, FN 172). The
-pathtraver subcategories contribute **123 of those 172 FN**. If we
-excluded them from the DAST-applicable denominator, the number would
-be above 0.99. We don't exclude them, because that would be gaming the
+pathtraver subcategories contribute **123 of those 172 FN**. If we excluded them from the DAST-applicable denominator, the F1 would rise to roughly 0.976 (TP 984, FP 0, FN 49). We don't exclude them, because that would be gaming the
 metric. The 0.920 figure is honest.
 
 If your target *does* leak the existence signal — which most real

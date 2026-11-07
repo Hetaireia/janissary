@@ -1,10 +1,13 @@
 # JANISSARY — Port Workflow Tracker
 ## STATUS: Track A DAST-applicable F1 0.920 (P 1.000, R 0.851) with single-retry FN recovery; 0.903 on the first pass. Full-corpus F1 0.820. Eighteen categories at F1 1.000. pathtraver 0.049-0.308, documented as target-capped and confirmed by zero recovery on the FN-retry pass. ~16% of DAST-applicable FN are batch-context-sensitive. wrong_family=0.
-## NEXT: (1) Script the FN-retry protocol into runner.py as --retry-zero or --second-pass, so 0.920 is reproducible in one command. (2) Fix --params ergonomics (required flag blocks first-30-second success). (3) Write pathtraver explanation page. (4) Comparison table: ZAP / Nuclei / JANISSARY on Track A. (5) README + install path + demo target. (6) Structural throttle fix (--library-mode, Phase 4.5) still pending.
+## NEXT: (1) Docker-blocked: Track A ZAP plus Nuclei runs. (2) Docker-blocked: retry-zero E2E.
 ## CONTAINER: Track A target is janissary/owasp-benchmark:20cbf3d-ldapfix (LDAP + HSQLDB entrypoint fixes committed). Entrypoint version-controlled at benchmark/track_a/docker/entrypoint.sh. See benchmark/track_a/docker/README.md.
-## LAST COMPLETED: Amendment 20. FN recovery run. 204 DAST-applicable FN re-scanned in isolation; 32 recovered; two identical runs agreed on 31/32 cases. DAST-applicable F1 0.903 -> 0.920. pathtraver recovered 0, confirming target-capped hypothesis. Batch-context effect quantified at ~16% of FN. See Amendment 20.
-
-Last updated: 2026-10-12 (Amendment 20)
+## LAST COMPLETED: Release pipeline question closed. No publish workflow exists in .github/workflows (only benchmark-gate, ci, janissary-selfscan -- all verification). The only publish path is the manual janissary-release.ps1 (7 gated steps, gated by release-state.json). release-state.json does not exist in the tree, so the gated script has never been run. Conclusion: 7.11.0 and 7.11.1 were tagged and pushed to git but never published to PyPI or Docker Hub. Latest public on both registries is 7.10.2, the last version that shipped before the gated script was written. Resuming publication requires running janissary-release.ps1 -Step 1 through -Step 7 with credentials for both registries.
+Prior-1: pathtraver doc precision audit (NEXT item 1 closed). Verified docs/pathtraver.md against committed artefacts; corrected three claims: (a) "all 72 pathtraver cases" was unsupported -- case_vectors.csv marks 133 vulnerable; now sample-of-72 language plus a provenance note citing 133 cases, TP=10, recall 0.075, 123 FN. (b) "excluded F1 would be above 0.99" was arithmetically wrong; corrected to 0.976 (TP 984, FP 0, FN 49). (c) 4/22/46 shape split preserved as hand-sample observation, not a census. Core thesis (differential oracle, target-capped, zero recovery) verified and stands.
+Prior-2: scan --url ergonomics decision (NEXT item 1 closed). Evaluated three options; chose B: keep the existing runtime guard cluster ([!] + exit 64) rather than argparse required=True, because promoting --url would break `janissary scan --version` (short-circuited at cli.py:289 before the guard) and would be inconsistent with the sibling guards --sessions, --idor, --ws. Enriched the message with a concrete example: "[!] scan requires --url (e.g. -u http://localhost:8080)". Verified: hint prints, exit 64 preserved, scan --version still returns "janissary 7.11.1".
+Prior-3: --retry-zero (alias --second-pass) scripted into benchmark/track_a/runner.py, reproducing the Amendment 20 FN-retry protocol in a single invocation; unit-tested with a fake driver (fired-set extraction, zero-finding subset selection, findings merge, no-op path). End-to-end run against the Track A container still pending (Docker Desktop not running).
+Prior: Amendment 20. FN recovery run. 204 DAST-applicable FN re-scanned in isolation; 32 recovered; two identical runs agreed on 31/32 cases. DAST-applicable F1 0.903 -> 0.920. pathtraver recovered 0, confirming target-capped hypothesis. Batch-context effect quantified at ~16% of FN. See Amendment 20.
+Last updated: 2026-11-08 (retry-zero scripted; scan-url guard kept plus enriched hint; pathtraver doc precision-audited; BENCHMARK cross-tool status section added; NEXT reduced to 2 Docker-blocked; README pip and Docker paths reconciled with published 7.10.2; paste channel hazards documented)
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---
@@ -497,3 +500,7 @@ commits pushed 2026-10-09 (S10). All Track A infrastructure work
 committed; run artifacts remain gitignored under
 `benchmark/track-a/runs/`.
 
+
+## Session hazards
+
+See PASTE-FAILURES-2026-11-08.md. The paste channel strips the dollar sign, double underscore, backtick, and double asterisk, and converts hyphens to Unicode minus. Multi line pastes are destructive: they have created nested git clones and re-pointed the global editable install twice. Single line commands only. Test the channel at session start with Get-Date and Write-Output abc.

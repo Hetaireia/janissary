@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -357,6 +358,47 @@ DRIVERS = {
 # ---------------------------------------------------------------------
 
 
+def _fired_testnames(findings_path: Path) -> set[str]:
+    fired: set[str] = set()
+    if not findings_path.exists():
+        return fired
+    for line in findings_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        m = re.search(r"BenchmarkTest(\d+)", obj.get("url") or "")
+        if m:
+            fired.add("BenchmarkTest" + m.group(1))
+    return fired
+
+
+def _retry_zero_pass(run_dir, cases, base, env, driver) -> None:
+    """Amendment 20 FN-retry protocol: rerun zero-finding vulnerable cases."""
+    fired = _fired_testnames(run_dir / "findings.jsonl")
+    zero = [
+        c for c in cases
+        if c["testname"] not in fired
+        and (c.get("vulnerable") or "").strip().lower() == "true"
+    ]
+    if not zero:
+        print("[runner] retry-zero: no zero-finding vulnerable cases")
+        return
+    retry_dir = run_dir / "pass2"
+    retry_dir.mkdir(exist_ok=True)
+    print(f"[runner] retry-zero: {len(zero)} cases in second pass")
+    driver(retry_dir, zero, base, env)
+    p2 = retry_dir / "findings.jsonl"
+    if p2.exists():
+        with (run_dir / "findings.jsonl").open("ab") as out:
+            data = p2.read_bytes()
+            out.write(data)
+            if data and not data.endswith(b"\n"):
+                out.write(b"\n")
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="benchmark.track_a.runner",
@@ -371,6 +413,14 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=HERE / "tools.env",
         help="Optional env file with binary paths and timeouts.",
+    )
+    p.add_argument(
+        "--retry-zero",
+        "--second-pass",
+        dest="retry_zero",
+        action="store_true",
+        help="Amendment 20 FN-retry: rerun zero-finding vulnerable cases "
+             "(janissary tool only).",
     )
     args = p.parse_args(argv)
     if not args.target_base.rstrip("/").endswith("/benchmark"):
@@ -400,6 +450,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[runner] {args.tool} run #{args.run_number}: {len(cases)} cases")
     print(f"[runner] run dir: {run_dir}")
     code = driver(run_dir, cases, args.target_base, env)
+    if args.retry_zero:
+        if args.tool != "janissary":
+            print(
+                "[runner] retry-zero only supported for --tool janissary; ignoring",
+                file=sys.stderr,
+            )
+        else:
+            _retry_zero_pass(run_dir, cases, args.target_base, env, driver)
 
     # Quick sanity: how many findings did we get?
     n = len(load_jsonl(run_dir / "findings.jsonl"))

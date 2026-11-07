@@ -108,6 +108,19 @@ confidence interval.
   is a disqualifying characteristic for the bug-bounty use case even if
   precision is higher.)
 
+### Cross-tool results — status (as of 2026-11-08)
+
+No Track A run of OWASP ZAP or Nuclei exists on disk. The only nuclei artefact in the repo is `benchmark/track_c/runs/20261031-000218-nuclei-demo4/`, a 70-second smoke test against the README mock server (`http://127.0.0.1:5000`, `exposures/configs` templates, zero findings), not a benchmark run. ZAP has no artefacts at all.
+
+H-A1 through H-A4 therefore remain unevaluated. They will be reported here — pass or fail — once the following exist per tool:
+
+- 3 runs against a fresh target container, invocation exactly as tabulated above.
+- `findings.jsonl` per run in `benchmark/track_a/runs/<timestamp>-<tool>-r<N>/`.
+- Scores produced by `benchmark/track_a/score_dast_aware.py` against `benchmark/track_a/case_vectors.csv`.
+- The per-tool `manifest.json` recording the pinned image digest.
+
+No results will be inferred from other runs, other corpora, or other targets. If the runs cannot be completed, this section will say so; it will not be removed.
+
 ---
 
 ## Track B — Operational proof

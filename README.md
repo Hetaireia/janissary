@@ -42,7 +42,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 
 | | |
 |---|---|
-| **Version** | 7.11.0 (released 2026-11-06) |
+| **Version** | 7.11.0 (git tag, 2026-11-06; PyPI and Docker Hub at 7.10.2) |
 | **New in 7.7.0** | SSRF response-body oracle, JSON-body inject mode, crAPI (app 7) in corpus |
 | **New in 7.6.0** | LFI content oracle, blind SQLi oracle, deep/absolute traversal payloads |
 | **New in 7.5.0** | SSRF via Burp-compatible collaborator |
@@ -50,7 +50,7 @@ If you are evaluating an enterprise platform with crawling, RBAC, scheduled scan
 | **Detection classes** | SQLi, XSS, SSRF, traversal (partial support; recall 0.075 -- see Known Limitations and ADR-027), cmdi |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | Human text - JSON - JSONL - SARIF 2.1.0 |
-| **Install** | `pip install janissary==7.11.0` |
+| **Install** | `git clone https://github.com/Hetaireia/janissary.git`, then `pip install -e .` (PyPI at 7.10.2; 7.11.x unreleased) |
 
 ---
 
@@ -223,9 +223,9 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for the architectural plan.
 ## Install
 
 ```bash
-pip install janissary==7.11.0
-
-# From source (development)
+# PyPI releases currently at 7.10.2. The unreleased 7.11.x line contains
+# WebSocket, host-bypass, heuristics, SARIF two-run, tri-session auth,
+# IDOR, crAPI, and SSRF metadata.
 git clone https://github.com/Hetaireia/janissary.git
 cd janissary
 pip install -e .
@@ -474,7 +474,7 @@ Configuration: `docker-compose.waf.yml` (ModSecurity CRS reverse proxy in front 
 ## Docker
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.0 scan -u "https://target.example" -p q
+docker run --rm oraclemode337/janissary:7.10.2 scan -u "https://target.example" -p q
 ```
 
 The image exposes the same entrypoint as the PyPI package. Use host.docker.internal to reach services on the host from inside the container.

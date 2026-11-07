@@ -291,7 +291,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         return 0
 
     if not args.url:
-        print("[!] scan requires --url", file=sys.stderr)
+        print("[!] scan requires --url (e.g. -u http://localhost:8080)", file=sys.stderr)
         return 64
 
     if getattr(args, "sessions", None) and (
