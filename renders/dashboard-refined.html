@@ -530,6 +530,7 @@
   var TARGET = Date.parse('26-SEP-2028T00:00:00Z');
   var TOTAL_MS = TARGET - CREATION;
   var TOTAL_DAYS = TOTAL_MS / 86400000;
+  var MS_PER_DAY = 86400000;
   var WORK_PCT = 62.0;
 
   var els = {
@@ -549,30 +550,50 @@
     return s;
   }
 
+  function fmtDate(ms) {
+    var d = new Date(ms);
+    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    return pad(d.getUTCDate(), 2) + '-' + months[d.getUTCMonth()] + '-' + d.getUTCFullYear();
+  }
+
   function tick() {
     var now = Date.now();
-    var remaining = Math.max(0, TARGET - now);
+
+    // 1. Time elapsed (nominal): (now - start) / (end - start)
     var elapsedMs = Math.min(TOTAL_MS, Math.max(0, now - CREATION));
     var elapsedPct = (elapsedMs / TOTAL_MS) * 100;
 
-    els.days.textContent    = pad(Math.floor(remaining / 86400000), 3);
-    els.hours.textContent   = pad(Math.floor((remaining % 86400000) / 3600000), 2);
-    els.minutes.textContent = pad(Math.floor((remaining % 3600000) / 60000), 2);
-    els.seconds.textContent = pad(Math.floor((remaining % 60000) / 1000), 2);
+    // 2. Days ahead (+) or behind (-): work% vs time%
+    var aheadDays = (WORK_PCT - elapsedPct) / 100 * TOTAL_DAYS;
 
+    // 3. Adjusted target: shift the nominal TARGET by aheadDays
+    //    ahead > 0  => finish earlier than planned
+    //    ahead < 0  => finish later than planned
+    var adjustedTarget = TARGET - aheadDays * MS_PER_DAY;
+
+    // 4. Countdown counts down to the adjusted target
+    var adjustedRemaining = Math.max(0, adjustedTarget - now);
+
+    // 5. Render countdown (uses adjusted target)
+    els.days.textContent    = pad(Math.floor(adjustedRemaining / MS_PER_DAY), 3);
+    els.hours.textContent   = pad(Math.floor((adjustedRemaining % MS_PER_DAY) / 3600000), 2);
+    els.minutes.textContent = pad(Math.floor((adjustedRemaining % 3600000) / 60000), 2);
+    els.seconds.textContent = pad(Math.floor((adjustedRemaining % 60000) / 1000), 2);
+
+    // 6. Render time-elapsed bar/percent (nominal, unchanged)
     els.timeBar.style.width = elapsedPct.toFixed(2) + '%';
     els.timePct.textContent = elapsedPct.toFixed(2) + '%';
 
-    var ahead = (WORK_PCT - elapsedPct) / 100 * TOTAL_DAYS;
-    var rounded = Math.round(Math.abs(ahead));
-    if (ahead >= 0) {
+    // 7. Render ahead/behind label with adjusted target date
+    var rounded = Math.round(Math.abs(aheadDays));
+    if (aheadDays >= 0) {
       els.aheadNum.textContent = '+' + rounded;
       els.aheadNum.style.color = 'var(--green)';
-      els.aheadLbl.textContent = 'Days ahead of schedule';
+      els.aheadLbl.textContent = 'Days ahead of schedule \u00B7 target ' + fmtDate(adjustedTarget);
     } else {
       els.aheadNum.textContent = '\u2212' + rounded;
       els.aheadNum.style.color = 'var(--red)';
-      els.aheadLbl.textContent = 'Days behind schedule';
+      els.aheadLbl.textContent = 'Days behind schedule \u00B7 target ' + fmtDate(adjustedTarget);
     }
   }
 
