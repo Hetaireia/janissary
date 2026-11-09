@@ -304,6 +304,7 @@ def run_nuclei(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
 def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     image = env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable")
     wrk = run_dir.resolve()
+    base = base.replace("127.0.0.1", "host.docker.internal").replace("localhost", "host.docker.internal")
     cmd = [
         "docker",
         "run",
