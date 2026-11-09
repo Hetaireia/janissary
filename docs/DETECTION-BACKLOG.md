@@ -12,7 +12,7 @@ Differential-provable. Reuses an existing oracle or payload path. No new archite
 
 Gap: _ssrf_phase in engine/scanner.py fires on direct SSRF. Does not test whether the target follows a redirect to an internal host. Classic bypass: url= to allowlisted host that 302s to http://169.254.169.254/latest/meta-data/.
 
-Needs: second probe that sends a redirecting URL. Two test apps: one 302s to internal IP, one 302s to benign host.
+Needs: new payload family pointing at a USER-SUPPLIED redirector. CLI flag --ssrf-redirector URL. Payload becomes <redirector>?to=<metadata-endpoint>. Fires when (a) metadata markers appear in the response body, or (b) OOB callback arrives at the Interactsh unique URL. Design constraint: JANISSARY does not host the redirector; the user supplies it. Bug bounty hunters already have this infrastructure. Test cases: benign redirect -> silent; redirect to metadata endpoint -> fires; redirect to Interactsh -> fires (OOB).
 
 Verification: fires on the first, silent on the second.
 
