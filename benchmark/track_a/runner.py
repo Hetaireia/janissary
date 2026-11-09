@@ -312,7 +312,7 @@ def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
         f"{wrk}:/zap/wrk/:rw",
         "-t",
         image,
-        "zap-baseline.py",
+        "zap-full-scan.py",
         "-t",
         base,
         "-J",
