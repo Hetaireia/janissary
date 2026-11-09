@@ -49,6 +49,8 @@ from benchmark.common.run_utils import (  # noqa: E402
     write_manifest,
 )
 
+from benchmark.track_a.zap_driver import run_zap_v2
+
 TRACK = "track_a"
 BENCH_ROOT = HERE.parent
 
@@ -350,7 +352,7 @@ def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
 DRIVERS = {
     "janissary": run_janissary,
     "nuclei": run_nuclei,
-    "zap": run_zap,
+    "zap": run_zap_v2,
 }
 
 
