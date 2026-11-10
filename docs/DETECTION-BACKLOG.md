@@ -85,3 +85,14 @@ T3-7 JS exec sink detection (Dalfox feature). Out: requires DOM-XSS path. Revisi
 Strategic roadmap: docs/ROADMAP.md
 Finding-gap registry: docs/PHASE-6-PLAN.md
 Session tracker: WORKFLOW.md
+
+### BL-1b — SSRF OOB-via-redirect
+
+Gap: ADR-028 described two redirect payload families. `408098d` shipped only metadata-via-redirect (response-body oracle). The OOB family needs the per-probe Interactsh unique ID threaded into the payload value, which the current `(name, value, category, severity)` tuple cannot carry.
+
+Needs: parallel allocation path in `_ssrf_phase`, or tuple change that ripples through `_ssrf_phase` and the body-oracle branch. Three payloads named `ssrf_redirect_oob_http` etc., value = `<redirector>?to=http://{uniq}.{collab}/`. Oracle is the existing collaborator poll.
+
+Verification: mock server 302s to Interactsh unique URL; poll returns a hit; finding emitted.
+
+Refs: ADR-028 (partial implementation note), ADR-012, ADR-015
+

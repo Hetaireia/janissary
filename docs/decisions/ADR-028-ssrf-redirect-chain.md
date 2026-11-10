@@ -69,3 +69,11 @@ The ADR is correct when:
 
 - If users report needing multi-hop chains — extend to allow `--ssrf-redirector-hops N`
 - If a hosted redirector becomes a product feature — new ADR, new funding question
+
+## Implementation note (2026-11-10)
+
+Commit `408098d` implements the **metadata-via-redirect** payload family only: three payloads (`ssrf_redirect_aws`, `ssrf_redirect_gcp`, `ssrf_redirect_azure`) gated on `--ssrf-redirector`, reusing the existing `SSRF_BODY_MARKERS` response-body oracle. 7 new tests, 1134 total passing.
+
+The **OOB-via-redirect** family described in the Decision section above is not implemented. The blocker is threading: the current payload tuple is `(name, value, category, severity)` with no slot for the per-probe Interactsh unique ID that `_ssrf_phase` allocates. Adding the OOB family requires either a parallel allocation path or a payload-tuple change that ripples through `_ssrf_phase` and the body-oracle branch. Estimated 40–60 lines. Filed as BL-1b in the backlog.
+
+Verification criterion 4 in the ADR is therefore partially unmet: cases 2 fires (metadata), case 3 (Interactsh) does not. Case 1 (benign redirect silent) is covered by `test_no_redirector_no_extra_payloads`.
