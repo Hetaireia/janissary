@@ -15,6 +15,13 @@ Project root: C:\Users\M5 E60\janissary-project\janissary
 ---
 
 ## How to resume after losing context
+**Mandatory reads before acting:** run `ls *.md` at repo root and read any file matching `PASTE|HANDOVER|FAILURE|HAZARD|RESUME`. These contain channel and state lessons that are not repeated in the session handover.
+
+**Two WORKFLOW.md files:** status block (STATUS / NEXT / LAST COMPLETED) is root `WORKFLOW.md`. Process patterns are `docs/WORKFLOW.md`. The handover uses the bare name for both — verify which one before editing.
+
+**Channel policy:** WSL bash for git and pytest. Single-line PowerShell for structural ops. Anchored Python scripts with `NOT FOUND` guards for multi-line text edits. Never multi-line here-strings. Never paste Python into the PowerShell prompt.
+
+**Handovers:** trust the narrative, verify the paths. Descriptions of what happened transfer; locations on disk need checking.
 
 **Step 0 — read `docs/WORKFLOW.md` first.** It records eight process patterns learned from prior measurement work (verify before claiming, file-based execution for complex commands, explicit-path output capture, cleanup-before-port-check, three-outcome distinction, forward-only corrections, shape checks, write-down-when-wrong). Violating those patterns produced two incidents in the 2026-11-10 session alone. Read them before issuing any command.
 
