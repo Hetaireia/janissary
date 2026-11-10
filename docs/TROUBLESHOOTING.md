@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="branding/janissary-emblem-gold.svg" alt="JANISSARY" width="40">
+</p>
+
 # Troubleshooting
 
 ## Banner shows "ΓÇö" instead of "—" on Windows

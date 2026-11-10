@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="branding/janissary-emblem-gold.svg" alt="JANISSARY" width="40">
+</p>
+
 # SSRF via collaborator
 
 Out-of-band Server-Side Request Forgery detection, added to the standard

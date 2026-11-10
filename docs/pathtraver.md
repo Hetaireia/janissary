@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="branding/janissary-emblem-gold.svg" alt="JANISSARY" width="40">
+</p>
+
 # Pathtraver on OWASP Benchmark: what we can see, and what we can't
 
 If you scroll the results table in `BENCHMARK.md` to the bottom, the
