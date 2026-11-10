@@ -489,6 +489,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         auth_sessions=auth_cfg.sessions,
         collaborator=collaborator_client,
         ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
+        ssrf_redirector=getattr(args, "ssrf_redirector", None),
         json_template=_json_template,
         baseline_value=args.baseline_value or "",
         collect_observations=getattr(args, "heuristic", False)
@@ -1745,6 +1746,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=10.0,
         help="Seconds to wait for SSRF collaborator hits (default 10).",
+    )
+    scan.add_argument(
+        "--ssrf-redirector",
+        default=None,
+        metavar="URL",
+        help="User-supplied HTTP redirector for redirect-chain SSRF (ADR-028).",
     )
     scan.add_argument(
         "--json-template",

