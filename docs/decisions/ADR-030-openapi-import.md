@@ -71,11 +71,11 @@ Read a single-file OpenAPI 3.0 JSON spec. Enumerate `paths` → methods → para
 
 ### Stage 2 — `$ref` resolution
 
-Resolve local `#/components/...` and external file `$ref` chains. Test against a spec that uses `$ref` heavily (the Kubernetes OpenAPI spec is the canonical torture test, ~3 MB). Assert resolved operation count equals `prance`'s count.
+Resolve local `#/components/...` and external file `$ref` chains. Test against a spec that uses `$ref` heavily (the large torture test is deferred until a 2-4 MB 3.0 spec is pinned; the published Kubernetes spec is Swagger 2.0 and would be rejected by Stage 2's 3.0-only validator, so kube moves to Stage 3). Assert resolved operation count equals `prance`'s count.
 
 ### Stage 3 — Swagger 2.0 support
 
-2.0 has a different schema (`definitions` not `components/schemas`, `host`+`basePath`+`schemes` not `servers`). Write the adapter. Same tests, different fixtures.
+2.0 has a different schema (`definitions` not `components/schemas`, `host`+`basePath`+`schemes` not `servers`). Write the adapter. Same tests, different fixtures. Stage 3 also carries the Kubernetes torture test (api/openapi-spec/swagger.json, ~3 MB, Swagger 2.0), moved here from Stage 2 because Stage 2 validates 3.0 only.
 
 ### Stage 4 — server URL templating
 
@@ -109,7 +109,7 @@ Pin the following fixtures under `tests/fixtures/openapi/`:
 | `external-ref-3.0.json` + `external-ref-target.json` | External file `$ref` |
 | `templated-servers-3.0.json` | `{protocol}`/`{host}` templating |
 | `overlapping-paths-3.0.json` | `/users/{id}` vs `/users/me` |
-| `kube-openapi.json` | Real-world large spec (~3 MB) — torture test |
+| `kube-openapi.json (Stage 3)` | Real-world large spec (~3 MB) — torture test |
 
 For each, the expected operation count is committed alongside the fixture. Any change to the count is a regression until reviewed.
 
