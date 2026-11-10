@@ -217,7 +217,7 @@ python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/<run-dir>
 > **Two-minute install.** `pip`, Docker, or from source. The core scanner runs without external services.
 
 See [LIMITATIONS.md](LIMITATIONS.md) for what Janissary can and cannot prove.
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the architectural plan.
+See [docs/decisions/](docs/decisions/) for the architectural decision record.
 
 
 ## Install
@@ -419,7 +419,7 @@ Being explicit about scope is part of being honest about precision:
 
 ## Roadmap
 
-Strategic direction is documented in `docs/FUTURE-STATE-PLAN.md`.
+Strategic direction is maintained privately; the public architecture is in `docs/decisions/`.
 The architectural decisions governing current and planned work are
 in `docs/decisions/` (ADR-016 through ADR-021 for the Phase 0
 Foundation, and prior ADRs for the verification engine itself).
@@ -434,11 +434,7 @@ Two near-term direction items are captured as ADRs:
   demand or 3+ user asks). When built, ships open-source. See
   ADR-021.
 
-Milestone tracking: `docs/FUTURE-STATE-PLAN.md` (Part 3) defines
-the phased plan and the gates between phases. Current status is
-visible in `JANISSARY-ASCENSION.md` (generated dashboard).
-Internal gate thresholds are redacted at Gate 2 or Gate 4 per
-`docs/FUTURE-STATE-PLAN.md` Part 7; the public plan remains public.
+Detailed phased planning and milestone tracking are maintained privately and are not part of this repository.
 
 ---
 
