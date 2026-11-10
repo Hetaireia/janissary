@@ -87,7 +87,19 @@ Refs: ADR-003, ADR-027
 
 May already be covered. Verification before implementation.
 
-### BL-4 — DOM-XSS coverage
+### BL-4 — DOM-XSS coverage — CLOSED 2026-11-10 (architecturally out of scope)
+
+Audit result: engine/dom_hash.py is a pure HTML-string hashing primitive with no I/O and no browser. No JS execution anywhere in the src tree. DOM-XSS cannot be detected by this architecture.
+
+Why: DOM-XSS executes client-side. The payload arrives via URL fragment (location.hash), which HTTP does not transmit to the server. A server-side scanner sees only the server response, never the browser DOM after JS runs. The reflection oracle (analyzer.py:566-605) cannot fire because the payload was never reflected by the server.
+
+What DOM-XSS detection would require: a headless browser (Playwright, Selenium, or pyppeteer) that loads the page, sets the URL fragment, waits for JS execution, and inspects the resulting DOM. This is a fundamentally different scanning mode — browser-based, not HTTP-based. Not in the roadmap. Not scheduled. Not a payload gap.
+
+Comparison: Burp Suite Professional detects DOM-XSS via its embedded browser. ZAP has a separate AJAX Spider. JANISSARY does not compete on this axis, consistent with the roadmap rule that it does not compete on protocol or surface count.
+
+Revisit trigger: roadmap opens a Phase 2.x headless-browser workstream. At that point this becomes a scope entry, not a detection-class entry.
+
+
 
 Question: ADR-002 (DOM structural hashing) — does it catch DOM-XSS (payload in location.hash executing via innerHTML), or only reflected XSS?
 
