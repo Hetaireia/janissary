@@ -87,6 +87,7 @@ def _emit_abort_reason(reason: str | None) -> None:
 
 def _print_banner() -> None:
     print("JANISSARY — differential DAST")
+    print("SIGNAL OVER NOISE.")
     print("=" * 60)
 
 
@@ -1642,8 +1643,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = _ArgumentParser(
         prog="janissary",
         description="JANISSARY — differential DAST scanner",
+        epilog="SIGNAL OVER NOISE.",
     )
-    p.add_argument("--version", action="version", version=f"janissary {__version__}")
+    p.add_argument(
+        "--version",
+        action="version",
+        version=f"janissary {__version__}\nSIGNAL OVER NOISE.",
+    )
 
     sub = p.add_subparsers(dest="command")
 
