@@ -867,6 +867,23 @@ class Scanner:
                 r = None
             summary.total_requests += 1
             issued.append((uniq, payload.name, url, r))
+        if self.ssrf_redirector:
+            _red = self.ssrf_redirector.rstrip("?&")
+            _sep = "&" if "?" in _red else "?"
+            from janissary.integrations.collaborator import SsrfPayload
+            _redirect_payloads = [
+                SsrfPayload("ssrf_redirect_oob_http", f"{_red}{_sep}to=http://{{uniq}}.{{collab}}/"),
+                SsrfPayload("ssrf_redirect_oob_https", f"{_red}{_sep}to=https://{{uniq}}.{{collab}}/"),
+            ]
+            for payload in _redirect_payloads:
+                uniq = self.collaborator.new_unique_id(payload.name)
+                url = self.collaborator.payload_for(payload, uniq)
+                try:
+                    r = self._paced_request(self.target, param, url)
+                except requests.RequestException:
+                    r = None
+                summary.total_requests += 1
+                issued.append((uniq, payload.name, url, r))
 
         if not issued:
             return

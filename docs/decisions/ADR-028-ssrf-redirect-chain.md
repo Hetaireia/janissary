@@ -72,8 +72,8 @@ The ADR is correct when:
 
 ## Implementation note (2026-11-10)
 
-Commit `408098d` implements the **metadata-via-redirect** payload family only: three payloads (`ssrf_redirect_aws`, `ssrf_redirect_gcp`, `ssrf_redirect_azure`) gated on `--ssrf-redirector`, reusing the existing `SSRF_BODY_MARKERS` response-body oracle. 7 new tests, 1134 total passing.
+Initial commit `408098d` shipped the **metadata-via-redirect** payload family: three payloads (`ssrf_redirect_aws`, `ssrf_redirect_gcp`, `ssrf_redirect_azure`) gated on `--ssrf-redirector`, reusing the existing `SSRF_BODY_MARKERS` response-body oracle. 7 new tests, 1134 total passing.
 
-The **OOB-via-redirect** family described in the Decision section above is not implemented. The blocker is threading: the current payload tuple is `(name, value, category, severity)` with no slot for the per-probe Interactsh unique ID that `_ssrf_phase` allocates. Adding the OOB family requires either a parallel allocation path or a payload-tuple change that ripples through `_ssrf_phase` and the body-oracle branch. Estimated 40–60 lines. Filed as BL-1b in the backlog.
+The **OOB-via-redirect** family was shipped in a follow-up commit the same session. Two payloads (`ssrf_redirect_oob_http`, `ssrf_redirect_oob_https`) are appended inside `_ssrf_phase` when `--ssrf-redirector` is set, using the same collaborator allocation path as the direct-SSRF payloads. Four tests in `tests/unit/test_ssrf_redirect_oob.py` verify the plumbing: payloads are issued when the flag is set, silent when unset, and values carry the correct `<redirector>?to=<proto>://<uniq>.<collab>/` shape. 1138 total tests passing. The end-to-end OOB callback path itself is not exercised by unit tests — that requires a live Interactsh instance and is verified manually against a redirecting mock, tracked as verification criterion 3.
 
-Verification criterion 4 in the ADR is therefore partially unmet: cases 2 fires (metadata), case 3 (Interactsh) does not. Case 1 (benign redirect silent) is covered by `test_no_redirector_no_extra_payloads`.
+Verification criterion 3 (end-to-end Interactsh callback) remains unmet by unit tests only; manual verification against a redirecting mock is required. Criteria 1, 2, and 4 are met by the shipped test suite.

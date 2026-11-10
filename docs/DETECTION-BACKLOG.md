@@ -86,7 +86,11 @@ Strategic roadmap: docs/ROADMAP.md
 Finding-gap registry: docs/PHASE-6-PLAN.md
 Session tracker: WORKFLOW.md
 
-### BL-1b — SSRF OOB-via-redirect
+### BL-1b — SSRF OOB-via-redirect — SHIPPED 2026-11-10
+
+Status: shipped in session, commit pending. Two payloads `ssrf_redirect_oob_http` and `ssrf_redirect_oob_https` added inside `_ssrf_phase`, gated on `--ssrf-redirector`. Four tests in `tests/unit/test_ssrf_redirect_oob.py` verify plumbing. Full suite 1138 passing. Manual end-to-end verification against a live Interactsh and redirecting mock still pending (ADR-028 verification criterion 3).
+
+Original gap text follows.
 
 Gap: ADR-028 described two redirect payload families. `408098d` shipped only metadata-via-redirect (response-body oracle). The OOB family needs the per-probe Interactsh unique ID threaded into the payload value, which the current `(name, value, category, severity)` tuple cannot carry.
 
