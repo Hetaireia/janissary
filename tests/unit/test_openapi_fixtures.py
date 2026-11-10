@@ -16,7 +16,7 @@ METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
 
 def _find_fixtures_dir():
     tail = ("tests", "fixtures", "openapi")
-    here = Path("__file__").resolve()
+    here = Path(__file__).resolve()
     candidates = [here, *here.parents, Path.cwd()]
     for base in candidates:
         candidate = base / Path(*tail)
