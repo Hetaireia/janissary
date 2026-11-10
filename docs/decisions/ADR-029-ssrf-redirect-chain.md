@@ -1,6 +1,6 @@
 # ADR-029 — SSRF via redirect chain (BL-1)
 
-**Status:** Proposed (design)
+**Status:** Accepted (2026-11-10). Metadata path and OOB path both shipped; 11 tests in `tests/unit/test_ssrf_redirect.py` and `tests/unit/test_ssrf_redirect_oob.py`; full suite 1138 passing. Note: the implementing commits were made before this ADR was renumbered from 028 to 029, so `git log --grep="ADR-028 BL-1"` finds them.
 **Parent:** ADR-012 (SSRF via collaborator), ADR-015 (Interactsh OOB client)
 **Amends:** ADR-012 by adding a user-supplied redirector probe path
 **Backlog:** docs/DETECTION-BACKLOG.md BL-1
