@@ -28,7 +28,30 @@ Verification: against a page that evaluates the double-brace form to its numeric
 
 Refs: existing XSS oracle, detection/analyzer.py
 
-### BL-3 — Path-traversal encoding audit
+### BL-3 — Path-traversal encoding audit — CLOSED 2026-11-10 (no additions)
+
+Audit complete. Six encoding families checked against scanner.py DEFAULT_PAYLOADS:
+
+| Family | Present | Payload name |
+|---|---|---|
+| standard | yes | traversal_passwd |
+| URL-encoded | yes | traversal_encoded |
+| double-encoded | yes | traversal_passwd_dot |
+| backslash-encoded | yes | traversal_win_encoded |
+| overlong UTF-8 | no | — |
+| mixed-slash | no | — |
+
+Decision: do not add the two missing families.
+
+Overlong UTF-8 (%c0%af) is rejected by every modern parser (Tomcat 9+, Jetty, Undertow, ASP.NET Core, Node/Express, Go net/http). The payload is functionally dead against any target JANISSARY would scan today.
+
+Mixed-slash (..\/..\/) has a real bypass case but cannot improve the benchmark score: pathtraver is target-capped (ADR-003), so new payloads cannot raise F1. ADR-027 lines 1720-1721 record that broadening traversal capture caused a documented -1 TP regression on pathtraver-01. Adding payloads risks the same code path for zero benchmark gain.
+
+Roadmap rule applied: do not compete on payload count. Adding to tick a checklist that the benchmark cannot reward is the exact mindset the roadmap forbids.
+
+Revisit trigger: a named user reports a real target where mixed-slash bypass succeeds. At that point, add mixed-slash with a regression check on pathtraver-01 before/after.
+
+
 
 Gap: unknown whether the payload dictionary covers overlong UTF-8, double-encoding, mixed slash.
 
