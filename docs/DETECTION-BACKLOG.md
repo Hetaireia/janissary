@@ -145,15 +145,15 @@ Session tracker: WORKFLOW.md
 
 ### BL-1b — SSRF OOB-via-redirect — SHIPPED 2026-11-10
 
-Status: shipped in session, commit pending. Two payloads `ssrf_redirect_oob_http` and `ssrf_redirect_oob_https` added inside `_ssrf_phase`, gated on `--ssrf-redirector`. Four tests in `tests/unit/test_ssrf_redirect_oob.py` verify plumbing. Full suite 1138 passing. Manual end-to-end verification against a live Interactsh and redirecting mock still pending (ADR-028 verification criterion 3).
+Status: shipped in session, commit pending. Two payloads `ssrf_redirect_oob_http` and `ssrf_redirect_oob_https` added inside `_ssrf_phase`, gated on `--ssrf-redirector`. Four tests in `tests/unit/test_ssrf_redirect_oob.py` verify plumbing. Full suite 1138 passing. Manual end-to-end verification against a live Interactsh and redirecting mock still pending (ADR-029 verification criterion 3).
 
 Original gap text follows.
 
-Gap: ADR-028 described two redirect payload families. `408098d` shipped only metadata-via-redirect (response-body oracle). The OOB family needs the per-probe Interactsh unique ID threaded into the payload value, which the current `(name, value, category, severity)` tuple cannot carry.
+Gap: ADR-029 described two redirect payload families. `408098d` shipped only metadata-via-redirect (response-body oracle). The OOB family needs the per-probe Interactsh unique ID threaded into the payload value, which the current `(name, value, category, severity)` tuple cannot carry.
 
 Needs: parallel allocation path in `_ssrf_phase`, or tuple change that ripples through `_ssrf_phase` and the body-oracle branch. Three payloads named `ssrf_redirect_oob_http` etc., value = `<redirector>?to=http://{uniq}.{collab}/`. Oracle is the existing collaborator poll.
 
 Verification: mock server 302s to Interactsh unique URL; poll returns a hit; finding emitted.
 
-Refs: ADR-028 (partial implementation note), ADR-012, ADR-015
+Refs: ADR-029 (partial implementation note), ADR-012, ADR-015
 

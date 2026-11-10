@@ -175,7 +175,7 @@ the not-in-baseline check." Probe section 4 shows the LDAP oracle implements
 the same pattern without a counter -- it just returns [] silently. Adding
 a counter to LFI oracle for the same purpose would deviate from precedent.
 
-Defer. If future sessions need per-signature suppression counts, ADR-029
+Defer. If future sessions need per-signature suppression counts, a future ADR
 will scope it consistently across all oracles (LFI, LDAP, collapse).
 
 ### D7. No change to existing _say call sites
@@ -283,7 +283,7 @@ would remove information the operator wants by default.
 
 **D: Add suppression counter to LFI oracle for D6.**
 Rejected per D6. LDAP oracle doesn't have a counter -- adding one only for
-LFI is inconsistent. Wait for ADR-029 to add counters uniformly.
+LFI is inconsistent. Wait for a future ADR to add counters uniformly.
 
 **E: Combine ADR-028 with D10 verification (do everything in one milestone).**
 Rejected. ADR-028 design is shippable at ~1040 MB; D10 verification needs

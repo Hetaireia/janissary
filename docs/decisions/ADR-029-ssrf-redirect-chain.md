@@ -1,4 +1,4 @@
-# ADR-028 — SSRF via redirect chain (BL-1)
+# ADR-029 — SSRF via redirect chain (BL-1)
 
 **Status:** Proposed (design)
 **Parent:** ADR-012 (SSRF via collaborator), ADR-015 (Interactsh OOB client)

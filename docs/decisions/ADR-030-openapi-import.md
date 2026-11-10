@@ -1,4 +1,4 @@
-# ADR-029 — OpenAPI / Swagger import (BL-5)
+# ADR-030 — OpenAPI / Swagger import (BL-5)
 
 **Status:** Proposed (design)
 **Parent:** ADR-021 (crawler placement), ADR-016 (verified/discovery vocabulary)

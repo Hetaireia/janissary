@@ -35,7 +35,7 @@ JANISSARY's differential oracle fires because it compares response *shape* betwe
 
 ## What would change this
 
-If ZAP's scan policy were tuned per-case (custom scripting, custom payloads), the result could shift. That is out of scope per ADR-028 — the comparison is "stock ZAP as the ZAP project recommends it," which is what a user gets when they download ZAP and run it.
+If ZAP's scan policy were tuned per-case (custom scripting, custom payloads), the result could shift. That is out of scope — the comparison is "stock ZAP as the ZAP project recommends it," which is what a user gets when they download ZAP and run it.
 
 ## Full comparison -- hardware blocker
 
