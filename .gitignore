@@ -150,6 +150,7 @@ tools/*.bak-*
 # Ascension (hyphenated + inputs — untracked 2026-11-01)
 
 # Ascension rendered dashboards (regenerable from local state)
+renders/
 
 audit_out/
 janissary_audit.tgz
