@@ -5,7 +5,7 @@
 <title>Janissary Ascension — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@700&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0B0B0F;
@@ -49,13 +49,20 @@
     margin-bottom: 12px;
     padding: 0 2px;
   }
-  h1 {
-    margin: 0;
-    font-size: 15.4px;
-    font-weight: 800;
+  .brandmark {
+    display: block;
+    height: 84px;
+    width: auto;
+    max-width: 100%;
+  }
+  .artifact-name {
+    margin: 8px 0 0;
+    font-size: 9.9px;
+    font-weight: 700;
     color: var(--cyan-bright);
-    letter-spacing: 2.2px;
+    letter-spacing: 3.6px;
     line-height: 1;
+    text-transform: uppercase;
   }
   .subtitle {
     margin-top: 5px;
@@ -63,14 +70,6 @@
     font-weight: 500;
     color: var(--muted);
     letter-spacing: 1.5px;
-    text-transform: uppercase;
-  }
-  .tagline {
-    margin-top: 6px;
-    font-size: 8.4px;
-    font-weight: 700;
-    color: var(--cyan-bright);
-    letter-spacing: 2.4px;
     text-transform: uppercase;
   }
   .timestamp {
@@ -290,8 +289,14 @@
 
   <header>
     <div>
-      <h1>JANISSARY ASCENSION</h1>
-      <div class="tagline">SIGNAL OVER NOISE.</div>
+      <svg class="brandmark" viewBox="0 0 1400 300" role="img" aria-label="JANISSARY, SIGNAL OVER NOISE">
+        <defs><linearGradient id="jgold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7D989"/><stop offset=".48" stop-color="#D4AF37"/><stop offset="1" stop-color="#A8791D"/></linearGradient></defs>
+        <g transform="translate(20 70) scale(2.2)"><path d="M50 7 L78 25 L78 82 L50 98 L22 80 L22 63 L39 52 L39 68 L50 75 L61 68 L61 35 L50 28 L33 40 L33 24 Z" fill="url(#jgold)" fill-rule="evenodd"/><path d="M50 7 L61 14 L61 68 L50 75 L50 98 L78 82 L78 25 Z" fill="#0B0B0F" opacity=".16"/></g>
+        <text x="290" y="168" fill="url(#jgold)" font-family="Montserrat, Arial, sans-serif" font-size="100" font-weight="700" letter-spacing="13">JANISSARY</text>
+        <path d="M294 212 H430 M1060 212 H1190" stroke="#D4AF37" stroke-width="2"/>
+        <text x="742" y="226" text-anchor="middle" fill="#EBEBEB" font-family="Inter, Arial, sans-serif" font-size="27" letter-spacing="12">SIGNAL OVER NOISE</text>
+      </svg>
+      <h1 class="artifact-name">ASCENSION</h1>
       <div class="subtitle">Road to top 20 · Differential DAST for teams who need results they can trust</div>
     </div>
     <div class="timestamp">11-NOV-2026 00:00:00</div>
