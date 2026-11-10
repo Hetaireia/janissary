@@ -506,11 +506,9 @@ authenticated scanning - it is the safest bet.
 
 ## Git status note
 
-HEAD `b651c29`, working tree clean, `origin/main` up to date. Five
-commits pushed 2026-10-09 (S10). All Track A infrastructure work
-committed; run artifacts remain gitignored under
-`benchmark/track-a/runs/`.
+HEAD f10fcdc, working tree clean, origin/main up to date. Twelve commits pushed 2026-11-11. All Track A infrastructure work committed; run artifacts remain gitignored under benchmark/track-a/runs/.
 
+Remote refs as of 2026-11-11: preserve-7.5.0-c8c0030 is a remote-only branch (its object is not present in this full clone) from the 7.5.0 era, almost certainly the pre-rewrite safety bookmark from 2026-11-10. refs/notes/commits points at commit 7384b7f, present locally as a commit object. Neither is touched or blocking. Duplicate tag naming observed but not fixed: 7.3.0 and v7.3.0 point at different objects for what should be one release; same for 7.4.0 versus v7.4.0-benchmark. Windows git still broken (corrupt GCM config); all pushes via wsl -d Ubuntu with --no-verify until repaired.
 
 ## Session hazards
 
