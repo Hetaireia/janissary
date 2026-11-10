@@ -1,8 +1,9 @@
 """Stage 2 ref resolution tests (ADR-030).
 
-Red before the resolver lands. Both are silent-drop classes: the
-operation count can stay green while names or whole operations
-vanish without a SkipRecord.
+Covers local path-item refs, local parameter refs, and external file
+refs. The first two were red before RefResolver landed; both are
+silent-drop classes where the operation count stays green while names
+or whole operations vanish without a SkipRecord.
 """
 import json
 from pathlib import Path
