@@ -137,6 +137,8 @@ T3-6 File-upload XSS. Out: requires upload state machine, scope creep. Revisit: 
 
 T3-7 JS exec sink detection (Dalfox feature). Out: requires DOM-XSS path. Revisit: BL-4 delivered.
 
+T3-8 gRPC protocol support (FN-17). Out: greenfield build, no existing implementation. ADR-014 already chose the protobuf dependency and ruled out HTTP-level guessing if reflection is unavailable. Revisit: named user asks for gRPC coverage, or the roadmap opens Phase 2.3. Full scope in docs/PHASE-6-PLAN.md FN-17.
+
 ## Cross-references
 
 Strategic roadmap: docs/ROADMAP.md
