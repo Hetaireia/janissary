@@ -1,9 +1,10 @@
 """OpenAPI spec import for scan target enumeration.
 
 Reads a single file OpenAPI 3.0 JSON spec and enumerates every
-operation (path by HTTP method) declared in it. This is Stage 1 of
-ADR-030: no $ref resolution, no Swagger 2.0, no server templating.
-Those come in later stages.
+operation (path by HTTP method) declared in it. Stage 2 of ADR-030
+adds local and external $ref resolution for path items and parameter
+entries. Still no Swagger 2.0, no server templating, no request-body
+import -- those come in later stages.
 
 The parser returns both what it imported and what it skipped, with
 reasons. len(imported) + len(skipped) must equal the total operation
@@ -16,6 +17,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from janissary.importers.refs import RefError, RefResolver
 
 log = logging.getLogger(__name__)
 
@@ -84,18 +87,22 @@ class OpenAPIParser:
     def __init__(self, source: str | Path) -> None:
         self.source = Path(source)
         self.result = ParseResult(source=str(self.source))
+        self._resolver: RefResolver | None = None
 
     def parse(self) -> ParseResult:
         raw = self._load()
         spec = self._validate(raw)
         self.result.spec_version = str(spec.get("openapi", ""))
+        self._resolver = RefResolver(spec, self.source)
         paths = spec.get("paths") or {}
         if not isinstance(paths, dict):
             raise OpenAPIImportError(
                 "spec paths is not an object: " + type(paths).__name__
             )
         for path, item in paths.items():
-            self._enumerate_path(str(path), item)
+            self._enumerate_path(
+                str(path), item, self._resolver.root_path
+            )
         return self.result
 
     def _load(self) -> Any:
@@ -135,7 +142,23 @@ class OpenAPIParser:
             raise OpenAPIImportError("spec has no 'paths' object")
         return raw
 
-    def _enumerate_path(self, path: str, item: Any) -> None:
+    def _enumerate_path(
+        self, path: str, item: Any, item_path: Path
+    ) -> None:
+        resolver = self._resolver
+        if resolver is None:
+            raise RuntimeError("resolver not initialized; call parse() first")
+        try:
+            item, item_path = resolver.resolve(item, item_path)
+        except RefError as exc:
+            self.result.skipped.append(
+                SkipRecord(
+                    path=path,
+                    method="*",
+                    reason="unresolvable path item: " + str(exc),
+                )
+            )
+            return
         if not isinstance(item, dict):
             self.result.skipped.append(
                 SkipRecord(
@@ -168,20 +191,35 @@ class OpenAPIParser:
                     path=path,
                     method=method,
                     operation_id=str(op.get("operationId") or ""),
-                    parameter_names=self._parameter_names(op),
+                    parameter_names=self._parameter_names(op, item_path),
                 )
             )
 
-    def _parameter_names(self, op: dict) -> list[str]:
+    def _parameter_names(
+        self, op: dict, current_path: Path
+    ) -> list[str]:
         params = op.get("parameters")
         if not isinstance(params, list):
             return []
+        resolver = self._resolver
+        if resolver is None:
+            raise RuntimeError("resolver not initialized; call parse() first")
         names: list[str] = []
         for p in params:
-            if isinstance(p, dict):
-                name = p.get("name")
-                if isinstance(name, str) and name:
-                    names.append(name)
+            if not isinstance(p, dict):
+                continue
+            try:
+                p, _ = resolver.resolve(p, current_path)
+            except RefError as exc:
+                self.result.notes.append(
+                    "unresolvable parameter ref: " + str(exc)
+                )
+                continue
+            if not isinstance(p, dict):
+                continue
+            name = p.get("name")
+            if isinstance(name, str) and name:
+                names.append(name)
         return names
 
 
