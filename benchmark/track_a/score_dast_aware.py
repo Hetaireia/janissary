@@ -18,7 +18,10 @@ FAMILY_OF = {
     "ldapi": "ldapi",
     "crypto": "crypto",
     "hash": "hash",
+    "sqli_blind": "sqli",
 }
+
+OUT_OF_SCOPE_CLASSES = {"ssrf"}  # benchmark has no ssrf category; not measured
 
 EXCLUDE_FILE = Path("benchmark/track_a/dast_excluded.txt")
 SUPPORTED_EXCLUDE_FILE = Path("benchmark/track_a/dast_supported_excluded.txt")
@@ -57,7 +60,7 @@ def score(run_dir, cases_csv, label="full"):
     excluded = load_excluded()
 
     correct_on_path = collections.defaultdict(set)
-    n_find = n_wrong = n_orphan = 0
+    n_find = n_wrong = n_orphan = n_out_of_scope = 0
     mismatches = collections.Counter()
 
     findings_path = Path(run_dir) / "findings.jsonl"
@@ -72,6 +75,9 @@ def score(run_dir, cases_csv, label="full"):
             p = p[len("/benchmark") :]
         if p not in by_path:
             n_orphan += 1
+            continue
+        if d["class"] in OUT_OF_SCOPE_CLASSES:
+            n_out_of_scope += 1
             continue
         emitted_fam = FAMILY_OF.get(d["class"], d["class"])
         truth_fam = family(by_path[p]["category"])
@@ -111,7 +117,7 @@ def score(run_dir, cases_csv, label="full"):
         return TP, FP, FN, TN, P, R, F1, per_cat
 
     print(f"RUN {run_dir}")
-    print(f"findings={n_find} wrong_family={n_wrong} orphan={n_orphan}")
+    print(f"findings={n_find} wrong_family={n_wrong} orphan={n_orphan} out_of_scope={n_out_of_scope}")
     print(f"excluded categories: {sorted(excluded)}")
     print()
 
