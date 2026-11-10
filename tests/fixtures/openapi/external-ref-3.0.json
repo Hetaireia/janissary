@@ -1,0 +1,15 @@
+{
+  "openapi": "3.0.0",
+  "info": {"title": "External Ref", "version": "1.0.0"},
+  "paths": {
+    "/pets/{petId}": {
+      "get": {
+        "operationId": "getPetExternalRef",
+        "parameters": [
+          {"$ref": "./refs/external-ref-target.json#/components/parameters/PetId"}
+        ],
+        "responses": {"200": {"description": "ok"}}
+      }
+    }
+  }
+}

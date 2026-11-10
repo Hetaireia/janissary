@@ -1,0 +1,12 @@
+{
+  "components": {
+    "parameters": {
+      "PetId": {
+        "name": "petId",
+        "in": "path",
+        "required": true,
+        "schema": {"type": "integer"}
+      }
+    }
+  }
+}
