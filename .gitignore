@@ -161,3 +161,11 @@ docs/internal/
 
 benchmark/track_a/runs/
 artifacts/precision-ranking-*/
+
+# Strategic planning — local-only, never commit
+docs/FUTURE-STATE-PLAN.md
+docs/ROADMAP.md
+docs/launch-plan.md
+JANISSARY-ASCENSION.md
+JANISSARY_ASCENSION.md
+
