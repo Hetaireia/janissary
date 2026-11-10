@@ -8,7 +8,7 @@ Not a replacement for docs/ROADMAP.md (strategic) or docs/PHASE-6-PLAN.md (FN re
 
 Differential-provable. Reuses an existing oracle or payload path. No new architecture.
 
-### BL-1 — Redirect-chain SSRF probe
+### BL-1 — Redirect-chain SSRF probe — SHIPPED 2026-11-10 (metadata path)
 
 Gap: _ssrf_phase in engine/scanner.py fires on direct SSRF. Does not test whether the target follows a redirect to an internal host. Classic bypass: url= to allowlisted host that 302s to http://169.254.169.254/latest/meta-data/.
 
@@ -18,7 +18,29 @@ Verification: fires on the first, silent on the second.
 
 Refs: ADR-012, ADR-015, scanner.py::_ssrf_phase
 
-### BL-2 — CSTI payload expansion
+### BL-2 — CSTI detection (design corrected 2026-11-10)
+
+Status: design corrected, implementation deferred to fresh session.
+
+Original proposal (rejected): add four CSTI families (double-brace, hash-brace, dollar-brace, ERB angle) to the existing XSS payload list in detection/analyzer.py.
+
+Why rejected: the XSS oracle is reflection-based (analyzer.py:566-605, emits reflected_xss when payload appears unescaped in body). CSTI vulnerabilities EVALUATE the payload — a vulnerable endpoint sending {{1337*1337}} responds with 1787569, not with the literal string. The reflection oracle sees no payload in the body, stays silent, produces a false negative on every CSTI-vulnerable endpoint.
+
+Corrected design: new detection oracle, not payload additions.
+
+New module: src/janissary/detection/csti_oracle.py. Payload families share a distinctive evaluated result: double-brace {{1337*1337}}, hash-brace #{1337*1337}, dollar-brace ${1337*1337}, ERB <%= 1337*1337 %>. All evaluate to 1787569 (seven digits, unlikely to appear naturally).
+
+Oracle logic: check whether the expected result string (1787569) appears in the response body AND the literal payload does not. Fires as category=csti severity=high. Silent otherwise. Reuses ResponseSnapshot and baseline comparison from existing oracles.
+
+Estimated effort: ~120 lines (new oracle ~50, scanner wiring ~20, payloads ~10, tests ~40). Requires an ADR before code per project rule.
+
+Deferred because: paste channel corruption rate this session (~50% of commands) makes a four-file write with a new oracle module unsafe. Implementation in a session with a clean paste channel, proper ADR first, full test coverage before commit.
+
+Verification: test against a Jinja2/Twig/Smarty-backed mock that evaluates the payload to 1787569 - oracle fires. Test against verbatim-reflection mock - oracle silent. Test against evaluating engine that escapes the result - oracle silent (not vulnerable).
+
+Refs: analyzer.py (XSS oracle, for contrast), ResponseSnapshot, ADR-016 (verified/discovery vocabulary)
+
+
 
 Gap: XSS oracle fires on reflection. Payload dictionary lacks template syntax.
 
