@@ -8,23 +8,23 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #030810;
-    --panel: #0a1726;
-    --panel-border: #1a3a5c;
-    --row-divider: #12263c;
-    --phase-rule: #6e5a1e;
-    --cyan: #4fc8f7;
-    --cyan-bright: #66d4ff;
-    --yellow: #e6b23a;
-    --muted-yellow: #8a7040;
-    --teal: #1fc8a8;
+    --bg: #0B0B0F;
+    --panel: #1a1a20;
+    --panel-border: #4B5057;
+    --row-divider: #2a2a32;
+    --phase-rule: #6b5a2a;
+    --cyan: #D4AF37;
+    --cyan-bright: #E5C158;
+    --yellow: #D4AF37;
+    --muted-yellow: #A88A2E;
+    --teal: #D4AF37;
     --green: #2ecc71;
     --red: #e74c3c;
-    --blue-fill: #4a6b8c;
-    --track: #0d1f33;
-    --text: #b8c8d8;
-    --muted: #5c7291;
-    --muted-2: #2a4b6e;
+    --blue-fill: #5c6269;
+    --track: #0f0f13;
+    --text: #EBEBEB;
+    --muted: #8a8a95;
+    --muted-2: #4B5057;
     --font: 'Inter', system-ui, -apple-system, sans-serif;
   }
   * { box-sizing: border-box; }
@@ -63,6 +63,14 @@
     font-weight: 500;
     color: var(--muted);
     letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .tagline {
+    margin-top: 6px;
+    font-size: 8.4px;
+    font-weight: 700;
+    color: var(--cyan-bright);
+    letter-spacing: 2.4px;
     text-transform: uppercase;
   }
   .timestamp {
@@ -283,6 +291,7 @@
   <header>
     <div>
       <h1>JANISSARY ASCENSION</h1>
+      <div class="tagline">SIGNAL OVER NOISE.</div>
       <div class="subtitle">Road to top 20 · Differential DAST for teams who need results they can trust</div>
     </div>
     <div class="timestamp">11-NOV-2026 00:00:00</div>
