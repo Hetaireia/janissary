@@ -708,8 +708,7 @@ No commit fixed this — the filing is the record of the gap.
 
 ## FN-16 — WebSocket recon exists; Phase 2.2 learn/probe/verify pipeline does not
 
-**Status: FILED 2026-11-01. Phase 2.2 build gap, distinct from FN-15
-(GraphQL integration).**
+**Status: FIXED 2026-11-06 (v7.11.0).** The WebSocket Phase 2.2 learn/probe/verify pipeline shipped: normalizer, learn/probe/verify, delta taxonomy, timing-delta, `--ws`, `--ws-payloads`. See CHANGELOG.md under `## [7.11.0] - 2026-11-06`. Originally filed as a build gap distinct from FN-15 (GraphQL integration); all gaps are now closed.
 
 ### What exists
 

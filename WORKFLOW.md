@@ -15,6 +15,8 @@ Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ## How to resume after losing context
 
+**Step 0 — read `docs/WORKFLOW.md` first.** It records eight process patterns learned from prior measurement work (verify before claiming, file-based execution for complex commands, explicit-path output capture, cleanup-before-port-check, three-outcome distinction, forward-only corrections, shape checks, write-down-when-wrong). Violating those patterns produced two incidents in the 2026-11-10 session alone. Read them before issuing any command.
+
 From PowerShell, in the project root:
 
     Get-Content WORKFLOW.md -TotalCount 20
