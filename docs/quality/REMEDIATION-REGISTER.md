@@ -66,12 +66,20 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Closure Criterion:** Negative-control suite produces zero verified SSRF.
 
 ### JAN-L06 — IDOR and Authorisation Detection
-- **Status:** In Progress
+- **Status:** Partial
 - **Priority:** P1
-- **Evidence:** M42 shipped, candidate-only (`--idor`), requires two identities. `run_idor` routes through `_ENGINE.verify()`.
-- **Remaining Gap:** No semantic verification (200-vs-200 still triggers). No role/tenant matrix.
-- **Next Action:** Add positive/negative authorisation fixtures (public-resource access must not verify).
-- **Closure Criterion:** Positive/negative authorisation fixtures pass.
+- **Evidence:** M42 shipped, candidate-only (`--idor`), requires two identities. `run_idor` routes through `_ENGINE.verify()` (`scanner.py:1339`). L06a `91e9281` adds five authorisation-boundary integration tests to `tests/integration/test_scanner_idor.py`: 200/200 public-resource shape asserts `unproven` and not `verified`; length within 5pct asserts candidate; length beyond 5pct asserts no candidate; A-observation-non-2xx asserts no candidate; B-5xx asserts no candidate. Committed with 1088 unit / 1183 unit+integration passing and both ruff gates green.
+- **Remaining Gap:** Semantic verification beyond the status+body predicate is L06b. No role/tenant matrix.
+- **Next Action:** None for L06a -- the boundary is covered. L06b carries the remaining design work.
+- **Closure Criterion:** L06a met by `91e9281`. Full closure depends on L06b.
+
+### JAN-L06b — IDOR Public-Resource Suppression
+- **Status:** Not Started
+- **Priority:** P2
+- **Evidence:** `is_idor_candidate` (`detection/idor.py:79`) compares A-status, B-status, and body equality-or-5pct-length only. It carries no public/private resource signal, so a 200/200 matching-body response emits an `unproven` candidate whether the resource is legitimately public or an IDOR. `test_run_idor_public_resource_shape_emits_unproven_not_verified` (`91e9281`) pins the current behaviour: the detector reports and defers to analyst triage.
+- **Remaining Gap:** Suppressing public resources requires a signal the detector does not have. Three candidate designs, not yet chosen: (i) a `public_resources` pattern list on the target spec, checked before emission; (ii) a response-header heuristic (`Cache-Control: public`, absent `Vary`); (iii) no code change -- treat analyst triage as the intended control and document it as such. (i) and (ii) trade false positives for false negatives; (iii) preserves current behaviour and is already the de-facto design.
+- **Next Action:** Write an ADR choosing one of the three designs, or recording the decision to keep triage as the control. Do not narrow the detector without that decision -- a suppression heuristic that is wrong in either direction is worse than the honest `unproven` boundary.
+- **Closure Criterion:** A recorded design decision (ADR) plus fixtures that assert whichever behaviour is chosen. If (iii) is chosen, closure is the ADR alone.
 
 ### JAN-L07 — Discovery / Modern SPA Coverage
 - **Status:** Accepted Limitation (Deliberate)
@@ -123,4 +131,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 resolved — block in a795234, SARIF wiring in 4a8f63f, JSONL accepted-absent). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 resolved — block in a795234, SARIF wiring in 4a8f63f, JSONL accepted-absent; L06 split into L06a (five authorisation-boundary fixtures in `91e9281`) and L06b (public-resource suppression, design-only); L06 status In Progress -> Partial). Next review scheduled.*
