@@ -1623,12 +1623,20 @@ def _from_agent_findings(findings: list) -> _SarifRunInput:
     )
 
 
-def _render_sarif(runs: list[tuple[_SarifRunInput, str | None]], path: str) -> None:
+def _render_sarif(
+    runs: list[tuple[_SarifRunInput, str | None]],
+    path: str,
+    scan_properties: dict | None = None,
+) -> None:
     """Render normalized SARIF run inputs to disk (ADR-019 D1).
 
     Each tuple is (run_input, track_label). If track_label is None,
     the run has no `properties.track` (agent path, backward compat).
     If non-None, sets `properties.track` per ADR-019 D1.
+
+    scan_properties, when given, is attached as properties.completeness on
+    every run. It carries the scan-level completeness block derived by
+    _scan_completeness, so SARIF reports the same information as JSON.
     """
     from janissary.sarif_rules import TOOL_NAME, TOOL_URI
 
@@ -1647,8 +1655,13 @@ def _render_sarif(runs: list[tuple[_SarifRunInput, str | None]], path: str) -> N
             "taxonomies": run_input.taxonomies,
             "results": run_input.results,
         }
+        props: dict = {}
         if track is not None:
-            run["properties"] = {"track": track}
+            props["track"] = track
+        if scan_properties:
+            props["completeness"] = scan_properties
+        if props:
+            run["properties"] = props
         sarif_runs.append(run)
 
     doc = {
@@ -1668,17 +1681,19 @@ def _write_sarif(source: ScanSummary | list, path: str) -> None:
     list (agent): single run, no track property (ADR-009 — agent
     findings have no verification_status field).
     """
+    scan_props = None
     if isinstance(source, ScanSummary):
         verified = _from_scan_summary(source, verification_filter="verified")
         discovery = _from_scan_summary(source, verification_filter="unproven")
         runs = [(verified, "verified"), (discovery, "discovery")]
+        scan_props = _scan_completeness(source)
     elif isinstance(source, list):
         runs = [(_from_agent_findings(source), None)]
     else:
         raise TypeError(
             f"_write_sarif: unsupported source type {type(source).__name__}"
         )
-    _render_sarif(runs, path)
+    _render_sarif(runs, path, scan_props)
 
 
 # -------------------------------------------------------------------

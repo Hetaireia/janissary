@@ -88,3 +88,47 @@ def test_completeness_in_summary_dict():
     assert "completeness" in d
     assert d["completeness"]["scan_complete"] is True
     assert d["completeness"]["params_identified"] == 1
+
+
+# ---------------------------------------------------------------------------
+# SARIF format coverage
+# ---------------------------------------------------------------------------
+
+
+def test_sarif_includes_completeness_on_every_run(tmp_path):
+    """SARIF embeds the completeness block under properties.completeness."""
+    import json
+
+    from janissary.cli import _write_sarif
+
+    s = _summary(params=["x"], baselines=1)
+    s.aborted = True
+    s.scan_incomplete = True
+    path = tmp_path / "out.sarif"
+    _write_sarif(s, str(path))
+
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert len(doc["runs"]) == 2
+    for run in doc["runs"]:
+        assert "properties" in run
+        assert "completeness" in run["properties"]
+        comp = run["properties"]["completeness"]
+        assert comp["scan_complete"] is False
+        assert "aborted" in comp["reasons"]
+        assert comp["params_identified"] == 1
+
+
+def test_sarif_completeness_true_for_clean_scan(tmp_path):
+    """A clean scan reports scan_complete true, empty reasons."""
+    import json
+
+    from janissary.cli import _write_sarif
+
+    s = _summary(params=["x"], baselines=1)
+    path = tmp_path / "clean.sarif"
+    _write_sarif(s, str(path))
+
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    for run in doc["runs"]:
+        assert run["properties"]["completeness"]["scan_complete"] is True
+        assert run["properties"]["completeness"]["reasons"] == []
