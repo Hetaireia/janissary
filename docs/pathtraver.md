@@ -123,9 +123,12 @@ We report them, we document why they're low, we don't hide them.
 
 ## What this costs us
 
-Current DAST-applicable F1 is **0.920** (TP 984, FP 0, FN 172). The
-pathtraver subcategories contribute **123 of those 172 FN**. If we excluded them from the DAST-applicable denominator, the F1 would rise to roughly 0.976 (TP 984, FP 0, FN 49). We don't exclude them, because that would be gaming the
-metric. The 0.920 figure is honest.
+Current DAST-applicable F1 is **0.921** (TP 987, FP 0, FN 169). The
+pathtraver subcategories contribute **123 of those 169 FN**. Amendment 27
+(ADR-027 D8, Path Z) reports the filtered figure — excluding
+`pathtraver-{00,01,02,03}` — as a labelled supplemental: F1 0.977
+(TP 977, FP 0, FN 46). The headline remains 0.921; promoting the
+filtered number would be gaming the metric. The 0.921 figure is honest.
 
 If your target *does* leak the existence signal — which most real
 file-serving apps do, because they have to handle nonexistent files
