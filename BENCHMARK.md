@@ -8,6 +8,27 @@
 
 ---
 
+> **Current measured results (navigational index).** This block is not part
+> of the frozen pre-registration below. It exists so a reader reaches the
+> governing numbers without reading 1,900 lines of amendment history. The
+> pre-registration text that follows was frozen 2026-09-28; every post-freeze
+> change is a timestamped amendment at the end of this file.
+>
+> - **Headline:** DAST-applicable F1 **0.921** (TP 987, FP 0, FN 169,
+>   TN 1102; P 1.000, R 0.854). Governing amendment: Amendment 21
+>   (2026-10-25), reaffirmed by Amendment 27 (2026-11-06).
+> - **Supplemental:** supported-classes F1 **0.977** (TP 977, FP 0, FN 46),
+>   a filtered projection excluding `pathtraver-{00,01,02,03}`. Does not
+>   supersede 0.921; see Amendment 27 guardrails.
+> - **Corpus denominator:** FULL CORPUS 2740 cases; DAST-APPLICABLE 2258
+>   cases (482 excluded via `dast_excluded.txt`); 93 structurally skipped
+>   (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri).
+> - **Gate:** `--min-f1 0.92 --max-fp 0` reads DAST-applicable.
+> - **Known structural limit:** pathtraver recall 0.075 (10/133); see
+>   `docs/pathtraver.md` for the oracle-ceiling analysis.
+
+---
+
 ## Why this document exists
 
 Benchmarks published by tool authors are assumed to be cherry-picked until
