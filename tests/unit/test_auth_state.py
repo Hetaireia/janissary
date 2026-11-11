@@ -15,7 +15,7 @@ honest because that path has no auth contract.
 from unittest.mock import patch
 
 from janissary.cli import _summary_to_dict
-from janissary.engine.scanner import ScanSummary, Scanner
+from janissary.engine.scanner import Scanner, ScanSummary
 
 
 def test_scan_summary_defaults_to_unknown():
