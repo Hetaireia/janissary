@@ -89,11 +89,13 @@ Handle `servers[].url` with `{protocol}`, `{host}`, `{basePath}` variables. Fill
 
 Route path/query/header/cookie/body parameters to the correct scan call. Path params substitute into URL path. Query params append. Header and cookie params need `--inject-in` dispatch. Body params reuse `--json-template`.
 
-**Dispatch layer shipped 2026-11-11 (7597258).** Operation gains parameter_locations, populated from each resolved parameter in key. New dispatch.py exposes build_scan_targets(op), returning one target per distinct location: Scanner.inject_in is a single mode per instance, so an operation declaring path, query, and header parameters requires three scanners and therefore three targets. Mode map: path->path, query->param-name, header->header, cookie->cookie, body->json-body. Parameterless operations yield one target with mode auto. Unsupported locations (Swagger 2.0 formData) append a parser note and are excluded. Stage 5 is the transformation only; the loop that constructs one Scanner per target and drives them is Stage 6, and Stage 6 effort is revised upward from 2-3h to account for it.
+**Dispatch layer shipped 2026-11-11 (7597258).** Operation gains parameter_locations, populated from each resolved parameter in key. New dispatch.py exposes build_scan_targets(op), returning one target per distinct location: Scanner.inject_in is a single mode per instance, so an operation declaring path, query, and header parameters requires three scanners and therefore three targets. Mode map: path->path, query->param-name, header->header, cookie->cookie, body->auto. Parameterless operations yield one target with mode auto. Unsupported locations (Swagger 2.0 formData) append a parser note and are excluded. Stage 5 is the transformation only; the loop that constructs one Scanner per target and drives them is Stage 6, and Stage 6 effort is revised upward from 2-3h to account for it.
+
+**Stage 5 amendment, 2026-11-11 (body targets).** As shipped, body locations emitted inject_in='json-body' with json_template=None. Scanner.__init__ rejects that combination, so any operation declaring a body parameter produced a target that raised ValueError on construction. The transformation was internally consistent (dispatch.py imports no scanner, by design), but the join went untested: six dispatch tests asserted emission, and none constructed a Scanner. Body locations now emit inject_in='auto', params=[], and a note; the endpoint is still scanned, without named body-param injection. New test_openapi_dispatch_consumption.py constructs a Scanner from every emitted target type, so the join is covered. Injecting body parameters by name requires request-body schema capture in the importer, which Operation does not carry; that is filed separately, not folded into Stage 6.
 
 ### Stage 6 — CLI wiring, `--dry-run`, integration
 
-Add `--openapi PATH` and `--dry-run` flags. Wire to scanner. Integration test: dry-run on a public spec, count operations, scan the smallest 3 operations against a mock. Assert no crashes and no silent drops.
+Add `--openapi PATH` and `--dry-run` flags. Wire to scanner. Integration test: dry-run on a public spec, count operations, scan the smallest 3 operations against a mock. Assert no crashes and no silent drops. **Revised estimate: 7-9 hours** (was 2-3h). The revision reflects what Stage 5's description implied but did not need: extracting the CLI's Scanner construction into a helper, the loop that builds one Scanner per build_scan_targets output, aggregation of N ScanSummary objects, and the body-target amendment above.
 
 ## Test strategy
 
@@ -150,11 +152,13 @@ Dry-run prints operations to stdout. The user can diff against their own reading
 | 2 — `$ref` | 6–8 hours |
 | 3 — 2.0 adapter | 3–4 hours |
 | 4 — server templates | 1–2 hours |
-| 5 — parameter dispatch | 4–6 hours |
-| 6 — CLI + integration | 2–3 hours |
-| **Total** | **~3 working days** |
+| 5 — parameter dispatch | 4–6 hours (+1–2h body amendment) |
+| 6 — CLI + integration | 7–9 hours (revised from 2–3h) |
+| **Total** | **~4 working days (revised)** |
 
 Not counting test fixture collection (a few hours), CI wiring, and the inevitable first real-world-spec bugs that emerge post-merge.
+
+Actuals for Stages 1-4 were not recorded. The row values for those stages remain the original estimates, not measurements; a future session should append an actuals table rather than infer one.
 
 ## Revisit triggers
 

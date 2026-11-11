@@ -16,8 +16,17 @@ LOCATION_TO_MODE: dict[str, str] = {
     "query": "param-name",
     "header": "header",
     "cookie": "cookie",
-    "body": "json-body",
+    # Body parameters are not injected by name: the importer does not
+    # capture request-body schemas, so Scanner's json-body mode has no
+    # json_template to work with and raises on construction. The endpoint
+    # is still scanned in "auto" mode; see BODY_LIMITATION_NOTE.
+    "body": "auto",
 }
+
+BODY_LIMITATION_NOTE = (
+    "body parameters are not injected by name "
+    "(ADR-030 Stage 5 limitation); endpoint is still scanned"
+)
 
 LOCATION_ORDER: list[str] = [
     "path",
@@ -58,6 +67,19 @@ def build_scan_targets(op: Operation) -> list[dict]:
     targets: list[dict] = []
     for loc in LOCATION_ORDER:
         if loc not in grouped:
+            continue
+        if loc == "body":
+            targets.append(
+                {
+                    "location": loc,
+                    "url": url,
+                    "params": [],
+                    "inject_in": LOCATION_TO_MODE[loc],
+                    "method": op.method,
+                    "json_template": None,
+                    "note": BODY_LIMITATION_NOTE,
+                }
+            )
             continue
         targets.append(
             {

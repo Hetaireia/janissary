@@ -111,6 +111,13 @@ def test_dispatch_no_parameters():
 
 
 def test_dispatch_body_location():
+    """Body params are not injected by name: Stage 5 limitation.
+
+    Before the amendment this asserted inject_in == "json-body", which
+    Scanner.__init__ rejects without a json_template. A body target now
+    scans the endpoint in "auto" mode with no named params and carries a
+    note. Consumption is tested in test_openapi_dispatch_consumption.py.
+    """
     op = Operation(
         path="/pets",
         method="post",
@@ -120,4 +127,6 @@ def test_dispatch_body_location():
     )
     targets = build_scan_targets(op)
     assert len(targets) == 1
-    assert targets[0]["inject_in"] == "json-body"
+    assert targets[0]["inject_in"] == "auto"
+    assert targets[0]["params"] == []
+    assert "note" in targets[0]
