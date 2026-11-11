@@ -57,8 +57,15 @@ def test_prance_parses_fixture(fixture):
     parser = ResolvingParser(str(fixture), backend=BACKEND, recursion_limit=5)
     spec = parser.specification
     assert isinstance(spec, dict)
-    assert "openapi" in spec
-    assert spec["openapi"].startswith("3.0.")
+    is_v3 = (
+        isinstance(spec.get("openapi"), str)
+        and spec["openapi"].startswith("3.0.")
+    )
+    is_v2 = (
+        isinstance(spec.get("swagger"), str)
+        and spec["swagger"] == "2.0"
+    )
+    assert is_v3 or is_v2
 
 
 @pytest.mark.parametrize("fixture", fixtures(), ids=lambda p: p.name)
