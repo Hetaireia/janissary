@@ -31,6 +31,7 @@ class RefResolver:
     ) -> None:
         self._root_path = Path(root_path).resolve()
         self._cache: dict[Path, Any] = {self._root_path: root_doc}
+        self._path_cache: dict[Path, Path] = {}
         self._max_depth = max_depth
 
     @property
@@ -38,7 +39,9 @@ class RefResolver:
         return self._root_path
 
     def resolve(self, node: Any, current_path: str | Path) -> tuple[Any, Path]:
-        path = Path(current_path).resolve()
+        if not isinstance(node, dict) or "$ref" not in node:
+            return node, Path(current_path)
+        path = self._resolved_path(current_path)
         visited: set[tuple[Path, str]] = set()
         depth = 0
         while isinstance(node, dict) and "$ref" in node:
@@ -57,6 +60,15 @@ class RefResolver:
             node = self._lookup(doc, pointer, ref)
             depth += 1
         return node, path
+
+    def _resolved_path(self, current_path: str | Path) -> Path:
+        p = Path(current_path)
+        cached = self._path_cache.get(p)
+        if cached is not None:
+            return cached
+        r = p.resolve()
+        self._path_cache[p] = r
+        return r
 
     def _split(self, ref: str, current_path: Path) -> tuple[Any, Path, str]:
         if ref.startswith("#"):
