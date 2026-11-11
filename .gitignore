@@ -152,6 +152,9 @@ tools/*.bak-*
 # Ascension rendered dashboards (regenerable from local state)
 renders/
 
+# Large OpenAPI fixtures fetched on demand (see tools/fetch_kube_spec.py)
+tests/fixtures/openapi/large/
+
 audit_out/
 janissary_audit.tgz
 
