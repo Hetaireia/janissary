@@ -89,6 +89,8 @@ Handle `servers[].url` with `{protocol}`, `{host}`, `{basePath}` variables. Fill
 
 Route path/query/header/cookie/body parameters to the correct scan call. Path params substitute into URL path. Query params append. Header and cookie params need `--inject-in` dispatch. Body params reuse `--json-template`.
 
+**Dispatch layer shipped 2026-11-11 (7597258).** Operation gains parameter_locations, populated from each resolved parameter in key. New dispatch.py exposes build_scan_targets(op), returning one target per distinct location: Scanner.inject_in is a single mode per instance, so an operation declaring path, query, and header parameters requires three scanners and therefore three targets. Mode map: path->path, query->param-name, header->header, cookie->cookie, body->json-body. Parameterless operations yield one target with mode auto. Unsupported locations (Swagger 2.0 formData) append a parser note and are excluded. Stage 5 is the transformation only; the loop that constructs one Scanner per target and drives them is Stage 6, and Stage 6 effort is revised upward from 2-3h to account for it.
+
 ### Stage 6 — CLI wiring, `--dry-run`, integration
 
 Add `--openapi PATH` and `--dry-run` flags. Wire to scanner. Integration test: dry-run on a public spec, count operations, scan the smallest 3 operations against a mock. Assert no crashes and no silent drops.
