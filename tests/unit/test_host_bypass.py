@@ -288,19 +288,28 @@ def _scanner_for_wiring():
     return Scanner(target="http://example.com/", params=["x"])
 
 
-def test_candidate_to_scan_finding_passes_engine_emitted_invariant():
-    """Converted finding must pass the asserting list's append check.
+def test_candidate_to_scan_finding_is_unproven_and_belongs_in_candidates():
+    """Discovery candidates must NOT pass the verified list's append check.
 
-    If _engine_emitted isn't set (or can't be set on a frozen dataclass),
-    appending to ScanSummary.findings raises AssertionError here.
+    The ADR-030 mandate (Rule 1) requires discovery to never emit a verified
+    ScanFinding. _candidate_to_scan_finding produces an unproven finding
+    without the _engine_emitted marker, so it can only go into
+    ScanSummary.candidates.
     """
     scanner = _scanner_for_wiring()
     c = _minimal_candidate()
     f = scanner._candidate_to_scan_finding(c)
+    assert f.verification_status == "unproven"
+    assert not getattr(f, "_engine_emitted", False)
+
     summary = _empty_scan_summary()
-    # This append is the assertion: _VerifiedFindingsList checks _engine_emitted
-    summary.findings.append(f)
-    assert summary.findings[0].finding_type == "host_header_acl_bypass"
+    summary.candidates.append(f)
+    assert summary.candidates[0].finding_type == "host_header_acl_bypass"
+
+    import pytest as _pytest
+
+    with _pytest.raises(AssertionError):
+        summary.findings.append(f)
 
 
 def test_scan_host_bypass_returns_populated_summary():
@@ -314,9 +323,11 @@ def test_scan_host_bypass_returns_populated_summary():
         return_value=[c],
     ):
         summary = scanner.scan_host_bypass()
-    assert summary.finding_count == 1
-    assert len(summary.findings) == 1
-    assert summary.findings[0].finding_type == "host_header_acl_bypass"
+    assert summary.finding_count == 0
+    assert len(summary.findings) == 0
+    assert len(summary.candidates) == 1
+    assert summary.candidates[0].finding_type == "host_header_acl_bypass"
+    assert summary.candidates[0].verification_status == "unproven"
     assert summary.method == "HOST-BYPASS"
     assert summary.total_requests == 3
 
@@ -333,6 +344,7 @@ def test_scan_host_bypass_clean_summary():
         summary = scanner.scan_host_bypass()
     assert summary.finding_count == 0
     assert len(summary.findings) == 0
+    assert len(summary.candidates) == 0
     assert summary.scan_incomplete is False
 
 

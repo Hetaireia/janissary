@@ -41,6 +41,26 @@ from janissary.scope import (
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
 
+def _finding_to_dict(f) -> dict:
+    return {
+        "param": f.param,
+        "payload_name": f.payload_name,
+        "payload_value": f.payload_value,
+        "category": f.category,
+        "severity": f.severity,
+        "finding_type": f.finding_type,
+        "detail": f.detail,
+        "response_status": f.response_status,
+        "response_length": f.response_length,
+        "response_time": f.response_time,
+        "reflection_context": f.reflection_context,
+        "response_content_type": f.response_content_type,
+        "fingerprint": f.fingerprint,
+        "verification_status": f.verification_status,
+        "verification_reason": f.verification_reason,
+    }
+
+
 def _summary_to_dict(summary: ScanSummary) -> dict:
     return {
         "target": summary.target,
@@ -48,6 +68,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "method": summary.method,
         "total_requests": summary.total_requests,
         "finding_count": summary.finding_count,
+        "candidate_count": len(summary.candidates),
         "group_count": len(summary.groups),
         "aborted": summary.aborted,
         "abort_reason": summary.abort_reason,
@@ -56,26 +77,8 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "waf": summary.waf,
         "pacer": summary.pacer,
         "groups": [g.to_dict() for g in summary.groups],
-        "findings": [
-            {
-                "param": f.param,
-                "payload_name": f.payload_name,
-                "payload_value": f.payload_value,
-                "category": f.category,
-                "severity": f.severity,
-                "finding_type": f.finding_type,
-                "detail": f.detail,
-                "response_status": f.response_status,
-                "response_length": f.response_length,
-                "response_time": f.response_time,
-                "reflection_context": f.reflection_context,
-                "response_content_type": f.response_content_type,
-                "fingerprint": f.fingerprint,
-                "verification_status": f.verification_status,
-                "verification_reason": f.verification_reason,
-            }
-            for f in summary.findings
-        ],
+        "findings": [_finding_to_dict(f) for f in summary.findings],
+        "candidates": [_finding_to_dict(f) for f in summary.candidates],
     }
 
 
@@ -263,17 +266,16 @@ def _merge_ws_into_scan(summary, ws_summary):
 
 
 def _merge_host_bypass_into_scan(summary, hb_summary):
-    """Merge Host-header ACL bypass findings into a completed HTTP scan summary.
+    """Merge Host-header ACL bypass candidates into a completed scan summary.
 
-    Mirrors _merge_ws_into_scan. Host-bypass findings already carry
-    _engine_emitted=True (via Scanner._candidate_to_scan_finding), so
-    they pass the asserting list's append check when merged.
+    Host-bypass output is discovery, not verified DAST. Per the ADR-030
+    mandate Rule 1, these findings are appended to summary.candidates and
+    never to summary.findings. finding_count is unaffected.
 
     See docs/PHASE-6-PLAN.md FN-20.
     """
-    for f in hb_summary.findings:
-        summary.findings.append(f)
-        summary.finding_count += 1
+    for f in hb_summary.candidates:
+        summary.candidates.append(f)
     summary.total_requests += hb_summary.total_requests
     if hb_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
@@ -644,10 +646,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
             print("[*] Host-header ACL bypass probe...")
         hb_summary = scanner.scan_host_bypass(baseline_host=args.baseline_host)
         summary = _merge_host_bypass_into_scan(summary, hb_summary)
-        if not args.quiet and hb_summary.findings:
+        if not args.quiet and hb_summary.candidates:
             print(
-                f"[*] Host-bypass: {len(hb_summary.findings)} finding(s) "
-                f"(see --json / --jsonl / --export for detail)"
+                f"[*] Host-bypass: {len(hb_summary.candidates)} candidate(s) "
+                f"(unproven; see --json / --jsonl / --export for detail)"
             )
 
     if getattr(args, "heuristic", False) and not summary.aborted:

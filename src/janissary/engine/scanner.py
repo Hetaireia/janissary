@@ -449,6 +449,35 @@ class _DedupedFindingsList(_VerifiedFindingsList):
         }
 
 
+class _CandidatesList(list):
+    """Findings list for discovery candidates (Track B / mandate Rule 1).
+
+    Discovery must never emit a verified ScanFinding. Every item appended
+    here must carry verification_status="unproven". A verified finding
+    belongs in ScanSummary.findings, not here.
+
+    This is the mirror of _VerifiedFindingsList: one list enforces
+    "engine-emitted only", this one enforces "not engine-verified". Together
+    they make cross-contamination a programming error rather than a
+    silent statistics problem.
+    """
+
+    def append(self, item):
+        status = getattr(item, "verification_status", "verified")
+        if status != "unproven":
+            raise AssertionError(
+                f"Discovery candidate list received a finding with "
+                f"verification_status={status!r}; candidates must be "
+                f"'unproven'. Verified findings belong in "
+                f"ScanSummary.findings."
+            )
+        super().append(item)
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+
 @dataclass
 class ScanSummary:
     target: str
@@ -461,6 +490,7 @@ class ScanSummary:
     scan_incomplete: bool = False  # True if aborted mid-scan (partial results present)
     baselines: dict = field(default_factory=dict)
     findings: list[ScanFinding] = field(default_factory=_DedupedFindingsList)
+    candidates: list[ScanFinding] = field(default_factory=_CandidatesList)
     groups: list = field(default_factory=list)
     waf: dict | None = None
     pacer: dict | None = None
@@ -1075,11 +1105,13 @@ class Scanner:
     def _candidate_to_scan_finding(self, c) -> ScanFinding:
         """Convert a CandidateFinding from an integration module to ScanFinding.
 
-        Sets the Phase 0.1 _engine_emitted attribute so the finding can be
-        appended to ScanSummary.findings (the asserting list at
-        scanner.py:290 checks it on append/extend).
+        The finding is explicitly unproven: it did NOT pass through
+        _ENGINE.verify() and must be appended to ScanSummary.candidates,
+        never ScanSummary.findings. The _engine_emitted marker is
+        deliberately NOT set. See ADR-030 mandate Rule 1: discovery must
+        never emit a verified ScanFinding.
         """
-        f = ScanFinding(
+        return ScanFinding(
             param=c.param,
             payload_name=c.payload_name,
             payload_value=c.payload_value,
@@ -1091,9 +1123,10 @@ class Scanner:
             response_length=c.response_length,
             url=getattr(c, "url", ""),
             method=getattr(c, "method", "GET"),
+            verification_status="unproven",
+            verification_reason=getattr(c, "discovery_reason", None)
+            or "discovery candidate; not verified by engine",
         )
-        f._engine_emitted = True
-        return f
 
     def scan_host_bypass(self, baseline_host: str | None = None) -> ScanSummary:
         """Run Host-header ACL bypass detection against self.target.
@@ -1123,9 +1156,7 @@ class Scanner:
         summary.total_requests = 3
 
         for c in candidates:
-            f = self._candidate_to_scan_finding(c)
-            summary.findings.append(f)
-            summary.finding_count += 1
+            summary.candidates.append(self._candidate_to_scan_finding(c))
 
         return summary
 

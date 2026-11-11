@@ -9,6 +9,7 @@ and reporting are derived.
 Merge semantics, chosen deliberately:
 
   findings, total_requests   summed; findings dedupe by fingerprint
+  candidates                 summed; never enter findings (mandate Rule 1)
   params                     union, order preserved
   aborted, scan_incomplete   OR; first abort_reason wins
   baselines                  dict.update (param names are unique per location)
@@ -55,6 +56,8 @@ def merge_scan_summaries(summaries: list[ScanSummary]) -> ScanSummary:
     for s in summaries:
         for f in s.findings:
             merged.findings.append(f)
+        for c in s.candidates:
+            merged.candidates.append(c)
         merged.total_requests += s.total_requests
         merged.baselines.update(s.baselines)
         if merged.waf is None and s.waf is not None:
