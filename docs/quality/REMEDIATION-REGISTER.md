@@ -28,9 +28,9 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L02 — Mid-Scan Authentication Expiry
 - **Status:** Partial
 - **Priority:** P0
-- **Evidence:** `bd7f1c3` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. 4 tests in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged.
-- **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Reauth itself is not tested — the abort path in `scanner.py` is not covered by unit tests (would need `_paced_request`, `collect_baseline` and `_detect_waf` mocked).
-- **Next Action:** (1) Add an abort-path test that mocks `_paced_request` to return two 401s and asserts `auth_state == "expired"`. (2) Extend with an `AuthStateManager` when reauth is specified. Reconcile with tri-session (M41) rather than a parallel subsystem.
+- **Evidence:** `bd7f1c3` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. `e96f31c` adds abort-path coverage: 3 tests against real ResponseSnapshot/compute_arming_state with 3 mocks, plus the auth_configured gate test. 7 tests total in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged.
+- **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Abort-path unit tests now exist (`e96f31c`).
+- **Next Action:** Extend with an `AuthStateManager` when reauth is specified. Reconcile with tri-session (M41) rather than a parallel subsystem.
 - **Closure Criterion:** Structured auth state in all output formats (JSON, JSONL, SARIF — not just text). Reauth tested against a mock IdP.
 
 ### JAN-L03 — Framework-Specific SQL Injection
@@ -115,4 +115,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c). Next review scheduled.*
