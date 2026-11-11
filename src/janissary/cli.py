@@ -335,10 +335,77 @@ def _build_scanner(
     )
 
 
+def _cmd_scan_openapi_dry_run(args: argparse.Namespace) -> int:
+    """Enumerate OpenAPI operations and dispatch targets without scanning.
+
+    Exit 0 on success, 64 on import failure. No Scanner, no network, no
+    preflight -- this is both a user-facing preview and the integration
+    test's entry point.
+    """
+    from janissary.importers.dispatch import build_scan_targets
+    from janissary.importers.openapi import OpenAPIImportError, parse_spec
+
+    try:
+        result = parse_spec(args.openapi)
+    except OpenAPIImportError as exc:
+        print(f"[!] --openapi: {exc}", file=sys.stderr)
+        return 64
+
+    print(f"[*] Spec: {args.openapi}")
+    print(f"[*] Version: {result.spec_version}")
+    print(
+        f"[*] Operations: {len(result.imported)} imported, "
+        f"{len(result.skipped)} skipped"
+    )
+
+    total_targets = 0
+    for op in result.imported:
+        targets = build_scan_targets(op)
+        total_targets += len(targets)
+        print()
+        print(f"  {op.method.upper()} {op.path}  ({op.operation_id or '-'})")
+        for tgt in targets:
+            line = (
+                f"    -> {tgt['location']:<7} inject={tgt['inject_in']:<10} "
+                f"params={len(tgt['params'])} url={tgt['url']}"
+            )
+            note = tgt.get("note")
+            if note:
+                line += f"  [{note}]"
+            print(line)
+
+    if result.skipped:
+        print()
+        print("[*] Skipped:")
+        for s in result.skipped:
+            print(f"    {s.method.upper()} {s.path}: {s.reason}")
+
+    if result.notes:
+        print()
+        print("[*] Notes:")
+        for n in result.notes:
+            print(f"    {n}")
+
+    print()
+    print(f"[*] Total targets: {total_targets}")
+    return 0
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
         return 0
+
+    if getattr(args, "openapi", None):
+        if not getattr(args, "dry_run", False):
+            print(
+                "[!] --openapi without --dry-run: the per-operation scan loop "
+                "is ADR-030 Stage 6 and is not implemented yet. "
+                "Use --dry-run to enumerate targets.",
+                file=sys.stderr,
+            )
+            return 64
+        return _cmd_scan_openapi_dry_run(args)
 
     if not args.url:
         print(
@@ -1762,6 +1829,21 @@ def build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="where to place the payload "
         "(default: auto = query for GET, body for POST). For 'path', also pass --baseline-value with a known-good value; URL templates like /users/v1/{username} are substituted per request.",
+    )
+    scan.add_argument(
+        "--openapi",
+        default=None,
+        metavar="PATH",
+        help=(
+            "import an OpenAPI 3.0 or Swagger 2.0 JSON spec and enumerate "
+            "scan targets per operation (ADR-030). Requires --dry-run until "
+            "the per-operation scan loop ships."
+        ),
+    )
+    scan.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="with --openapi, print the operations and dispatch targets without scanning.",
     )
     scan.add_argument(
         "--collaborator",
