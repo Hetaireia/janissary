@@ -41,13 +41,21 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Next Action:** Build FN-classification table (delivered/neutralised/indistinguishable) before touching payloads.
 - **Closure Criterion:** DBMS/framework corpus passes; no precision regression.
 
-### JAN-L04 — Path Traversal Recall
-- **Status:** Accepted Limitation (Partial)
+### JAN-L04a — Path Traversal Recall (observable cases)
+- **Status:** In Progress
 - **Priority:** P0
-- **Evidence:** Recall 0.075; per-subcategory F1 0.049–0.308. Amendment 5: structural ceiling ~4/72. `docs/pathtraver.md` documents it.
-- **Remaining Gap:** 65 FN remain, ~68/72 structurally unobservable by this oracle on this corpus.
-- **Next Action:** Split register entry into *observable-but-missed* (fixable) vs *structurally unobservable* (document, do not chase). Build dedicated traversal corpus.
-- **Closure Criterion:** Observable subset recall ≥0.30 without FP regression.
+- **Evidence:** Full corpus 133 vulnerable cases, TP=10, FN=123, recall 0.075 (`docs/pathtraver.md:57`, artefact `run-1-recovery-score.txt`). A 72-case hand sample split 4 existence-divergence / 22 fixed-string scaffold / 46 write-sink scaffold; selection not preserved in the repo. The 4/22/46 split is representative, not a census.
+- **Remaining Gap:** The observable-subset denominator is not established. The 72-sample implies ~4/72 (5.6%) have a divergence the current oracle can act on, but the full corpus yields 10 TP, which exceeds 4 — so either the sample under-represents observable cases or some TPs come from a different mechanism. No dedicated traversal harness exists to measure either way.
+- **Next Action:** (1) Instrument the traversal path to report delivery vs neutralisation vs no-divergence per case (mandate L04 "establish the real cause"). (2) Build a dedicated traversal harness with a documented denominator. (3) Only then set a recall target against a verified figure.
+- **Closure Criterion:** Observable-subset recall measured against a documented denominator, no FP regression against the existing baseline.
+
+### JAN-L04b — Path Traversal (structurally unobservable)
+- **Status:** Accepted Limitation
+- **Priority:** Documentation
+- **Evidence:** 123 of 123 non-firing pathtraver cases fall into the "no divergence" bucket by construction of the paired-differential oracle (`docs/pathtraver.md:57`). Two scaffolds account for the sample majority: fixed-string `already exists` on both payloads (22/72), and write-sink echo with no other outcome (46/72).
+- **Remaining Gap:** None fixable by signature expansion. This is the oracle's information-theoretic ceiling on that corpus. Additional payloads cannot create a differential where the target produces none.
+- **Next Action:** Record the exclusion in `BENCHMARK.md` with corpus-level evidence, so the 0.075 aggregate carries its denominator inline rather than in a separate document.
+- **Closure Criterion:** Exclusion documented in BENCHMARK.md with corpus-level evidence; aggregate recall reported with the caveat inline.
 
 ### JAN-L05 — SSRF / OOB Coverage
 - **Status:** Mitigated
@@ -115,4 +123,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md). Next review scheduled.*
