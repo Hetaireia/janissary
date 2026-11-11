@@ -83,6 +83,8 @@ Resolve local `#/components/...` and external file `$ref` chains. Test against a
 
 Handle `servers[].url` with `{protocol}`, `{host}`, `{basePath}` variables. Fill from `servers[].variables` defaults. If a template variable has no default, log skipped with reason.
 
+**Shipped 2026-11-11 (2ad849b), with two clarifications.** The original wording conflated versions: template substitution from servers[].variables is OpenAPI 3.0 only; Swagger 2.0 has no templating, its base URL is schemes[0] + host + basePath. Both are implemented, dispatched on the version key. Second, unresolved template variables append a note and leave Operation.base_url empty rather than emitting SkipRecords: SkipRecord is operation-scoped and server resolution is spec-scoped, so a literal skip would zero out every operation for one missing default. Per-operation and per-path servers overrides remain out of scope.
+
 ### Stage 5 — parameter dispatch
 
 Route path/query/header/cookie/body parameters to the correct scan call. Path params substitute into URL path. Query params append. Header and cookie params need `--inject-in` dispatch. Body params reuse `--json-template`.
