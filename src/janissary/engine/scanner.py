@@ -488,6 +488,9 @@ class ScanSummary:
     aborted: bool = False
     abort_reason: str | None = None
     scan_incomplete: bool = False  # True if aborted mid-scan (partial results present)
+    # Auth lifecycle state (JAN-L02). Unknown by default: sub-summaries
+    # from host-bypass, GraphQL and WebSocket have no auth context.
+    auth_state: str = "unknown"
     baselines: dict = field(default_factory=dict)
     findings: list[ScanFinding] = field(default_factory=_DedupedFindingsList)
     candidates: list[ScanFinding] = field(default_factory=_CandidatesList)
@@ -1347,6 +1350,9 @@ class Scanner:
             method=self.method,
         )
 
+        summary.auth_state = (
+            "authenticated" if self.auth_configured else "unauthenticated"
+        )
         ok, reason = self.preflight()
         summary.total_requests += 1
         if not ok:
@@ -1434,6 +1440,7 @@ class Scanner:
                     summary.aborted = True
                     summary.scan_incomplete = True
                     if self._session_rotator is not None:
+                        summary.auth_state = "recovery_failed"
                         summary.abort_reason = (
                             f"auth expired: {self._consecutive_401s} "
                             f"consecutive HTTP 401 responses after rotation; "
@@ -1442,6 +1449,7 @@ class Scanner:
                             f"(param={param}, last payload={name})"
                         )
                     else:
+                        summary.auth_state = "expired"
                         summary.abort_reason = (
                             f"auth expired: {self._consecutive_401s} "
                             f"consecutive HTTP 401 responses "

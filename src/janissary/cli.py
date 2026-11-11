@@ -73,6 +73,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "aborted": summary.aborted,
         "abort_reason": summary.abort_reason,
         "scan_incomplete": summary.scan_incomplete,
+        "auth_state": summary.auth_state,
         "baselines": summary.baselines,
         "waf": summary.waf,
         "pacer": summary.pacer,
@@ -118,6 +119,9 @@ def _print_summary(summary: ScanSummary) -> None:
             f"  Negative result: no findings after "
             f"{summary.total_requests} request(s); target responded normally."
         )
+
+    if summary.auth_state in ("expired", "recovery_failed"):
+        print(f"  Auth state:      {summary.auth_state}")
 
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
