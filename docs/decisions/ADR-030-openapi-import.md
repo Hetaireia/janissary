@@ -77,6 +77,8 @@ Resolve local `#/components/...` and external file `$ref` chains. Test against a
 
 2.0 has a different schema (`definitions` not `components/schemas`, `host`+`basePath`+`schemes` not `servers`). Write the adapter. Same tests, different fixtures. Stage 3 also carries the Kubernetes torture test (api/openapi-spec/swagger.json, ~3 MB, Swagger 2.0), moved here from Stage 2 because Stage 2 validates 3.0 only.
 
+**Shipped 2026-11-11.** Version gate accepts both openapi 3.0.x and swagger 2.0 (9a997c0). petstore-2.0 fixture, 14 paths and 20 operations, flows through the oracle and the parameter-name differential (38624fe). Kubernetes swagger.json, 4.3 MB and 1172 operations, parses in 0.27s at 17.4 MB peak against a 100 MB ceiling (3e497ed). The torture test found a performance bug the small-fixture tests could not: RefResolver.resolve called Path.resolve unconditionally before checking for $ref, then again per parameter; kube parse went from minutes to 0.27s after the fast-path and path-cache fix (7cfc8ad). No prance differential exists for the kube fixture; see the exception note under Differential testing.
+
 ### Stage 4 — server URL templating
 
 Handle `servers[].url` with `{protocol}`, `{host}`, `{basePath}` variables. Fill from `servers[].variables` defaults. If a template variable has no default, log skipped with reason.
@@ -94,6 +96,8 @@ Add `--openapi PATH` and `--dry-run` flags. Wire to scanner. Integration test: d
 ### Differential testing from day one
 
 Every parser test runs the same fixture through two parsers — JANISSARY's new parser and `prance` — and asserts they agree on operation count, parameter count, and per-operation parameter names. Disagreement is a test failure, not a warning.
+
+**Exception, 2026-11-11.** The Kubernetes torture test has no prance differential. prance cannot parse the Kubernetes spec: its ref discoverer treats every $ref key as a URL reference, and Kubernetes uses $ref as a JSON Schema property name (ObjectReference.ref -> type string), so prance raises AttributeError: dict object has no attribute decode inside prance.util.resolver._discover_refs. JANISSARY resolves refs only in path items and parameter entries, never inside schemas, so it is unaffected. The kube test asserts a measured operation count (1172) and a memory ceiling instead, and documents the prance failure in its docstring. All other fixtures run the full prance differential unchanged.
 
 `prance` is a mature OpenAPI parser used by Bravado and other API tooling. It supports 2.0 and 3.0. It is a test dependency only (add to `pyproject.toml` under `[project.optional-dependencies] dev`), not a runtime dependency.
 
