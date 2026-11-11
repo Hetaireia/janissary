@@ -1,4 +1,5 @@
 """Branding tests: banner, --version, --help all carry the brand line."""
+
 import pytest
 
 from janissary.cli import _print_banner, build_parser

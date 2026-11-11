@@ -581,11 +581,28 @@ class Scanner:
         if ssrf_redirector:
             _red = ssrf_redirector.rstrip("?&")
             _sep = "&" if "?" in _red else "?"
-            self._payloads.extend([
-                ("ssrf_redirect_aws", f"{_red}{_sep}to=http://169.254.169.254/latest/meta-data/", "ssrf", "critical"),
-                ("ssrf_redirect_gcp", f"{_red}{_sep}to=http://metadata.google.internal/computeMetadata/v1/", "ssrf", "critical"),
-                ("ssrf_redirect_azure", f"{_red}{_sep}to=http://169.254.169.254/metadata/instance", "ssrf", "critical"),
-            ])
+            self._payloads.extend(
+                [
+                    (
+                        "ssrf_redirect_aws",
+                        f"{_red}{_sep}to=http://169.254.169.254/latest/meta-data/",
+                        "ssrf",
+                        "critical",
+                    ),
+                    (
+                        "ssrf_redirect_gcp",
+                        f"{_red}{_sep}to=http://metadata.google.internal/computeMetadata/v1/",
+                        "ssrf",
+                        "critical",
+                    ),
+                    (
+                        "ssrf_redirect_azure",
+                        f"{_red}{_sep}to=http://169.254.169.254/metadata/instance",
+                        "ssrf",
+                        "critical",
+                    ),
+                ]
+            )
         if self.inject_in == "json-body":
             # json-body: filter to categories declared in the template's
             # _categories field. Default ["ssrf"] preserves backward
@@ -871,9 +888,16 @@ class Scanner:
             _red = self.ssrf_redirector.rstrip("?&")
             _sep = "&" if "?" in _red else "?"
             from janissary.integrations.collaborator import SsrfPayload
+
             _redirect_payloads = [
-                SsrfPayload("ssrf_redirect_oob_http", f"{_red}{_sep}to=http://{{uniq}}.{{collab}}/"),
-                SsrfPayload("ssrf_redirect_oob_https", f"{_red}{_sep}to=https://{{uniq}}.{{collab}}/"),
+                SsrfPayload(
+                    "ssrf_redirect_oob_http",
+                    f"{_red}{_sep}to=http://{{uniq}}.{{collab}}/",
+                ),
+                SsrfPayload(
+                    "ssrf_redirect_oob_https",
+                    f"{_red}{_sep}to=https://{{uniq}}.{{collab}}/",
+                ),
             ]
             for payload in _redirect_payloads:
                 uniq = self.collaborator.new_unique_id(payload.name)

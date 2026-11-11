@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from janissary.engine.scanner import DEFAULT_PAYLOADS, SSRF_BODY_MARKERS, Scanner
+from janissary.engine.scanner import SSRF_BODY_MARKERS, Scanner
 
 
 def _payload_names(scanner: Scanner) -> set[str]:

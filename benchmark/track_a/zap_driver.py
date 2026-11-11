@@ -1,4 +1,5 @@
 """ZAP driver for Track A benchmark -- parameterized URLs via automation framework."""
+
 from __future__ import annotations
 
 import json
@@ -17,7 +18,9 @@ def _seed_url(base: str, case: dict) -> str:
 def run_zap_v2(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     image = env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable")
     wrk = run_dir.resolve()
-    base = base.replace("127.0.0.1", "host.docker.internal").replace("localhost", "host.docker.internal")
+    base = base.replace("127.0.0.1", "host.docker.internal").replace(
+        "localhost", "host.docker.internal"
+    )
 
     urls = [_seed_url(base, c) for c in cases]
     (run_dir / "urls.txt").write_text("\n".join(urls), encoding="utf-8")
@@ -61,10 +64,17 @@ def run_zap_v2(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     (run_dir / "automation.yaml").write_text("\n".join(y), encoding="utf-8")
 
     cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{wrk}:/zap/wrk/:rw",
-        "-t", image,
-        "zap.sh", "-cmd", "-autorun", "/zap/wrk/automation.yaml",
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{wrk}:/zap/wrk/:rw",
+        "-t",
+        image,
+        "zap.sh",
+        "-cmd",
+        "-autorun",
+        "/zap/wrk/automation.yaml",
     ]
     code = run_subprocess(cmd, run_dir, timeout=float(env.get("ZAP_TIMEOUT", "3600")))
 

@@ -8,6 +8,7 @@ Dispatch returns one target per distinct parameter location: an
 operation with a path param, a query param, and a header param yields
 three targets, because Scanner.inject_in is a single mode per scanner.
 """
+
 import json
 
 from janissary.importers.dispatch import build_scan_targets
@@ -50,9 +51,7 @@ def test_parameter_locations_skips_unsupported(tmp_path):
             "/upload": {
                 "post": {
                     "operationId": "up",
-                    "parameters": [
-                        {"name": "file", "in": "formData", "type": "file"}
-                    ],
+                    "parameters": [{"name": "file", "in": "formData", "type": "file"}],
                     "responses": {"200": {"description": "ok"}},
                 }
             }

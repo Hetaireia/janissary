@@ -7,6 +7,7 @@ in three locations needs three scanners -- hence three targets.
 No scanner import, no network, no I/O. Pure transformation so it can
 be tested without standing up a target.
 """
+
 from __future__ import annotations
 
 from janissary.importers.openapi import Operation

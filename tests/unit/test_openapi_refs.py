@@ -5,6 +5,7 @@ refs. The first two were red before RefResolver landed; both are
 silent-drop classes where the operation count stays green while names
 or whole operations vanish without a SkipRecord.
 """
+
 import json
 from pathlib import Path
 

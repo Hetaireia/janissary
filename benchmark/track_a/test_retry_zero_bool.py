@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from benchmark.track_a.runner import _retry_zero_pass
+from benchmark.track_a.runner import _retry_zero_pass  # noqa: E402
 
 
 def test_retry_zero_pass_accepts_bool_vulnerable():

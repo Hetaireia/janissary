@@ -1,4 +1,5 @@
 import sys
+
 from prance import ResolvingParser
 
 METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}

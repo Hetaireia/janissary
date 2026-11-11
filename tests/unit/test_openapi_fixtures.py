@@ -4,6 +4,7 @@ No JANISSARY parser code yet. This asserts that prance, the reference
 implementation, agrees with the committed expected counts. When the
 Stage 1 parser lands, these counts become its target.
 """
+
 import json
 from pathlib import Path
 
@@ -23,8 +24,10 @@ def _find_fixtures_dir():
         if candidate.is_dir():
             return candidate
     raise RuntimeError(
-        "could not locate openapi fixtures dir; file=" + str(here)
-        + " cwd=" + str(Path.cwd())
+        "could not locate openapi fixtures dir; file="
+        + str(here)
+        + " cwd="
+        + str(Path.cwd())
     )
 
 
@@ -33,7 +36,8 @@ FIXTURES_DIR = _find_fixtures_dir()
 
 def fixtures():
     found = sorted(
-        p for p in FIXTURES_DIR.iterdir()
+        p
+        for p in FIXTURES_DIR.iterdir()
         if p.suffix == ".json" and not p.name.endswith(".expected.json")
     )
     if not found:
@@ -44,8 +48,8 @@ def fixtures():
 def count_operations(spec):
     paths = 0
     ops = 0
-    for path, item in spec.get("paths", {}).items():
-        n = sum(1 for m in item.keys() if m.lower() in METHODS)
+    for _path, item in spec.get("paths", {}).items():
+        n = sum(1 for m in item if m.lower() in METHODS)
         if n:
             paths += 1
             ops += n
@@ -57,14 +61,8 @@ def test_prance_parses_fixture(fixture):
     parser = ResolvingParser(str(fixture), backend=BACKEND, recursion_limit=5)
     spec = parser.specification
     assert isinstance(spec, dict)
-    is_v3 = (
-        isinstance(spec.get("openapi"), str)
-        and spec["openapi"].startswith("3.0.")
-    )
-    is_v2 = (
-        isinstance(spec.get("swagger"), str)
-        and spec["swagger"] == "2.0"
-    )
+    is_v3 = isinstance(spec.get("openapi"), str) and spec["openapi"].startswith("3.0.")
+    is_v2 = isinstance(spec.get("swagger"), str) and spec["swagger"] == "2.0"
     assert is_v3 or is_v2
 
 

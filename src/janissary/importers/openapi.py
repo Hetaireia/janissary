@@ -10,6 +10,7 @@ The parser returns both what it imported and what it skipped, with
 reasons. len(imported) + len(skipped) must equal the total operation
 count in the spec. That is the silent drop invariant from ADR-030.
 """
+
 from __future__ import annotations
 
 import json
@@ -111,28 +112,20 @@ class OpenAPIParser:
                 "spec paths is not an object: " + type(paths).__name__
             )
         for path, item in paths.items():
-            self._enumerate_path(
-                str(path), item, self._resolver.root_path
-            )
+            self._enumerate_path(str(path), item, self._resolver.root_path)
         return self.result
 
     def _load(self) -> Any:
         if not self.source.is_file():
-            raise OpenAPIImportError(
-                "spec file not found: " + str(self.source)
-            )
+            raise OpenAPIImportError("spec file not found: " + str(self.source))
         try:
             text = self.source.read_text(encoding="utf8")
         except OSError as exc:
-            raise OpenAPIImportError(
-                "could not read spec file: " + str(exc)
-            ) from exc
+            raise OpenAPIImportError("could not read spec file: " + str(exc)) from exc
         try:
             return json.loads(text)
         except json.JSONDecodeError as exc:
-            raise OpenAPIImportError(
-                "spec is not valid JSON: " + str(exc)
-            ) from exc
+            raise OpenAPIImportError("spec is not valid JSON: " + str(exc)) from exc
 
     def _validate(self, raw: Any) -> dict:
         if not isinstance(raw, dict):
@@ -141,19 +134,14 @@ class OpenAPIParser:
             )
         openapi_version = raw.get("openapi")
         swagger_version = raw.get("swagger")
-        is_v3 = (
-            isinstance(openapi_version, str)
-            and openapi_version.startswith("3.0.")
-        )
-        is_v2 = (
-            isinstance(swagger_version, str)
-            and swagger_version == "2.0"
-        )
+        is_v3 = isinstance(openapi_version, str) and openapi_version.startswith("3.0.")
+        is_v2 = isinstance(swagger_version, str) and swagger_version == "2.0"
         if not is_v3 and not is_v2:
             raise OpenAPIImportError(
                 "unsupported spec version: openapi="
                 + str(openapi_version)
-                + " swagger=" + str(swagger_version)
+                + " swagger="
+                + str(swagger_version)
                 + " (Stage 3 handles 3.0.x and 2.0)"
             )
         if "paths" not in raw:
@@ -185,9 +173,7 @@ class OpenAPIParser:
             return ""
         first = servers[0]
         if not isinstance(first, dict):
-            self.result.notes.append(
-                "servers[0] is not an object; base_url unresolved"
-            )
+            self.result.notes.append("servers[0] is not an object; base_url unresolved")
             return ""
         url = first.get("url")
         if not isinstance(url, str) or not url:
@@ -204,27 +190,25 @@ class OpenAPIParser:
             end = out.find("}", start)
             if end == -1:
                 break
-            name = out[start + 1:end]
+            name = out[start + 1 : end]
             var_spec = variables.get(name)
             if not isinstance(var_spec, dict):
                 self.result.notes.append(
-                    "server variable " + name
+                    "server variable "
+                    + name
                     + " has no definition; base_url unresolved"
                 )
                 return ""
             default = var_spec.get("default")
             if not isinstance(default, str) or not default:
                 self.result.notes.append(
-                    "server variable " + name
-                    + " has no default; base_url unresolved"
+                    "server variable " + name + " has no default; base_url unresolved"
                 )
                 return ""
-            out = out[:start] + default + out[end + 1:]
+            out = out[:start] + default + out[end + 1 :]
         return out
 
-    def _parameter_locations(
-        self, op: dict, current_path: Path
-    ) -> dict[str, str]:
+    def _parameter_locations(self, op: dict, current_path: Path) -> dict[str, str]:
         params = op.get("parameters")
         if not isinstance(params, list):
             return {}
@@ -248,17 +232,17 @@ class OpenAPIParser:
             loc = p.get("in")
             if not isinstance(loc, str) or loc not in supported:
                 self.result.notes.append(
-                    "parameter " + name
+                    "parameter "
+                    + name
                     + " has unsupported location '"
-                    + str(loc) + "'; not dispatched"
+                    + str(loc)
+                    + "'; not dispatched"
                 )
                 continue
             locations[name] = loc
         return locations
 
-    def _enumerate_path(
-        self, path: str, item: Any, item_path: Path
-    ) -> None:
+    def _enumerate_path(self, path: str, item: Any, item_path: Path) -> None:
         resolver = self._resolver
         if resolver is None:
             raise RuntimeError("resolver not initialized; call parse() first")
@@ -278,13 +262,10 @@ class OpenAPIParser:
                 SkipRecord(
                     path=path,
                     method="*",
-                    reason="path item is not an object: "
-                    + type(item).__name__,
+                    reason="path item is not an object: " + type(item).__name__,
                 )
             )
-            self.result.notes.append(
-                "skipped non object path item: " + path
-            )
+            self.result.notes.append("skipped non object path item: " + path)
             return
         for method_key, op in item.items():
             method = str(method_key).lower()
@@ -295,8 +276,7 @@ class OpenAPIParser:
                     SkipRecord(
                         path=path,
                         method=method,
-                        reason="operation is not an object: "
-                        + type(op).__name__,
+                        reason="operation is not an object: " + type(op).__name__,
                     )
                 )
                 continue
@@ -311,9 +291,7 @@ class OpenAPIParser:
                 )
             )
 
-    def _parameter_names(
-        self, op: dict, current_path: Path
-    ) -> list[str]:
+    def _parameter_names(self, op: dict, current_path: Path) -> list[str]:
         params = op.get("parameters")
         if not isinstance(params, list):
             return []
@@ -327,9 +305,7 @@ class OpenAPIParser:
             try:
                 p, _ = resolver.resolve(p, current_path)
             except RefError as exc:
-                self.result.notes.append(
-                    "unresolvable parameter ref: " + str(exc)
-                )
+                self.result.notes.append("unresolvable parameter ref: " + str(exc))
                 continue
             if not isinstance(p, dict):
                 continue

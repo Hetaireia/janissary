@@ -48,8 +48,7 @@ from benchmark.common.run_utils import (  # noqa: E402
     run_subprocess,
     write_manifest,
 )
-
-from benchmark.track_a.zap_driver import run_zap_v2
+from benchmark.track_a.zap_driver import run_zap_v2  # noqa: E402
 
 TRACK = "track_a"
 BENCH_ROOT = HERE.parent
@@ -306,7 +305,9 @@ def run_nuclei(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
 def run_zap(run_dir: Path, cases: list[dict], base: str, env: dict) -> int:
     image = env.get("ZAP_IMAGE", "ghcr.io/zaproxy/zaproxy:stable")
     wrk = run_dir.resolve()
-    base = base.replace("127.0.0.1", "host.docker.internal").replace("localhost", "host.docker.internal")
+    base = base.replace("127.0.0.1", "host.docker.internal").replace(
+        "localhost", "host.docker.internal"
+    )
     cmd = [
         "docker",
         "run",
@@ -383,7 +384,8 @@ def _retry_zero_pass(run_dir, cases, base, env, driver) -> None:
     """Amendment 20 FN-retry protocol: rerun zero-finding vulnerable cases."""
     fired = _fired_testnames(run_dir / "findings.jsonl")
     zero = [
-        c for c in cases
+        c
+        for c in cases
         if c["testname"] not in fired
         and str(c.get("vulnerable") or "").strip().lower() == "true"
     ]
@@ -401,6 +403,7 @@ def _retry_zero_pass(run_dir, cases, base, env, driver) -> None:
             out.write(data)
             if data and not data.endswith(b"\n"):
                 out.write(b"\n")
+
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
@@ -423,11 +426,13 @@ def main(argv: list[str] | None = None) -> int:
         dest="retry_zero",
         action="store_true",
         help="Amendment 20 FN-retry: rerun zero-finding vulnerable cases "
-             "(janissary tool only).",
+        "(janissary tool only).",
     )
     args = p.parse_args(argv)
     if not args.target_base.rstrip("/").endswith("/benchmark"):
-        p.error("--target-base must end with /benchmark (e.g. http://host:8080/benchmark)")
+        p.error(
+            "--target-base must end with /benchmark (e.g. http://host:8080/benchmark)"
+        )
     cases = load_cases(args.cases_csv)
     if not cases:
         print(f"[runner] no cases loaded from {args.cases_csv}", file=sys.stderr)

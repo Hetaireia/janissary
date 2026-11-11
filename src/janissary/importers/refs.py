@@ -5,6 +5,7 @@ resolution surface is deliberately narrow -- schemas, responses, and
 request bodies are never traversed -- which keeps memory bounded on
 large specs and avoids pulling Stage 5 concerns into Stage 2.
 """
+
 from __future__ import annotations
 
 import json
@@ -121,12 +122,8 @@ class RefResolver:
                         "JSON pointer list index not int: " + original
                     ) from exc
                 if idx < 0 or idx >= len(node):
-                    raise RefError(
-                        "JSON pointer list index out of range: " + original
-                    )
+                    raise RefError("JSON pointer list index out of range: " + original)
                 node = node[idx]
             else:
-                raise RefError(
-                    "JSON pointer traversed non-container in " + original
-                )
+                raise RefError("JSON pointer traversed non-container in " + original)
         return node

@@ -3,6 +3,7 @@
 Red before the data-model change and resolver land: Operation has no
 base_url field, and nothing reads servers/host/basePath/schemes.
 """
+
 import json
 
 from janissary.importers.openapi import parse_spec

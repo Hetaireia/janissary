@@ -4,6 +4,7 @@ Red before the version gate is relaxed: _validate rejects anything
 that is not 3.0.x. These inline specs are the minimum needed to prove
 acceptance and ref resolution, not full 2.0 coverage.
 """
+
 import json
 
 from janissary.importers.openapi import parse_spec
@@ -23,9 +24,7 @@ def test_swagger_2_0_accepted(tmp_path):
             "/ping": {
                 "get": {
                     "operationId": "ping",
-                    "parameters": [
-                        {"name": "q", "in": "query", "type": "string"}
-                    ],
+                    "parameters": [{"name": "q", "in": "query", "type": "string"}],
                     "responses": {"200": {"description": "ok"}},
                 }
             }
@@ -69,16 +68,12 @@ def test_swagger_2_0_parameter_ref(tmp_path):
             "/x": {
                 "get": {
                     "operationId": "x",
-                    "parameters": [
-                        {"$ref": "#/parameters/CommonQ"}
-                    ],
+                    "parameters": [{"$ref": "#/parameters/CommonQ"}],
                     "responses": {"200": {"description": "ok"}},
                 }
             }
         },
-        "parameters": {
-            "CommonQ": {"name": "q", "in": "query", "type": "string"}
-        },
+        "parameters": {"CommonQ": {"name": "q", "in": "query", "type": "string"}},
     }
     result = parse_spec(_write(tmp_path, spec))
     assert len(result.imported) == 1

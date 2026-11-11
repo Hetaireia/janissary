@@ -4,6 +4,7 @@ Covers the silent drop invariant: every operation either imports or
 lands in skipped with a reason. Differential checks against the
 committed expected count files, which Commit A verified against prance.
 """
+
 import json
 from pathlib import Path
 
@@ -23,8 +24,10 @@ def _find_fixtures_dir():
         if candidate.is_dir():
             return candidate
     raise RuntimeError(
-        "could not locate openapi fixtures dir; file=" + str(here)
-        + " cwd=" + str(Path.cwd())
+        "could not locate openapi fixtures dir; file="
+        + str(here)
+        + " cwd="
+        + str(Path.cwd())
     )
 
 

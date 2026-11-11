@@ -117,7 +117,9 @@ def score(run_dir, cases_csv, label="full"):
         return TP, FP, FN, TN, P, R, F1, per_cat
 
     print(f"RUN {run_dir}")
-    print(f"findings={n_find} wrong_family={n_wrong} orphan={n_orphan} out_of_scope={n_out_of_scope}")
+    print(
+        f"findings={n_find} wrong_family={n_wrong} orphan={n_orphan} out_of_scope={n_out_of_scope}"
+    )
     print(f"excluded categories: {sorted(excluded)}")
     print()
 

@@ -11,6 +11,7 @@ The spec is Swagger 2.0 (~3 MB). The published source is the
 Kubernetes repository's api/openapi-spec/swagger.json, which is what
 the ADR calls kube-openapi.json.
 """
+
 from pathlib import Path
 from urllib.request import urlretrieve
 

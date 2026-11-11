@@ -10,6 +10,7 @@ dispatch tests passed while the crash sat one function call away.
 These tests construct the Scanner Stage 6 will construct. They scan
 nothing, hit no network, and need no live target.
 """
+
 from janissary.engine.scanner import Scanner
 from janissary.importers.dispatch import build_scan_targets
 from janissary.importers.openapi import Operation

@@ -6,15 +6,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from janissary.engine.scanner import ScanSummary, Scanner
+from janissary.engine.scanner import Scanner, ScanSummary
 
 
 def _make_collab() -> MagicMock:
     """Collaborator stub that records calls and returns no hits."""
     collab = MagicMock()
     collab.new_unique_id.side_effect = lambda name: f"u_{name}"
-    collab.payload_for.side_effect = (
-        lambda p, u: p.url_template.format(uniq=u, collab="collab.example.com")
+    collab.payload_for.side_effect = lambda p, u: p.url_template.format(
+        uniq=u, collab="collab.example.com"
     )
     collab.poll.return_value = []
     return collab
@@ -28,6 +28,7 @@ def _summary() -> ScanSummary:
 def _no_sleep(monkeypatch):
     """Skip the ssrf poll delays so tests run in milliseconds, not 10s each."""
     import janissary.engine.scanner as _sc
+
     monkeypatch.setattr(_sc.time, "sleep", lambda _s: None)
 
 
@@ -67,15 +68,17 @@ def test_redirect_oob_payload_url_shape():
     s._ssrf_phase("q", _summary(), quiet=True)
 
     oob = [p for p in seen_payloads if "redirect_oob" in p.name]
-    assert len(oob) == 2, f"expected 2 OOB payloads, saw {[p.name for p in seen_payloads]}"
+    assert len(oob) == 2, (
+        f"expected 2 OOB payloads, saw {[p.name for p in seen_payloads]}"
+    )
 
     rendered = [collab.payload_for(p, "u1") for p in oob]
     assert any(
-        "https://redir.example.com/r?to=http://u1.collab.example.com/" == r
+        r == "https://redir.example.com/r?to=http://u1.collab.example.com/"
         for r in rendered
     ), rendered
     assert any(
-        "https://redir.example.com/r?to=https://u1.collab.example.com/" == r
+        r == "https://redir.example.com/r?to=https://u1.collab.example.com/"
         for r in rendered
     ), rendered
 

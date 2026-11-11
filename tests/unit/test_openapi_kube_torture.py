@@ -16,6 +16,7 @@ path items and parameter entries, never inside schemas, so it is
 unaffected. The expected count below was measured once from
 JANISSARY and cross-checked against the raw path/method enumeration.
 """
+
 import time
 import tracemalloc
 
@@ -23,23 +24,21 @@ import pytest
 
 from janissary.importers.openapi import parse_spec
 
-FIXTURE = (
-    "tests/fixtures/openapi/large/kube-openapi.json"
-)
+FIXTURE = "tests/fixtures/openapi/large/kube-openapi.json"
 EXPECTED_OPERATIONS = 1172
 MEMORY_CEILING_MB = 100
 
 
 def _fixture_available():
     from pathlib import Path
+
     return Path(FIXTURE).is_file()
 
 
 @pytest.mark.skipif(
     not _fixture_available(),
     reason=(
-        "Kubernetes spec not present; run "
-        "python tools/fetch_kube_spec.py to fetch it"
+        "Kubernetes spec not present; run python tools/fetch_kube_spec.py to fetch it"
     ),
 )
 def test_kube_operations_and_memory():
@@ -57,10 +56,12 @@ def test_kube_operations_and_memory():
     assert len(result.skipped) == 0
     assert len(result.notes) == 0
     assert peak_mb < MEMORY_CEILING_MB, (
-        "peak " + str(round(peak_mb, 1)) + " MB exceeds "
-        + str(MEMORY_CEILING_MB) + " MB ceiling"
+        "peak "
+        + str(round(peak_mb, 1))
+        + " MB exceeds "
+        + str(MEMORY_CEILING_MB)
+        + " MB ceiling"
     )
     assert elapsed < 10, (
-        "parse took " + str(round(elapsed, 2)) + " s; "
-        "expected well under 10"
+        "parse took " + str(round(elapsed, 2)) + " s; expected well under 10"
     )

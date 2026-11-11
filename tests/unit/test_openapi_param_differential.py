@@ -3,6 +3,7 @@
 For every fixture, asserts JANISSARY's parser and prance agree on the
 set of operation keys and the sorted parameter names per operation.
 """
+
 from pathlib import Path
 
 import pytest
@@ -22,9 +23,7 @@ def _find_fixtures_dir():
         candidate = base / Path(*tail)
         if candidate.is_dir():
             return candidate
-    raise RuntimeError(
-        "could not locate openapi fixtures dir; file=" + str(here)
-    )
+    raise RuntimeError("could not locate openapi fixtures dir; file=" + str(here))
 
 
 FIXTURES_DIR = _find_fixtures_dir()
@@ -32,7 +31,8 @@ FIXTURES_DIR = _find_fixtures_dir()
 
 def fixtures():
     found = sorted(
-        p for p in FIXTURES_DIR.iterdir()
+        p
+        for p in FIXTURES_DIR.iterdir()
         if p.suffix == ".json" and not p.name.endswith(".expected.json")
     )
     if not found:
@@ -41,9 +41,7 @@ def fixtures():
 
 
 def prance_params(fixture):
-    parser = ResolvingParser(
-        str(fixture), backend=BACKEND, recursion_limit=5
-    )
+    parser = ResolvingParser(str(fixture), backend=BACKEND, recursion_limit=5)
     spec = parser.specification
     out = {}
     for path, item in spec.get("paths", {}).items():
@@ -64,10 +62,7 @@ def prance_params(fixture):
 
 def janissary_params(fixture):
     result = parse_spec(fixture)
-    return {
-        (op.path, op.method): sorted(op.parameter_names)
-        for op in result.imported
-    }
+    return {(op.path, op.method): sorted(op.parameter_names) for op in result.imported}
 
 
 @pytest.mark.parametrize("fixture", fixtures(), ids=lambda p: p.name)
