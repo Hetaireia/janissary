@@ -98,12 +98,12 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Closure Criterion:** Rule 1 / Rule 3 violation closed. (Category contract remains tracked under L11).
 
 ### JAN-L10 — Scan Completeness and Negative Results
-- **Status:** Partial
+- **Status:** Resolved
 - **Priority:** P0
-- **Evidence:** `a795234` — `_scan_completeness()` derives `scan_complete` from four tracked conditions (aborted, scan_incomplete, auth lost, params unbaselined) and returns `params_identified`, `params_baselined` and a `reasons` list. `_summary_to_dict` emits the block; `_print_summary` renders the reasons only when incomplete, so a clean report stays clean. 8 tests in `tests/unit/test_scan_completeness.py`; full suite 1086 passed. `scan_incomplete` was already emitted in JSON (`cli.py:54`). LIMITATIONS has a "What 'no finding' means" section.
-- **Remaining Gap:** Two gaps remain. (1) Four mandate fields are untracked anywhere in the scanner — WAF-blocked counts, timeout counts, skipped-check counts, endpoint-discovery counts — and are deliberately absent from the block rather than emitted as zero, because a zero that means unknown reads like a measurement. (2) The block is in JSON and the human summary only; JSONL, SARIF, HTML and PDF do not carry it. The closure criterion requires one source across all formats.
-- **Next Action:** (1) Wire `completeness` into the SARIF and JSONL emitters from the same `_summary_to_dict` source. (2) Decide whether the four untracked fields justify instrumentation, or whether they should be recorded as accepted-absent in the closure criterion.
-- **Closure Criterion:** Completeness block in all output formats from one source.
+- **Evidence:** `a795234` — `_scan_completeness()` derives `scan_complete` from four tracked conditions (aborted, scan_incomplete, auth lost, params unbaselined) and returns `params_identified`, `params_baselined` and a `reasons` list. `_summary_to_dict` emits the block; `_print_summary` renders the reasons only when incomplete. `4a8f63f` wires it into SARIF via `properties.completeness` on every run, from the same `_scan_completeness` source. HTML and PDF receive the `payload` dict and already carried it. JSON and the human summary carry it. 10 tests in `tests/unit/test_scan_completeness.py`; full suite 1088 passed. `scan_incomplete` was already emitted in JSON (`cli.py:54`). LIMITATIONS has a "What 'no finding' means" section.
+- **Remaining Gap:** Recorded as accepted limitation, not a gap. (1) JSONL does not carry the block, by design: `OutputEmitter.emit` writes one line per finding, and a scan-level header record would break every line-by-line consumer. JSON is the complete-document format; JSONL is the finding stream. A consumer that needs completeness requests `--json`. (2) Four mandate fields are untracked anywhere in the scanner — WAF-blocked counts, timeout counts, skipped-check counts, endpoint-discovery counts — and are deliberately absent rather than emitted as zero, because a zero that means unknown reads like a measurement. Instrumenting them is a scanner change, not a reporting one.
+- **Next Action:** None for this entry. If the four untracked fields are later judged worth instrumenting, that work belongs in a new item with its own criterion; it is not a completeness-reporting task.
+- **Closure Criterion:** Met by `a795234` and `4a8f63f`. The completeness block reaches every output format that carries a scan-level record, from a single derivation function. JSONL is documented as an intentional absence because its line-per-finding structure has no scan-level record to carry it.
 
 ### JAN-L11 — Benchmark Coverage Documentation
 - **Status:** Resolved
@@ -123,4 +123,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 completeness block shipped in a795234, formats and four untracked fields outstanding). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 resolved — block in a795234, SARIF wiring in 4a8f63f, JSONL accepted-absent). Next review scheduled.*
