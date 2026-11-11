@@ -100,9 +100,9 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L10 — Scan Completeness and Negative Results
 - **Status:** Partial
 - **Priority:** P0
-- **Evidence:** `scan_incomplete` exists and is emitted in JSON (`cli.py:54`). LIMITATIONS has "What 'no finding' means" section.
-- **Remaining Gap:** No structured completeness accounting (endpoints/skipped/WAF-blocked). No consistency guarantee across formats.
-- **Next Action:** Add completeness block to `_summary_to_dict` and render it in all formats from one source.
+- **Evidence:** `a795234` — `_scan_completeness()` derives `scan_complete` from four tracked conditions (aborted, scan_incomplete, auth lost, params unbaselined) and returns `params_identified`, `params_baselined` and a `reasons` list. `_summary_to_dict` emits the block; `_print_summary` renders the reasons only when incomplete, so a clean report stays clean. 8 tests in `tests/unit/test_scan_completeness.py`; full suite 1086 passed. `scan_incomplete` was already emitted in JSON (`cli.py:54`). LIMITATIONS has a "What 'no finding' means" section.
+- **Remaining Gap:** Two gaps remain. (1) Four mandate fields are untracked anywhere in the scanner — WAF-blocked counts, timeout counts, skipped-check counts, endpoint-discovery counts — and are deliberately absent from the block rather than emitted as zero, because a zero that means unknown reads like a measurement. (2) The block is in JSON and the human summary only; JSONL, SARIF, HTML and PDF do not carry it. The closure criterion requires one source across all formats.
+- **Next Action:** (1) Wire `completeness` into the SARIF and JSONL emitters from the same `_summary_to_dict` source. (2) Decide whether the four untracked fields justify instrumentation, or whether they should be recorded as accepted-absent in the closure criterion.
 - **Closure Criterion:** Completeness block in all output formats from one source.
 
 ### JAN-L11 — Benchmark Coverage Documentation
@@ -123,4 +123,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 completeness block shipped in a795234, formats and four untracked fields outstanding). Next review scheduled.*
