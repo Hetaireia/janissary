@@ -92,7 +92,12 @@ class OpenAPIParser:
     def parse(self) -> ParseResult:
         raw = self._load()
         spec = self._validate(raw)
-        self.result.spec_version = str(spec.get("openapi", ""))
+        openapi_v = spec.get("openapi")
+        swagger_v = spec.get("swagger")
+        if isinstance(swagger_v, str):
+            self.result.spec_version = "swagger " + swagger_v
+        elif isinstance(openapi_v, str):
+            self.result.spec_version = openapi_v
         self._resolver = RefResolver(spec, self.source)
         paths = spec.get("paths") or {}
         if not isinstance(paths, dict):
@@ -128,15 +133,22 @@ class OpenAPIParser:
             raise OpenAPIImportError(
                 "spec root is not a JSON object: " + type(raw).__name__
             )
-        version = raw.get("openapi")
-        if not isinstance(version, str):
+        openapi_version = raw.get("openapi")
+        swagger_version = raw.get("swagger")
+        is_v3 = (
+            isinstance(openapi_version, str)
+            and openapi_version.startswith("3.0.")
+        )
+        is_v2 = (
+            isinstance(swagger_version, str)
+            and swagger_version == "2.0"
+        )
+        if not is_v3 and not is_v2:
             raise OpenAPIImportError(
-                "spec has no openapi version string"
-            )
-        if not version.startswith("3.0."):
-            raise OpenAPIImportError(
-                "unsupported spec version: " + version
-                + " (Stage 1 handles 3.0.x only)"
+                "unsupported spec version: openapi="
+                + str(openapi_version)
+                + " swagger=" + str(swagger_version)
+                + " (Stage 3 handles 3.0.x and 2.0)"
             )
         if "paths" not in raw:
             raise OpenAPIImportError("spec has no 'paths' object")
