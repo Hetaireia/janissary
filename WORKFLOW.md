@@ -45,6 +45,9 @@ section into the chat and continue.
 2. Never batch PowerShell commands — each is reviewed before the next.
 3. Update this file at the end of every completed step.
 4. If a command fails, stop and report the error before proceeding.
+5. **Verify before claiming.** Never state a file's content, a line number, a count, a hash, or a test result without a command output from this session showing it. If it cannot be verified, the claim says "unverified".
+6. **Predictions are not evidence.** Label a prediction as a prediction. When a prediction and an output disagree, the output is truth and the prediction is corrected in the next message, never silently dropped.
+7. **Destructive edits:** back up first, assert the anchor before writing, assert the content after writing, read the diff. A guard that fires after a write is a guard that failed.
 
 ---
 
