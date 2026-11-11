@@ -37,6 +37,7 @@ class Operation:
     method: str
     operation_id: str = ""
     parameter_names: list[str] = field(default_factory=list)
+    parameter_locations: dict[str, str] = field(default_factory=dict)
     base_url: str = ""
 
     def to_dict(self) -> dict:
@@ -45,6 +46,7 @@ class Operation:
             "method": self.method,
             "operation_id": self.operation_id,
             "parameter_names": list(self.parameter_names),
+            "parameter_locations": dict(self.parameter_locations),
             "base_url": self.base_url,
         }
 
@@ -220,6 +222,40 @@ class OpenAPIParser:
             out = out[:start] + default + out[end + 1:]
         return out
 
+    def _parameter_locations(
+        self, op: dict, current_path: Path
+    ) -> dict[str, str]:
+        params = op.get("parameters")
+        if not isinstance(params, list):
+            return {}
+        resolver = self._resolver
+        if resolver is None:
+            raise RuntimeError("resolver not initialized; call parse() first")
+        supported = {"path", "query", "header", "cookie", "body"}
+        locations: dict[str, str] = {}
+        for p in params:
+            if not isinstance(p, dict):
+                continue
+            try:
+                p, _ = resolver.resolve(p, current_path)
+            except RefError:
+                continue
+            if not isinstance(p, dict):
+                continue
+            name = p.get("name")
+            if not isinstance(name, str) or not name:
+                continue
+            loc = p.get("in")
+            if not isinstance(loc, str) or loc not in supported:
+                self.result.notes.append(
+                    "parameter " + name
+                    + " has unsupported location '"
+                    + str(loc) + "'; not dispatched"
+                )
+                continue
+            locations[name] = loc
+        return locations
+
     def _enumerate_path(
         self, path: str, item: Any, item_path: Path
     ) -> None:
@@ -270,6 +306,7 @@ class OpenAPIParser:
                     method=method,
                     operation_id=str(op.get("operationId") or ""),
                     parameter_names=self._parameter_names(op, item_path),
+                    parameter_locations=self._parameter_locations(op, item_path),
                     base_url=self._base_url,
                 )
             )
