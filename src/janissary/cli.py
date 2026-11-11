@@ -286,6 +286,55 @@ def _merge_host_bypass_into_scan(summary, hb_summary):
     return summary
 
 
+def _build_scanner(
+    args: argparse.Namespace,
+    *,
+    target: str,
+    params: list[str],
+    method: str,
+    inject_in: str,
+    proxies,
+    session,
+    collaborator,
+    auth_cfg,
+    json_template,
+) -> Scanner:
+    """Construct a Scanner for one dispatch target (ADR-030 Stage 6).
+
+    cmd_scan resolves proxies, the auth session, the collaborator client and
+    the JSON template once, before any scanning starts. Stage 6's per-target
+    loop calls this helper N times per operation, so re-deriving those here
+    would repeat auth setup and template file reads N times for one scan.
+
+    Per-target values -- target, params, method, inject_in -- are the four
+    fields build_scan_targets varies across an operation's locations.
+    Everything else comes from args or from the caller's resolved values.
+    """
+    return Scanner(
+        target=target,
+        params=params,
+        method=method,
+        timeout=args.timeout,
+        baseline_count=args.baseline_count,
+        delay=args.delay,
+        stealth=args.stealth,
+        proxies=proxies,
+        detect_waf=not args.no_waf,
+        session=session,
+        inject_in=inject_in,
+        auth_configured=not auth_cfg.is_empty,
+        auth_sessions=auth_cfg.sessions,
+        collaborator=collaborator,
+        ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
+        ssrf_redirector=getattr(args, "ssrf_redirector", None),
+        json_template=json_template,
+        baseline_value=args.baseline_value or "",
+        collect_observations=getattr(args, "heuristic", False)
+        or getattr(args, "idor", False),
+        verbose=getattr(args, "verbose", False),
+    )
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -476,28 +525,17 @@ def cmd_scan(args: argparse.Namespace) -> int:
             )
             return 64
 
-    scanner = Scanner(
+    scanner = _build_scanner(
+        args,
         target=args.url,
         params=params,
         method=args.method,
-        timeout=args.timeout,
-        baseline_count=args.baseline_count,
-        delay=args.delay,
-        stealth=args.stealth,
-        proxies=proxies,
-        detect_waf=not args.no_waf,
-        session=auth_session,
         inject_in=args.inject_in,
-        auth_configured=not auth_cfg.is_empty,
-        auth_sessions=auth_cfg.sessions,
+        proxies=proxies,
+        session=auth_session,
         collaborator=collaborator_client,
-        ssrf_timeout=getattr(args, "ssrf_timeout", 10.0),
-        ssrf_redirector=getattr(args, "ssrf_redirector", None),
+        auth_cfg=auth_cfg,
         json_template=_json_template,
-        baseline_value=args.baseline_value or "",
-        collect_observations=getattr(args, "heuristic", False)
-        or getattr(args, "idor", False),
-        verbose=getattr(args, "verbose", False),
     )
 
     if not args.quiet:
