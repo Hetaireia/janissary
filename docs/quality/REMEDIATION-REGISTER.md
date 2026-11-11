@@ -9,7 +9,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 |---|---|---|
 | 1 — Precision | **FAIL** | L09 resolved, but no FP regression corpus exists yet. |
 | 2 — Detection | **PARTIAL** | Per-class recall published; no 3-run CI requirement enforced. |
-| 3 — Reliability | **FAIL** | Auth interruption lacks structured state (Issue #2). |
+| 3 — Reliability | **PARTIAL** | Auth state now reported (bd7f1c3); reauth workflow and abort-path tests outstanding. |
 | 4 — Evidence | **PARTIAL** | `verification_status` in all formats; category contract not enforced. |
 | 5 — Release | **PARTIAL** | v7.11.0 clean, but L01/L02 remain open. |
 
@@ -26,12 +26,12 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Closure Criterion:** Regression corpus passes with zero verified admin-panel FPs.
 
 ### JAN-L02 — Mid-Scan Authentication Expiry
-- **Status:** In Progress
+- **Status:** Partial
 - **Priority:** P0
-- **Evidence:** Issue #2 open. ADR-010 two-consecutive-401 safety exists.
-- **Remaining Gap:** No `AuthStateManager`, no reauth workflow, no structured auth state in output.
-- **Next Action:** Add `auth_state` string enum to `_summary_to_dict` and abort path. Reconcile with tri-session (M41).
-- **Closure Criterion:** Structured auth state in all output formats; reauth tested.
+- **Evidence:** `bd7f1c3` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. 4 tests in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged.
+- **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Reauth itself is not tested — the abort path in `scanner.py` is not covered by unit tests (would need `_paced_request`, `collect_baseline` and `_detect_waf` mocked).
+- **Next Action:** (1) Add an abort-path test that mocks `_paced_request` to return two 401s and asserts `auth_state == "expired"`. (2) Extend with an `AuthStateManager` when reauth is specified. Reconcile with tri-session (M41) rather than a parallel subsystem.
+- **Closure Criterion:** Structured auth state in all output formats (JSON, JSONL, SARIF — not just text). Reauth tested against a mock IdP.
 
 ### JAN-L03 — Framework-Specific SQL Injection
 - **Status:** Not Started
@@ -115,4 +115,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11. Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3). Next review scheduled.*
