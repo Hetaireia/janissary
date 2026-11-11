@@ -106,12 +106,12 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Closure Criterion:** Completeness block in all output formats from one source.
 
 ### JAN-L11 — Benchmark Coverage Documentation
-- **Status:** Partial
+- **Status:** Resolved
 - **Priority:** P1
-- **Evidence:** `BENCHMARK.md:975` states the denominator explicitly: FULL CORPUS (2740 cases) and DAST-APPLICABLE (2258 cases, 482 excluded via `dast_excluded.txt`). Line 735 breaks out 93 structurally skipped cases (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri). Amendment 27 defines two labelled scopes — DAST-applicable 0.921 (TP 987, FP 0, FN 169) and supported-classes 0.977 (TP 977, FP 0, FN 46) — with guardrails at lines 1919-1922 preventing the supplemental from superseding the headline. Scorer misattribution fixed 2026-11-10 (`FAMILY_OF` lacked `sqli_blind`).
-- **Remaining Gap:** The register previously stated no denominator existed; that was wrong, written without reading `BENCHMARK.md`. What remains: (1) `docs/pathtraver.md:126` cited Amendment 20's superseded figures (0.920 / TP 984 / FN 172) rather than Amendment 21's (0.921 / TP 987 / FN 169) — corrected in this commit; (2) the same paragraph cited 0.976 / TP 984 / FN 49 for the filtered scope while Amendment 27 records 0.977 / TP 977 / FN 46 — also corrected; (3) `BENCHMARK.md` is a 1930-line amendment log with no top-level current-state summary, so a reader following it top-to-bottom sees F1 0.724 before reaching the 0.921 headline.
-- **Next Action:** Add a top-of-document current-state summary to `BENCHMARK.md` linking to the governing amendment. The stale-figure problem in `docs/pathtraver.md` is closed by this commit.
-- **Closure Criterion:** The headline and its supplemental are findable from the top of `BENCHMARK.md` without reading the amendment chain.
+- **Evidence:** `BENCHMARK.md:975` states the denominator explicitly: FULL CORPUS (2740 cases) and DAST-APPLICABLE (2258 cases, 482 excluded via `dast_excluded.txt`). Line 735 breaks out 93 structurally skipped cases (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri). Amendment 27 defines two labelled scopes — DAST-applicable 0.921 (TP 987, FP 0, FN 169) and supported-classes 0.977 (TP 977, FP 0, FN 46) — with guardrails at lines 1919-1922 preventing the supplemental from superseding the headline. Scorer misattribution fixed 2026-11-10 (`FAMILY_OF` lacked `sqli_blind`). The navigational index landed in `ad8cb13`, adding headline, supplemental, denominator, gate and pathtraver ceiling to the top of `BENCHMARK.md` as a labelled non-pre-registration block.
+- **Remaining Gap:** None for closure. The amendment log remains long by design — it is a frozen pre-registration and the amendments are the historical record. The index mitigates the length for a reader; it does not shorten it.
+- **Next Action:** Maintenance, not remediation. Update the navigational index whenever a new headline amendment supersedes 0.921. Nothing enforces this — it is a manual obligation recorded here so a future session knows the index can go stale.
+- **Closure Criterion:** Met by `ad8cb13`. The headline and its supplemental are reachable from the top of `BENCHMARK.md` without reading the amendment chain.
 
 ### JAN-L12 — Resumable / Fault-Tolerant Scanning
 - **Status:** Not Started
@@ -123,4 +123,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 corrected — denominator exists in BENCHMARK.md:975, docs/pathtraver.md stale figures fixed). Next review scheduled.*
+*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13). Next review scheduled.*
