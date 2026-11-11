@@ -29,7 +29,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 
 ### Differential detection, measured
 
-Every finding is gated by a baseline comparison — nothing emits from a single response. Measured against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): **precision 1.000** on dev splits (0 FP observed), **recall 0.854**, **F1 0.921**. Three baseline runs give a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` closes to 0.921. Run artifacts are committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+Every finding is gated by a baseline comparison — nothing emits from a single response. Measured against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): **precision 1.000** on dev splits (0 FP observed), **recall 0.854**, **F1 0.921**. Three baseline runs on 7.3.0 gave a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` closes to 0.921. Current 7.5.0 figures: F1 0.906 ± 0.002 unassisted (n=3), recovery 0.921. Run artifacts are committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
 
 ### WAF-aware pacing
 
@@ -360,7 +360,7 @@ The architectural decisions governing current and planned work are in [`docs/dec
 
 Two near-term direction items are captured as ADRs:
 
-- **Heuristic discovery mode (Track B):** planned as `--heuristic` flag; emits candidates marked `unproven` in a separate SARIF run. Never promotes to verified findings without engine corroboration. See ADR-016, ADR-017, ADR-019.
+- **Heuristic discovery mode (Track B):** shipped as `--heuristic`. Candidates route through `_ENGINE.verify()`; those that pass become normal findings and those that fail are dropped (a separate unproven-candidate stream is tracked as M41). Never promotes to verified findings without engine corroboration. See ADR-016, ADR-017, ADR-019.
 - **Crawler:** deferred with explicit triggers (named enterprise demand or 3+ user asks). When built, ships open-source. See ADR-021.
 
 Detailed phased planning and milestone tracking are maintained privately and are not part of this repository.
