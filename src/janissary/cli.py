@@ -61,6 +61,35 @@ def _finding_to_dict(f) -> dict:
     }
 
 
+def _scan_completeness(summary: ScanSummary) -> dict:
+    """Derive whether a scan ran to completion, and why not if it didn't.
+
+    A clean report with zero findings must not be confused with a
+    comprehensive assessment. scan_complete is False when any of these
+    hold: the scan aborted, partial results were recorded, authentication
+    was lost, or fewer parameters received a baseline than were identified.
+
+    Only reasons the scanner actually tracks appear here. WAF-blocked
+    counts, timeout counts and endpoint-discovery counts are not tracked
+    and are therefore absent rather than reported as zero.
+    """
+    reasons = []
+    if summary.aborted:
+        reasons.append("aborted")
+    if summary.scan_incomplete:
+        reasons.append("scan_incomplete")
+    if summary.auth_state in ("expired", "recovery_failed"):
+        reasons.append("auth_" + summary.auth_state)
+    if len(summary.baselines) < len(summary.params):
+        reasons.append("params_unbaselined")
+    return {
+        "scan_complete": not reasons,
+        "params_identified": len(summary.params),
+        "params_baselined": len(summary.baselines),
+        "reasons": reasons,
+    }
+
+
 def _summary_to_dict(summary: ScanSummary) -> dict:
     return {
         "target": summary.target,
@@ -74,6 +103,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "abort_reason": summary.abort_reason,
         "scan_incomplete": summary.scan_incomplete,
         "auth_state": summary.auth_state,
+        "completeness": _scan_completeness(summary),
         "baselines": summary.baselines,
         "waf": summary.waf,
         "pacer": summary.pacer,
@@ -122,6 +152,10 @@ def _print_summary(summary: ScanSummary) -> None:
 
     if summary.auth_state in ("expired", "recovery_failed"):
         print(f"  Auth state:      {summary.auth_state}")
+
+    _comp = _scan_completeness(summary)
+    if not _comp["scan_complete"]:
+        print(f"  Scan complete:   NO ({', '.join(_comp['reasons'])})")
 
     if summary.aborted:
         print(f"  ABORTED:         {summary.abort_reason}")
