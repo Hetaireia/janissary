@@ -37,6 +37,7 @@ class Operation:
     method: str
     operation_id: str = ""
     parameter_names: list[str] = field(default_factory=list)
+    base_url: str = ""
 
     def to_dict(self) -> dict:
         return {
@@ -44,6 +45,7 @@ class Operation:
             "method": self.method,
             "operation_id": self.operation_id,
             "parameter_names": list(self.parameter_names),
+            "base_url": self.base_url,
         }
 
 
@@ -88,6 +90,7 @@ class OpenAPIParser:
         self.source = Path(source)
         self.result = ParseResult(source=str(self.source))
         self._resolver: RefResolver | None = None
+        self._base_url: str = ""
 
     def parse(self) -> ParseResult:
         raw = self._load()
@@ -99,6 +102,7 @@ class OpenAPIParser:
         elif isinstance(openapi_v, str):
             self.result.spec_version = openapi_v
         self._resolver = RefResolver(spec, self.source)
+        self._base_url = self._resolve_base_url(spec)
         paths = spec.get("paths") or {}
         if not isinstance(paths, dict):
             raise OpenAPIImportError(
@@ -154,6 +158,68 @@ class OpenAPIParser:
             raise OpenAPIImportError("spec has no 'paths' object")
         return raw
 
+    def _resolve_base_url(self, spec: dict) -> str:
+        swagger_v = spec.get("swagger")
+        if isinstance(swagger_v, str) and swagger_v == "2.0":
+            return self._resolve_v2_base_url(spec)
+        return self._resolve_v3_base_url(spec)
+
+    def _resolve_v2_base_url(self, spec: dict) -> str:
+        host = spec.get("host")
+        if not isinstance(host, str) or not host:
+            return ""
+        base_path = spec.get("basePath", "")
+        if not isinstance(base_path, str):
+            base_path = ""
+        schemes = spec.get("schemes")
+        scheme = "https"
+        if isinstance(schemes, list) and schemes and isinstance(schemes[0], str):
+            scheme = schemes[0]
+        return scheme + "://" + host + base_path
+
+    def _resolve_v3_base_url(self, spec: dict) -> str:
+        servers = spec.get("servers")
+        if not isinstance(servers, list) or not servers:
+            return ""
+        first = servers[0]
+        if not isinstance(first, dict):
+            self.result.notes.append(
+                "servers[0] is not an object; base_url unresolved"
+            )
+            return ""
+        url = first.get("url")
+        if not isinstance(url, str) or not url:
+            self.result.notes.append(
+                "servers[0].url missing or not a string; base_url unresolved"
+            )
+            return ""
+        variables = first.get("variables")
+        if not isinstance(variables, dict):
+            variables = {}
+        out = url
+        while "{" in out:
+            start = out.find("{")
+            end = out.find("}", start)
+            if end == -1:
+                break
+            name = out[start + 1:end]
+            var_spec = variables.get(name)
+            if not isinstance(var_spec, dict):
+                self.result.notes.append(
+                    "server variable " + name
+                    + " has no definition; base_url unresolved"
+                )
+                return ""
+            default = var_spec.get("default")
+            if not isinstance(default, str) or not default:
+                self.result.notes.append(
+                    "server variable " + name
+                    + " has no default; base_url unresolved"
+                )
+                return ""
+            out = out[:start] + default + out[end + 1:]
+        return out
+
     def _enumerate_path(
         self, path: str, item: Any, item_path: Path
     ) -> None:
@@ -204,6 +270,7 @@ class OpenAPIParser:
                     method=method,
                     operation_id=str(op.get("operationId") or ""),
                     parameter_names=self._parameter_names(op, item_path),
+                    base_url=self._base_url,
                 )
             )
 
