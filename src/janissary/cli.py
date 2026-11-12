@@ -2015,7 +2015,19 @@ def build_parser() -> argparse.ArgumentParser:
             "the URL query string, or a small built-in default set"
         ),
     )
-    scan.add_argument("--method", choices=["GET", "POST"], default="GET")
+    scan.add_argument(
+        "--method",
+        choices=[
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "HEAD",
+            "OPTIONS",
+        ],
+        default="GET",
+    )
     scan.add_argument(
         "--inject-in",
         choices=[

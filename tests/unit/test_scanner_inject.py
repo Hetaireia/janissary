@@ -38,21 +38,18 @@ def _record_session(scanner: Scanner) -> list[tuple[str, dict]]:
 
     calls: list[tuple[str, dict]] = []
 
-    def fake_get(url, **kw):
+    def make(verb):
 
-        calls.append(("GET", {"url": url, **kw}))
+        def fake(url, **kw):
 
-        return MagicMock()
+            calls.append((verb, {"url": url, **kw}))
 
-    def fake_post(url, **kw):
+            return MagicMock()
 
-        calls.append(("POST", {"url": url, **kw}))
+        return fake
 
-        return MagicMock()
-
-    scanner.session.get = fake_get  # type: ignore[assignment]
-
-    scanner.session.post = fake_post  # type: ignore[assignment]
+    for _v in ("get", "post", "put", "patch", "delete", "head", "options"):
+        setattr(scanner.session, _v, make(_v.upper()))
 
     return calls
 
@@ -351,3 +348,50 @@ def test_auto_post_also_puts_payload_in_query():
     assert verb == "POST"
     assert kw["data"] == {"p": "PAY"}
     assert "p=PAY" in kw["url"]
+
+
+def test_auto_put_puts_payload_in_body():
+    """PUT is body-capable: auto mode puts the payload in the body."""
+    s = _scanner("PUT", "auto")
+
+    calls = _record_session(s)
+
+    s._request(s.target, "p", "PAY")
+
+    verb, kw = calls[0]
+
+    assert verb == "PUT"
+
+    assert kw["data"] == {"p": "PAY"}
+
+
+def test_auto_patch_puts_payload_in_body():
+    """PATCH is body-capable: auto mode puts the payload in the body."""
+    s = _scanner("PATCH", "auto")
+
+    calls = _record_session(s)
+
+    s._request(s.target, "p", "PAY")
+
+    verb, kw = calls[0]
+
+    assert verb == "PATCH"
+
+    assert kw["data"] == {"p": "PAY"}
+
+
+def test_auto_delete_stays_in_query():
+    """DELETE is not body-capable: auto mode uses query placement."""
+    s = _scanner("DELETE", "auto")
+
+    calls = _record_session(s)
+
+    s._request(s.target, "p", "PAY")
+
+    verb, kw = calls[0]
+
+    assert verb == "DELETE"
+
+    assert "p=PAY" in kw["url"]
+
+    assert "data" not in kw

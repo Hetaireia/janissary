@@ -690,107 +690,88 @@ class Scanner:
             headers["X-Forwarded-For"] = "127.0.0.1"
         return headers
 
+    def _send(
+        self, url: str, *, verb: str | None = None, **kwargs
+    ) -> requests.Response | None:
+        """Single verb-dispatching request primitive.
+
+        verb overrides self.method when supplied; json-body is always
+        POST. Otherwise the scanner's declared verb is used, so every
+        injection location preserves the caller's HTTP method rather
+        than falling through to GET for anything other than POST.
+        """
+        v = verb or self.method
+        if v == "GET":
+            return self.session.get(url, **kwargs)
+        if v == "POST":
+            return self.session.post(url, **kwargs)
+        if v == "PUT":
+            return self.session.put(url, **kwargs)
+        if v == "PATCH":
+            return self.session.patch(url, **kwargs)
+        if v == "DELETE":
+            return self.session.delete(url, **kwargs)
+        if v == "HEAD":
+            return self.session.head(url, **kwargs)
+        if v == "OPTIONS":
+            return self.session.options(url, **kwargs)
+        return self.session.request(v, url, **kwargs)
+
     def _request(
         self, url: str, param: str, value: str, allow_redirects: bool = False
     ) -> requests.Response | None:
+        common = {
+            "headers": self._headers(),
+            "timeout": self.timeout,
+            "allow_redirects": allow_redirects,
+            "proxies": self.proxies,
+        }
         if self.inject_in == "param-name":
             # OWASP Benchmark "getParameterNames" cases: the payload is
             # delivered as the parameter *name*, whose value is the
-            # testname. Over POST send it in the form body; over GET
-            # append it as a query pair.
-            if self.method == "POST":
-                return self.session.post(
-                    self.target,
-                    headers=self._headers(),
-                    data={value: param},
-                    timeout=self.timeout,
-                    allow_redirects=allow_redirects,
-                    proxies=self.proxies,
-                )
-            return self.session.get(
-                build_url(self.target, value, param),
-                headers=self._headers(),
-                timeout=self.timeout,
-                allow_redirects=allow_redirects,
-                proxies=self.proxies,
-            )
+            # testname. Body-capable verbs carry it in the form body;
+            # everything else carries it as a query pair.
+            if self.method in ("POST", "PUT", "PATCH"):
+                return self._send(self.target, data={value: param}, **common)
+            return self._send(build_url(self.target, value, param), **common)
 
         if self.inject_in == "header":
-            hdrs = self._headers()
-            hdrs[param] = value
-            kwargs = {
-                "headers": hdrs,
-                "timeout": self.timeout,
-                "allow_redirects": allow_redirects,
-                "proxies": self.proxies,
-            }
-            if self.method == "POST":
-                return self.session.post(self.target, **kwargs)
-            return self.session.get(self.target, **kwargs)
+            common["headers"] = {**common["headers"], param: value}
+            return self._send(self.target, **common)
 
         if self.inject_in == "cookie":
-            kwargs = {
-                "headers": self._headers(),
-                "cookies": {param: value},
-                "timeout": self.timeout,
-                "allow_redirects": allow_redirects,
-                "proxies": self.proxies,
-            }
-            if self.method == "POST":
-                return self.session.post(self.target, **kwargs)
-            return self.session.get(self.target, **kwargs)
+            return self._send(self.target, cookies={param: value}, **common)
 
         if self.inject_in == "json-body":
             if not self.json_template:
                 raise ValueError("inject_in='json-body' requires json_template")
             body = _substitute_placeholder(self.json_template, "{{PAYLOAD}}", value)
-            return self.session.post(
-                self.target,
-                json=body,
-                headers=self._headers(),
-                timeout=self.timeout,
-                allow_redirects=allow_redirects,
-                proxies=self.proxies,
-            )
+            return self._send(self.target, verb="POST", json=body, **common)
 
         if self.inject_in == "path":
             from urllib.parse import quote as _quote
 
             path_url = url.replace(f"{{{param}}}", _quote(value, safe=""))
-            kwargs = {
-                "headers": self._headers(),
-                "timeout": self.timeout,
-                "allow_redirects": allow_redirects,
-                "proxies": self.proxies,
-            }
-            if self.method == "POST":
-                return self.session.post(path_url, **kwargs)
-            return self.session.get(path_url, **kwargs)
+            return self._send(path_url, **common)
 
-        if self.inject_in == "body" or (
-            self.inject_in == "auto" and self.method == "POST"
-        ):
-            # Amendment 7: dual-vector. Send the payload in the query
-            # string as well as the form body. Servlets reading
-            # getParameter() see the body; servlets reading
-            # getQueryString() see the query. Previously the body
-            # path sent only the body, and getQueryString() servlets
-            # were unreachable.
-            return self.session.post(
+        if self.inject_in == "body":
+            # Amendment 7: dual-vector. body mode is form-body delivery
+            # and always sends POST regardless of self.method.
+            return self._send(
                 build_url(self.target, param, value),
-                headers=self._headers(),
+                verb="POST",
                 data={param: value},
-                timeout=self.timeout,
-                allow_redirects=allow_redirects,
-                proxies=self.proxies,
+                **common,
             )
-        return self.session.get(
-            build_url(url, param, value),
-            headers=self._headers(),
-            timeout=self.timeout,
-            allow_redirects=allow_redirects,
-            proxies=self.proxies,
-        )
+
+        if self.inject_in == "auto" and self.method in ("POST", "PUT", "PATCH"):
+            return self._send(
+                build_url(self.target, param, value),
+                data={param: value},
+                **common,
+            )
+
+        return self._send(build_url(url, param, value), **common)
 
     def _paced_request(
         self, url: str, param: str, value: str
