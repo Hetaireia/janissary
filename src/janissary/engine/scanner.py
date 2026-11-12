@@ -307,6 +307,18 @@ class ScanFinding:
     confidence: float = 0.0
     evidence_excerpt: str = ""
 
+    # M82a: aggregation metadata. Populated by the M82b aggregation
+    # layer; defaults preserve Track A single-observation behaviour.
+    # NOTE: all six are internal-only. Not serialised to
+    #       JSON/JSONL/SARIF — same reporting-contract deferral as
+    #       evidence_excerpt above.
+    signature_id: str = ""
+    observation_count: int = 1
+    first_observation_id: str = ""
+    last_observation_id: str = ""
+    payload_families: tuple[str, ...] = ()
+    contributing_observation_ids: tuple[str, ...] = ()
+
     def __post_init__(self) -> None:
         if not self.fingerprint:
             self.fingerprint = compute_fingerprint(
@@ -344,6 +356,12 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
         verification_reason=verified.verification_reason,
         confidence=verified.confidence,
         evidence_excerpt=verified.evidence_excerpt,
+        signature_id=verified.signature_id,
+        observation_count=verified.observation_count,
+        first_observation_id=verified.first_observation_id,
+        last_observation_id=verified.last_observation_id,
+        payload_families=verified.payload_families,
+        contributing_observation_ids=verified.contributing_observation_ids,
     )
     finding._engine_emitted = True
     return finding

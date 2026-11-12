@@ -61,6 +61,18 @@ class CandidateFinding:
     confidence: float = 0.0
     evidence_excerpt: str = ""
 
+    # M82a: aggregation metadata. Populated by the M82b aggregation
+    # layer; defaults preserve Track A single-observation behaviour.
+    # NOTE: all six are internal-only. Not serialised to
+    #       JSON/JSONL/SARIF — same reporting-contract deferral as
+    #       evidence_excerpt above.
+    signature_id: str = ""
+    observation_count: int = 1
+    first_observation_id: str = ""
+    last_observation_id: str = ""
+    payload_families: tuple[str, ...] = ()
+    contributing_observation_ids: tuple[str, ...] = ()
+
 
 @dataclass(frozen=True)
 class VerifiedFinding:
@@ -106,6 +118,18 @@ class VerifiedFinding:
     # see CandidateFinding for the reporting-contract note.
     confidence: float = 0.0
     evidence_excerpt: str = ""
+
+    # M82a: aggregation metadata. Populated by the M82b aggregation
+    # layer; defaults preserve Track A single-observation behaviour.
+    # NOTE: all six are internal-only. Not serialised to
+    #       JSON/JSONL/SARIF — same reporting-contract deferral as
+    #       evidence_excerpt above.
+    signature_id: str = ""
+    observation_count: int = 1
+    first_observation_id: str = ""
+    last_observation_id: str = ""
+    payload_families: tuple[str, ...] = ()
+    contributing_observation_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

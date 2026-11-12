@@ -45,6 +45,12 @@ _EVIDENCE_FIELDS = (
     "raw_response",
     "confidence",
     "evidence_excerpt",
+    "signature_id",
+    "observation_count",
+    "first_observation_id",
+    "last_observation_id",
+    "payload_families",
+    "contributing_observation_ids",
 )
 
 
