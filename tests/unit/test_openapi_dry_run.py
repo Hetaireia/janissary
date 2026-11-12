@@ -42,7 +42,7 @@ def test_dry_run_reports_targets(capsys):
     assert rc == 0
     assert "Total targets:" in out
     assert "inject=path" in out
-    assert "inject=param-name" in out
+    assert "inject=query" in out
 
 
 def test_dry_run_body_target_carries_note(capsys):

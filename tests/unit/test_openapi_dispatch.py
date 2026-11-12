@@ -73,7 +73,7 @@ def test_dispatch_single_query_location():
     )
     targets = build_scan_targets(op)
     assert len(targets) == 1
-    assert targets[0]["inject_in"] == "param-name"
+    assert targets[0]["inject_in"] == "query"
     assert targets[0]["params"] == ["limit"]
     assert targets[0]["url"] == "https://api.example.com/pets"
 
@@ -93,7 +93,7 @@ def test_dispatch_mixed_locations():
     targets = build_scan_targets(op)
     assert len(targets) == 3
     modes = sorted(t["inject_in"] for t in targets)
-    assert modes == ["header", "param-name", "path"]
+    assert modes == ["header", "path", "query"]
 
 
 def test_dispatch_no_parameters():

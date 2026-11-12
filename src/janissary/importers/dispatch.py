@@ -14,7 +14,7 @@ from janissary.importers.openapi import Operation
 
 LOCATION_TO_MODE: dict[str, str] = {
     "path": "path",
-    "query": "param-name",
+    "query": "query",
     "header": "header",
     "cookie": "cookie",
     # Body parameters are not injected by name: the importer does not

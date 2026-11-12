@@ -66,7 +66,7 @@ def test_build_scanner_query_target():
     op = _op("/pets", "GET", ["limit"], {"limit": "query"})
     for t in build_scan_targets(op):
         s = _build(t)
-        assert s.inject_in == "param-name"
+        assert s.inject_in == "query"
         assert s.params == t["params"]
 
 
