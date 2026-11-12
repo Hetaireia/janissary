@@ -221,12 +221,12 @@ def _print_summary(summary: ScanSummary) -> None:
                     f"           - [{e.payload_name}] {e.finding_type}: {e.detail[:80]}{_marker}"
                 )
 
-    if summary.findings:
+    if summary.findings or summary.candidates:
         print()
         print("  Findings by severity:")
         by_sev: dict[str, int] = {}
         unproven_by_sev: dict[str, int] = {}
-        for f in summary.findings:
+        for f in (*summary.findings, *summary.candidates):
             by_sev[f.severity] = by_sev.get(f.severity, 0) + 1
             if getattr(f, "verification_status", "verified") == "unproven":
                 unproven_by_sev[f.severity] = unproven_by_sev.get(f.severity, 0) + 1
@@ -1634,7 +1634,7 @@ def _from_scan_summary(
 
     findings = [
         f
-        for f in summary.findings
+        for f in (*summary.findings, *summary.candidates)
         if verification_filter is None or f.verification_status == verification_filter
     ]
 

@@ -35,7 +35,10 @@ def _summary(findings=None, **kw):
         method=kw.get("method", "GET"),
     )
     for f in findings or []:
-        s.findings.append(f)
+        if f.verification_status == "unproven":
+            s.candidates.append(f)
+        else:
+            s.findings.append(f)
     s.finding_count = len(s.findings)
     s.total_requests = kw.get("total_requests", 10)
     s.aborted = kw.get("aborted", False)
@@ -89,13 +92,16 @@ def test_load_ws_payloads_skips_blanks_and_comments(tmp_path):
 
 
 def test_merge_ws_adds_findings_and_sums_requests():
+    """M75: unproven WS findings route to summary.candidates, not
+    summary.findings. total_requests sums; finding_count is unaffected."""
     s = _summary([], total_requests=10)
     ws = _summary(
         [_ws_finding(), _ws_finding(finding_type="websocket_b")], total_requests=7
     )
     _merge_ws_into_scan(s, ws)
-    assert len(s.findings) == 2
-    assert s.finding_count == 2
+    assert len(s.findings) == 0
+    assert len(s.candidates) == 2
+    assert s.finding_count == 0
     assert s.total_requests == 17
 
 
@@ -157,7 +163,9 @@ def test_cmd_scan_calls_scan_ws_with_parsed_payloads(tmp_path):
             mock_scope.return_value.require = MagicMock()
             rc = cmd_scan(args)
     inst.scan_ws.assert_called_once_with(payloads=["PAY1", "PAY2"])
-    assert rc == 1, "merged WS finding should make cmd_scan exit 1"
+    # M75: unproven findings route to candidates; candidate-only
+    # scan exits 0 (exit 1 reserved for verified findings).
+    assert rc == 0, "candidate-only scan exits 0 (no verified findings)"
 
 
 def test_cmd_scan_does_not_call_scan_ws_when_flag_absent():

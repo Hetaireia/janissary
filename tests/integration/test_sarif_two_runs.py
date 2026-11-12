@@ -51,8 +51,11 @@ def _finding(
 def _summary(*findings: ScanFinding) -> ScanSummary:
     s = ScanSummary(target="http://x/", params=["q"], method="GET")
     for f in findings:
-        s.findings.append(f)
-    s.finding_count = len(findings)
+        if f.verification_status == "unproven":
+            s.candidates.append(f)
+        else:
+            s.findings.append(f)
+    s.finding_count = len(s.findings)
     return s
 
 
@@ -119,6 +122,10 @@ def test_run_track_labels(tmp_path):
 
 
 def test_mixed_summary_partitioned_by_status(tmp_path):
+    """M75c safeguard: candidates remain distinguishable from verified
+    findings in the emitted SARIF. The verified run contains only
+    verified results; the discovery run contains only unproven
+    results. No candidate is represented as verified."""
     doc = _read(
         tmp_path,
         _summary(
@@ -139,6 +146,14 @@ def test_mixed_summary_partitioned_by_status(tmp_path):
         doc["runs"][1]["results"][0]["ruleId"]
         == "sqli:error_leak:heuristic_sqli_error_leak"
     )
+    # Explicit distinction check: verified run has no unproven results
+    for r in doc["runs"][0]["results"]:
+        assert r["properties"]["verification_status"] == "verified"
+        assert r["partialFingerprints"]["verification_status/v1"] == "verified"
+    # Discovery run has no verified results
+    for r in doc["runs"][1]["results"]:
+        assert r["properties"]["verification_status"] == "unproven"
+        assert r["partialFingerprints"]["verification_status/v1"] == "unproven"
 
 
 # --- partialFingerprints (ADR-019 D2) ---------------------------------

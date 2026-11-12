@@ -36,7 +36,10 @@ def _summary_with_group(findings: list[ScanFinding]) -> ScanSummary:
     )
     for f in findings:
         group.add(f)
-        summary.findings.append(f)
+        if f.verification_status == "unproven":
+            summary.candidates.append(f)
+        else:
+            summary.findings.append(f)
     summary.groups.append(group)
     return summary
 
@@ -112,7 +115,10 @@ def _summary_ungrouped(findings: list[ScanFinding]) -> ScanSummary:
     """
     s = ScanSummary(target="http://x/", params=["q"], method="GET")
     for f in findings:
-        s.findings.append(f)
+        if f.verification_status == "unproven":
+            s.candidates.append(f)
+        else:
+            s.findings.append(f)
     s.finding_count = len(s.findings)
     return s
 

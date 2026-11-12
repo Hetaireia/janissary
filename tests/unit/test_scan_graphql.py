@@ -68,8 +68,8 @@ def test_reachable_graphql_produces_findings():
                 summary = s.scan_graphql(include_probes=False)
     assert summary.aborted is False
     assert summary.scan_incomplete is False
-    assert len(summary.findings) == 1
-    finding = summary.findings[0]
+    assert len(summary.candidates) == 1
+    finding = summary.candidates[0]
     assert finding.category == "graphql"
     assert finding.verification_status == "unproven"
     assert finding.verification_reason == "graphql_recon"
@@ -89,8 +89,8 @@ def test_graphql_findings_marked_unproven_by_engine():
                 return_value=candidates,
             ):
                 summary = s.scan_graphql(include_probes=False)
-    assert summary.findings
-    for f in summary.findings:
+    assert summary.candidates
+    for f in summary.candidates:
         assert f.verification_status == "unproven"
         assert f.verification_reason == "graphql_recon"
 
@@ -111,7 +111,7 @@ def test_multiple_candidates_produce_multiple_findings():
                 return_value=candidates,
             ):
                 summary = s.scan_graphql(include_probes=False)
-    assert len(summary.findings) == 3
+    assert len(summary.candidates) == 3
 
 
 def test_include_fuzz_passed_to_discovery_module():

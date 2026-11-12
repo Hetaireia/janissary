@@ -121,8 +121,8 @@ def test_scan_ws_success_findings_verified_and_unproven():
                 summary = s.scan_ws(payloads=['{"x":1}'])
     assert summary.aborted is False
     assert summary.scan_incomplete is False
-    assert len(summary.findings) == 1
-    f = summary.findings[0]
+    assert len(summary.candidates) == 1
+    f = summary.candidates[0]
     assert f.finding_type == "websocket_sqli_probe"
     assert f.verification_status == "unproven"
     assert f.verification_reason == "websocket_recon"

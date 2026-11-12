@@ -1119,7 +1119,10 @@ class Scanner:
             if not isinstance(result, VerifiedFinding):
                 continue
             finding = _to_scan_finding(result)
-            summary.record(finding)
+            if finding.verification_status == "unproven":
+                summary.candidates.append(finding)
+            else:
+                summary.record(finding)
 
         return summary
 
@@ -1251,7 +1254,10 @@ class Scanner:
             if not isinstance(result, VerifiedFinding):
                 continue
             finding = _to_scan_finding(result)
-            summary.record(finding)
+            if finding.verification_status == "unproven":
+                summary.candidates.append(finding)
+            else:
+                summary.record(finding)
 
         return summary
 

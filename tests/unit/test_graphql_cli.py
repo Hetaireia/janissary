@@ -53,7 +53,10 @@ def _summary(findings=None, **kw):
         method=kw.get("method", "GET"),
     )
     for f in findings or []:
-        s.findings.append(f)
+        if f.verification_status == "unproven":
+            s.candidates.append(f)
+        else:
+            s.findings.append(f)
     s.finding_count = len(s.findings)
     s.total_requests = kw.get("total_requests", 10)
     s.aborted = kw.get("aborted", False)
@@ -63,14 +66,18 @@ def _summary(findings=None, **kw):
 
 
 def test_merge_appends_findings_and_updates_count():
+    """M75: unproven GraphQL findings route to summary.candidates,
+    not summary.findings. Verified findings and finding_count are
+    unaffected."""
     s = _summary([_scan_finding()])
     gql = _summary(
         [_graphql_finding(), _graphql_finding(finding_type="graphql_batching_accepted")]
     )
     result = _merge_graphql_into_scan(s, gql)
     assert result is s
-    assert len(s.findings) == 3
-    assert s.finding_count == 3
+    assert len(s.findings) == 1  # the pre-existing verified scan_finding
+    assert len(s.candidates) == 2  # both graphql findings are unproven
+    assert s.finding_count == 1
 
 
 def test_merge_sums_total_requests():
@@ -103,13 +110,14 @@ def test_merge_propagates_aborted_when_outer_not_aborted():
     assert s.abort_reason == "graphql aborted"
 
 
-def test_merge_findings_pass_verified_findings_list_assertion():
-    """The outer summary.findings is a _VerifiedFindingsList that
-    asserts _engine_emitted=True. Merge must not raise."""
+def test_merge_routes_unproven_to_candidates_not_findings():
+    """M75: _merge_graphql_into_scan routes unproven findings to
+    summary.candidates. summary.findings stays empty."""
     s = _summary([])
     gql = _summary([_graphql_finding()])
-    _merge_graphql_into_scan(s, gql)  # would raise AssertionError if marker missing
-    assert len(s.findings) == 1
+    _merge_graphql_into_scan(s, gql)
+    assert len(s.findings) == 0
+    assert len(s.candidates) == 1
 
 
 def test_graphql_flag_registered_in_scan_subparser():
