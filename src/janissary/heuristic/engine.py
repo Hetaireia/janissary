@@ -168,13 +168,27 @@ class HeuristicEngine:
         observations: list[Observation],
         *,
         include_suppressed: bool = False,
+        aggregate: bool = False,
     ) -> list[CandidateFinding]:
         """Convert matches to CandidateFinding.
 
         discovery_reason='heuristic:<sig_id>' triggers HeuristicConfirmer.
         verification_status is deliberately NOT set (CandidateFinding has
         no such field; ADR-022 D1).
+
+        When ``aggregate=True`` (M82b), matches are grouped by
+        ``(url, method, param)`` and one aggregate candidate is emitted
+        per group. ``include_suppressed`` still governs whether
+        suppressed matches are considered: when False they are
+        filtered before grouping; when True they contribute (with an
+        advisory marker in ``detail``). Non-aggregate behaviour is
+        unchanged.
         """
+        if aggregate:
+            return self._to_aggregate_candidates(
+                matches, observations, include_suppressed=include_suppressed
+            )
+
         candidates: list[CandidateFinding] = []
         for m in matches:
             if m.suppressed and not include_suppressed:
@@ -270,6 +284,94 @@ class HeuristicEngine:
 
         groups.sort(key=lambda g: g.first_observation_index)
         return groups
+
+    def _to_aggregate_candidates(
+        self,
+        matches: list[HeuristicMatch],
+        observations: list[Observation],
+        *,
+        include_suppressed: bool,
+    ) -> list[CandidateFinding]:
+        """Emit one aggregate candidate per MatchGroup (M82b).
+
+        Reduction policy (R1-R6):
+        - observation_count = distinct contributing probes
+        - signature_id = sorted comma-join of group.signature_ids
+        - category = category of the highest-confidence match,
+          tiebroken by (signature_id, category) alphabetically
+        - confidence = max(group.confidences)
+        - detail = aggregate summary per R5, with suppression prefix
+        - include_suppressed False filters matches before grouping;
+          True includes them with an advisory
+
+        Base observation fields (payload_name, payload_value,
+        response_status, response_length) come from the observation at
+        the group's first_observation_index. raw_* remain defaults.
+        """
+        if include_suppressed:
+            filtered = list(matches)
+        else:
+            filtered = [m for m in matches if not m.suppressed]
+        groups = self.aggregate(filtered, observations)
+
+        candidates: list[CandidateFinding] = []
+        for g in groups:
+            primary = min(
+                g.matches,
+                key=lambda m: (-m.confidence, m.signature_id, m.category),
+            )
+            primary_category = primary.category
+            first_match = min(g.matches, key=lambda m: m.observation_index)
+            base_obs = observations[g.first_observation_index]
+
+            n_suppressed = sum(1 for m in g.matches if m.suppressed)
+            if n_suppressed == 0:
+                prefix = ""
+            elif n_suppressed == len(g.matches):
+                prefix = f"[suppressed: {g.matches[0].suppression_reason}] "
+            else:
+                prefix = f"[includes {n_suppressed} suppressed] "
+
+            sig_id_str = ",".join(sorted(g.signature_ids))
+            fams_str = ",".join(sorted(g.payload_families))
+            cats_str = ",".join(sorted(g.categories))
+            detail = (
+                f"Heuristic aggregation on {g.param}: "
+                f"{len(g.matches)} matches across "
+                f"{len(g.contributing_observation_ids)} probes; "
+                f"signatures={sig_id_str}; families={fams_str}; "
+                f"categories={cats_str}; "
+                f"evidence: {first_match.evidence_excerpt!r}"
+            )
+            detail = prefix + detail
+
+            candidates.append(
+                CandidateFinding(
+                    param=g.param,
+                    payload_name=base_obs.payload_name or "heuristic",
+                    payload_value=(
+                        base_obs.payload_value or first_match.matched_pattern
+                    ),
+                    category=primary_category,
+                    severity="low",
+                    finding_type=(f"heuristic_{primary_category.replace(':', '_')}"),
+                    detail=detail,
+                    response_status=base_obs.response_status,
+                    response_length=len(base_obs.body or ""),
+                    url=g.url,
+                    method=g.method,
+                    discovery_reason=f"heuristic:{sig_id_str}",
+                    confidence=max(g.confidences),
+                    evidence_excerpt=first_match.evidence_excerpt,
+                    signature_id=sig_id_str,
+                    observation_count=len(g.contributing_observation_ids),
+                    first_observation_id=g.first_observation_id,
+                    last_observation_id=g.last_observation_id,
+                    payload_families=tuple(sorted(g.payload_families)),
+                    contributing_observation_ids=g.contributing_observation_ids,
+                )
+            )
+        return candidates
 
     @staticmethod
     def _select_target(layer: str, obs: Observation) -> str | None:
