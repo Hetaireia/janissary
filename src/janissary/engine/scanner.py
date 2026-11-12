@@ -403,6 +403,38 @@ class _VerifiedFindingsList(list):
                 )
         super().extend(items)
 
+    def __setitem__(self, index, value):
+        if isinstance(index, slice):
+            for item in value:
+                if not getattr(item, "_engine_emitted", False):
+                    raise AssertionError(
+                        f"Phase 0.1 invariant violation: "
+                        f"ScanSummary.findings.__setitem__ (slice) received "
+                        f"a finding that did not come from "
+                        f"VerificationEngine.verify() -> _to_scan_finding(). "
+                        f"Offender: {item!r}"
+                    )
+        else:
+            if not getattr(value, "_engine_emitted", False):
+                raise AssertionError(
+                    f"Phase 0.1 invariant violation: "
+                    f"ScanSummary.findings.__setitem__ received a finding "
+                    f"that did not come from "
+                    f"VerificationEngine.verify() -> _to_scan_finding(). "
+                    f"Offender: {value!r}"
+                )
+        super().__setitem__(index, value)
+
+    def insert(self, index, item):
+        if not getattr(item, "_engine_emitted", False):
+            raise AssertionError(
+                f"Phase 0.1 invariant violation: ScanSummary.findings.insert "
+                f"received a finding that did not come from "
+                f"VerificationEngine.verify() -> _to_scan_finding(). "
+                f"Offender: {item!r}"
+            )
+        super().insert(index, item)
+
 
 class _DedupedFindingsList(_VerifiedFindingsList):
     """Findings list that rejects duplicate fingerprints on append.
