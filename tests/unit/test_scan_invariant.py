@@ -18,7 +18,7 @@ from janissary.engine.scanner import (
     _to_scan_finding,
     _VerifiedFindingsList,
 )
-from janissary.verification import CandidateFinding
+from janissary.verification import CandidateFinding, VerifiedFinding
 
 
 def _candidate(**kw) -> CandidateFinding:
@@ -134,3 +134,86 @@ def test_source_uses_verified_findings_list_and_marker():
             "_DedupedFindingsList must inherit from _VerifiedFindingsList "
             "to preserve the Phase 0.1 invariant"
         )
+
+
+# --- M75b behavioural tests ---
+
+
+def _verified_finding_m75() -> ScanFinding:
+    vf = VerifiedFinding(
+        param="q",
+        payload_name="sql_single_quote",
+        payload_value="'",
+        category="sqli",
+        severity="critical",
+        finding_type="db_error",
+        detail="SQL error",
+        url="http://x/a?q='",
+        verification_status="verified",
+    )
+    return _to_scan_finding(vf)
+
+
+def _unproven_finding_m75() -> ScanFinding:
+    vf = VerifiedFinding(
+        param="q",
+        payload_name="heuristic",
+        payload_value="x",
+        category="heuristic",
+        severity="info",
+        finding_type="heuristic_match",
+        detail="heuristic hit",
+        url="http://x/a?q=x",
+        verification_status="unproven",
+        verification_reason="heuristic_discovery",
+    )
+    return _to_scan_finding(vf)
+
+
+def test_verified_findings_list_rejects_unproven_finding():
+    lst = _VerifiedFindingsList()
+    f = _unproven_finding_m75()
+    assert getattr(f, "_engine_emitted", False) is True
+    assert f.verification_status == "unproven"
+    with pytest.raises(AssertionError, match=r"verification_status="):
+        lst.append(f)
+
+
+def test_verified_findings_list_accepts_verified_finding():
+    lst = _VerifiedFindingsList()
+    lst.append(_verified_finding_m75())
+    assert len(lst) == 1
+
+
+def test_verified_findings_list_extend_rejects_unproven():
+    lst = _VerifiedFindingsList()
+    with pytest.raises(AssertionError):
+        lst.extend([_verified_finding_m75(), _unproven_finding_m75()])
+
+
+def test_verified_findings_list_insert_rejects_unproven():
+    lst = _VerifiedFindingsList()
+    with pytest.raises(AssertionError):
+        lst.insert(0, _unproven_finding_m75())
+
+
+def test_verified_findings_list_setitem_rejects_unproven():
+    lst = _VerifiedFindingsList()
+    lst.append(_verified_finding_m75())
+    with pytest.raises(AssertionError):
+        lst[0] = _unproven_finding_m75()
+
+
+def test_verified_findings_list_slice_setitem_rejects_unproven():
+    lst = _VerifiedFindingsList()
+    lst.append(_verified_finding_m75())
+    with pytest.raises(AssertionError):
+        lst[0:1] = [_unproven_finding_m75()]
+
+
+def test_scan_summary_record_rejects_unproven():
+    summary = ScanSummary(target="http://x", params=["q"], method="GET")
+    with pytest.raises(AssertionError):
+        summary.record(_unproven_finding_m75())
+    assert summary.finding_count == 0
+    assert len(summary.findings) == 0

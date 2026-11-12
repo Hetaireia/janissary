@@ -369,70 +369,62 @@ _ENGINE = VerificationEngine(
 
 
 class _VerifiedFindingsList(list):
-    """A list that asserts every appended item carries _engine_emitted=True.
+    """A list that asserts every appended item is engine-emitted AND verified.
 
-    Phase 0.1 invariant: ScanSummary.findings contains only findings produced
-    by VerificationEngine.verify() -> _to_scan_finding(). Any direct
-    ScanFinding(...) construction that bypasses the engine and tries to
-    append here raises AssertionError.
+    M75 invariant: ScanSummary.findings contains only findings produced by
+    VerificationEngine.verify() -> _to_scan_finding() whose verification_status
+    is 'verified'. Two independent requirements:
+
+    - _engine_emitted=True  -> the item came through the engine
+    - verification_status="verified" -> the engine actually confirmed it
+
+    A finding that came through the engine but was not confirmed (status
+    'unproven') belongs in ScanSummary.candidates. A ScanFinding constructed
+    directly (no marker) is rejected regardless of status.
 
     The marker is a non-dataclass attribute set only by _to_scan_finding().
     It is not visible to dataclasses.asdict() (which only walks fields) and
     invisible to consumers that filter underscore-prefixed keys from vars().
     """
 
-    def append(self, item):
+    @staticmethod
+    def _validate(item):
         if not getattr(item, "_engine_emitted", False):
             raise AssertionError(
-                f"Phase 0.1 invariant violation: ScanSummary.findings.append "
+                f"Phase 0.1 invariant violation: ScanSummary.findings "
                 f"received a finding that did not come from "
                 f"VerificationEngine.verify() -> _to_scan_finding(). "
                 f"Offender: {item!r}"
             )
+        status = getattr(item, "verification_status", "verified")
+        if status != "verified":
+            raise AssertionError(
+                f"Phase 0.1 invariant violation: ScanSummary.findings "
+                f"received a finding with verification_status={status!r}; "
+                f"findings must be 'verified'. Unproven findings belong in "
+                f"ScanSummary.candidates. Offender: {item!r}"
+            )
+
+    def append(self, item):
+        self._validate(item)
         super().append(item)
         return True
 
     def extend(self, items):
         for item in items:
-            if not getattr(item, "_engine_emitted", False):
-                raise AssertionError(
-                    f"Phase 0.1 invariant violation: ScanSummary.findings.extend "
-                    f"received a finding that did not come from "
-                    f"VerificationEngine.verify() -> _to_scan_finding(). "
-                    f"Offender: {item!r}"
-                )
+            self._validate(item)
         super().extend(items)
 
     def __setitem__(self, index, value):
         if isinstance(index, slice):
             for item in value:
-                if not getattr(item, "_engine_emitted", False):
-                    raise AssertionError(
-                        f"Phase 0.1 invariant violation: "
-                        f"ScanSummary.findings.__setitem__ (slice) received "
-                        f"a finding that did not come from "
-                        f"VerificationEngine.verify() -> _to_scan_finding(). "
-                        f"Offender: {item!r}"
-                    )
+                self._validate(item)
         else:
-            if not getattr(value, "_engine_emitted", False):
-                raise AssertionError(
-                    f"Phase 0.1 invariant violation: "
-                    f"ScanSummary.findings.__setitem__ received a finding "
-                    f"that did not come from "
-                    f"VerificationEngine.verify() -> _to_scan_finding(). "
-                    f"Offender: {value!r}"
-                )
+            self._validate(value)
         super().__setitem__(index, value)
 
     def insert(self, index, item):
-        if not getattr(item, "_engine_emitted", False):
-            raise AssertionError(
-                f"Phase 0.1 invariant violation: ScanSummary.findings.insert "
-                f"received a finding that did not come from "
-                f"VerificationEngine.verify() -> _to_scan_finding(). "
-                f"Offender: {item!r}"
-            )
+        self._validate(item)
         super().insert(index, item)
 
 
@@ -460,11 +452,11 @@ class _DedupedFindingsList(_VerifiedFindingsList):
 
     def append(self, item):
         fp = getattr(item, "fingerprint", None)
-        if fp and isinstance(fp, str):
-            if fp in self._seen_fingerprints:
-                return False
-            self._seen_fingerprints.add(fp)
+        if fp and isinstance(fp, str) and fp in self._seen_fingerprints:
+            return False
         super().append(item)
+        if fp and isinstance(fp, str):
+            self._seen_fingerprints.add(fp)
         return True
 
     def extend(self, items):
