@@ -36,14 +36,17 @@ def _escape_pdf_text(s: str) -> str:
 
 def _normalize(payload):
     if isinstance(payload, list):
-        return {}, payload
+        return {}, payload, []
     if not isinstance(payload, dict):
-        return {}, []
-    meta = {k: v for k, v in payload.items() if k != "findings"}
+        return {}, [], []
+    meta = {k: v for k, v in payload.items() if k not in ("findings", "candidates")}
     findings = payload.get("findings") or []
     if not isinstance(findings, list):
         findings = []
-    return meta, findings
+    candidates = payload.get("candidates") or []
+    if not isinstance(candidates, list):
+        candidates = []
+    return meta, findings, candidates
 
 
 def _wrap(text: str, width: int = MAX_CHARS):
@@ -53,53 +56,69 @@ def _wrap(text: str, width: int = MAX_CHARS):
     return [text[i : i + width] for i in range(0, len(text), width)]
 
 
-def _build_lines(meta: dict, findings: list):
+def _render_one(f: dict, idx: int, *, is_candidate: bool = False):
+    lines: list[str] = []
+    sev = (f.get("severity") or "info").upper()
+    cls = f.get("class") or f.get("category") or "?"
+    param = f.get("parameter") or "?"
+    url = f.get("url") or "?"
+    payload = f.get("payload") or ""
+    detail = f.get("detail") or ""
+    vstatus = f.get("verification_status") or ""
+    vreason = f.get("verification_reason") or ""
+    verification = vstatus + (f" ({vreason})" if vreason else "")
+    idx_label = f"C#{idx}" if is_candidate else f"#{idx}"
+    marker = "[UNPROVEN] " if is_candidate else ""
+
+    lines.append("-" * 78)
+    lines.append(f"{idx_label}  [{sev}]  {marker}{cls}")
+    lines.extend(_wrap(f"URL:        {url}"))
+    lines.extend(_wrap(f"Parameter:  {param}"))
+    if payload:
+        lines.extend(_wrap(f"Payload:    {payload}"))
+    if verification:
+        lines.extend(_wrap(f"Verified:   {verification}"))
+    if detail:
+        lines.extend(_wrap(f"Detail:     {detail}"))
+
+    raw_req = f.get("raw_request") or ""
+    if raw_req:
+        lines.append("--- raw request ---")
+        for raw_line in raw_req.replace("\r\n", "\n").split("\n")[:40]:
+            lines.extend(_wrap(raw_line))
+    raw_resp = f.get("raw_response") or ""
+    if raw_resp:
+        lines.append("--- raw response ---")
+        for raw_line in raw_resp.replace("\r\n", "\n").split("\n")[:40]:
+            lines.extend(_wrap(raw_line))
+    lines.append("")
+    return lines
+
+
+def _build_lines(meta: dict, findings: list, candidates: list):
     lines = ["JANISSARY report", "=" * 78]
     target = meta.get("target") or meta.get("url") or "?"
     lines.extend(_wrap(f"Target: {target}"))
     ts = meta.get("timestamp")
     if ts:
         lines.extend(_wrap(f"Timestamp: {ts}"))
-    lines.append(f"Total findings: {len(findings)}")
+    lines.append(f"Verified: {len(findings)} | Candidates: {len(candidates)}")
     lines.append("")
 
+    lines.append("--- Verified Findings ---")
     if not findings:
-        lines.append("No findings.")
-        return lines
+        lines.append("No verified findings.")
+    else:
+        for i, f in enumerate(findings, 1):
+            lines.extend(_render_one(f, i))
 
-    for i, f in enumerate(findings, 1):
-        sev = (f.get("severity") or "info").upper()
-        cls = f.get("class") or f.get("category") or "?"
-        param = f.get("parameter") or "?"
-        url = f.get("url") or "?"
-        payload = f.get("payload") or ""
-        detail = f.get("detail") or ""
-        vstatus = f.get("verification_status") or ""
-        vreason = f.get("verification_reason") or ""
-        verification = vstatus + (f" ({vreason})" if vreason else "")
-
-        lines.append("-" * 78)
-        lines.append(f"#{i}  [{sev}]  {cls}")
-        lines.extend(_wrap(f"URL:        {url}"))
-        lines.extend(_wrap(f"Parameter:  {param}"))
-        if payload:
-            lines.extend(_wrap(f"Payload:    {payload}"))
-        if verification:
-            lines.extend(_wrap(f"Verified:   {verification}"))
-        if detail:
-            lines.extend(_wrap(f"Detail:     {detail}"))
-
-        raw_req = f.get("raw_request") or ""
-        if raw_req:
-            lines.append("--- raw request ---")
-            for raw_line in raw_req.replace("\r\n", "\n").split("\n")[:40]:
-                lines.extend(_wrap(raw_line))
-        raw_resp = f.get("raw_response") or ""
-        if raw_resp:
-            lines.append("--- raw response ---")
-            for raw_line in raw_resp.replace("\r\n", "\n").split("\n")[:40]:
-                lines.extend(_wrap(raw_line))
-        lines.append("")
+    lines.append("")
+    lines.append("--- Discovery Candidates (unproven) ---")
+    if not candidates:
+        lines.append("No discovery candidates.")
+    else:
+        for i, c in enumerate(candidates, 1):
+            lines.extend(_render_one(c, i, is_candidate=True))
 
     return lines
 
@@ -187,7 +206,7 @@ def _emit_pdf(pages) -> bytes:
 
 def write_pdf_report(payload, path: str) -> None:
     """Render payload as a valid PDF 1.4 report at `path`."""
-    meta, findings = _normalize(payload)
-    lines = _build_lines(meta, findings)
+    meta, findings, candidates = _normalize(payload)
+    lines = _build_lines(meta, findings, candidates)
     pages = _paginate(lines)
     Path(path).write_bytes(_emit_pdf(pages))

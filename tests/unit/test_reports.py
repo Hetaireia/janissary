@@ -30,6 +30,34 @@ PAYLOAD = {
     "findings": [FINDING],
 }
 
+CANDIDATE = {
+    "class": "graphql",
+    "severity": "info",
+    "url": "http://example.com/graphql",
+    "parameter": "introspection_query",
+    "payload": "__schema",
+    "detail": "Introspection enabled",
+    "raw_request": "POST /graphql HTTP/1.1\r\nHost: example.com\r\n\r\n",
+    "raw_response": "HTTP/1.1 200 OK\r\n\r\n{}",
+    "verification_status": "unproven",
+    "verification_reason": "graphql_recon",
+    "record_type": "candidate",
+}
+
+MIXED_PAYLOAD = {
+    "target": "http://example.com",
+    "timestamp": "2026-11-04T00:00:00Z",
+    "findings": [FINDING],
+    "candidates": [CANDIDATE],
+}
+
+CANDIDATE_ONLY_PAYLOAD = {
+    "target": "http://example.com",
+    "timestamp": "2026-11-04T00:00:00Z",
+    "findings": [],
+    "candidates": [CANDIDATE, dict(CANDIDATE, parameter="depth_probe")],
+}
+
 
 # ---- html renderer --------------------------------------------------------
 
@@ -41,7 +69,8 @@ def test_html_doctype_and_structure(tmp_path):
     assert text.startswith("<!doctype html>")
     assert "<title>JANISSARY report" in text
     assert "http://example.com" in text
-    assert "Total findings:</b> 1" in text
+    assert "<b>Verified:</b> 1" in text
+    assert "<b>Candidates:</b> 0" in text
 
 
 def test_html_renders_finding_fields(tmp_path):
@@ -67,8 +96,8 @@ def test_html_empty_findings(tmp_path):
     out = tmp_path / "r.html"
     write_html_report({"target": "t", "findings": []}, str(out))
     text = out.read_text(encoding="utf-8")
-    assert "No findings." in text
-    assert "no findings" in text
+    assert "No verified findings." in text
+    assert "No discovery candidates." in text
 
 
 def test_html_accepts_bare_findings_list(tmp_path):
@@ -76,14 +105,14 @@ def test_html_accepts_bare_findings_list(tmp_path):
     write_html_report([FINDING], str(out))
     text = out.read_text(encoding="utf-8")
     assert "sqli" in text
-    assert "Total findings:</b> 1" in text
+    assert "<b>Verified:</b> 1" in text
 
 
 def test_html_handles_garbage_payload(tmp_path):
     out = tmp_path / "r.html"
     write_html_report("not a dict or list", str(out))
     text = out.read_text(encoding="utf-8")
-    assert "No findings." in text
+    assert "No verified findings." in text
 
 
 # ---- pdf renderer ---------------------------------------------------------
@@ -113,7 +142,8 @@ def test_pdf_empty_findings(tmp_path):
     write_pdf_report({"target": "t", "findings": []}, str(out))
     data = out.read_bytes()
     assert data.startswith(b"%PDF-1.4")
-    assert b"No findings." in data
+    assert b"No verified findings." in data
+    assert b"No discovery candidates." in data
 
 
 def test_pdf_multipage_when_many_findings(tmp_path):
@@ -167,12 +197,87 @@ def test_paginate_splits_correctly():
 
 
 def test_normalize_handles_all_shapes():
-    meta, findings = _normalize({"target": "t", "findings": [FINDING]})
+    meta, findings, candidates = _normalize({"target": "t", "findings": [FINDING]})
     assert meta == {"target": "t"}
     assert findings == [FINDING]
+    assert candidates == []
 
-    meta, findings = _normalize([FINDING])
-    assert meta == {} and findings == [FINDING]
+    meta, findings, candidates = _normalize([FINDING])
+    assert meta == {} and findings == [FINDING] and candidates == []
 
-    meta, findings = _normalize(None)
-    assert meta == {} and findings == []
+    meta, findings, candidates = _normalize(None)
+    assert meta == {} and findings == [] and candidates == []
+
+    meta, findings, candidates = _normalize({"findings": [], "candidates": [CANDIDATE]})
+    assert findings == [] and candidates == [CANDIDATE]
+
+
+# ---- HTML candidate rendering ----
+
+
+def test_html_mixed_shows_both_sections(tmp_path):
+    out = tmp_path / "r.html"
+    write_html_report(MIXED_PAYLOAD, str(out))
+    text = out.read_text(encoding="utf-8")
+    assert "Verified Findings" in text
+    assert "Discovery Candidates" in text
+    assert "<b>Verified:</b> 1" in text
+    assert "<b>Candidates:</b> 1" in text
+
+
+def test_html_candidate_only_shows_only_candidates(tmp_path):
+    out = tmp_path / "r.html"
+    write_html_report(CANDIDATE_ONLY_PAYLOAD, str(out))
+    text = out.read_text(encoding="utf-8")
+    assert "No verified findings." in text
+    assert "Discovery Candidates" in text
+    assert "<b>Verified:</b> 0" in text
+    assert "<b>Candidates:</b> 2" in text
+
+
+def test_html_candidate_has_unproven_marker(tmp_path):
+    out = tmp_path / "r.html"
+    write_html_report(MIXED_PAYLOAD, str(out))
+    text = out.read_text(encoding="utf-8")
+    assert '<span class="stream">unproven</span>' in text
+    assert "C#1" in text
+
+
+def test_html_backward_compat_missing_candidates_key(tmp_path):
+    # PAYLOAD has no candidates key; must not crash
+    out = tmp_path / "r.html"
+    write_html_report(PAYLOAD, str(out))
+    text = out.read_text(encoding="utf-8")
+    assert "<b>Candidates:</b> 0" in text
+    assert "No discovery candidates." in text
+
+
+# ---- PDF candidate rendering ----
+
+
+def test_pdf_mixed_renders_candidates_section(tmp_path):
+    out = tmp_path / "r.pdf"
+    write_pdf_report(MIXED_PAYLOAD, str(out))
+    data = out.read_bytes()
+    # _escape_pdf_text maps ( to \( and ) to \) per PDF spec. Assert
+    # the escaped byte form; the section header is present in the
+    # content stream with parentheses escaped.
+    assert b"Discovery Candidates \\(unproven\\)" in data
+    assert b"[UNPROVEN]" in data
+    assert b"graphql" in data
+
+
+def test_pdf_candidate_only_renders_candidates_section(tmp_path):
+    out = tmp_path / "r.pdf"
+    write_pdf_report(CANDIDATE_ONLY_PAYLOAD, str(out))
+    data = out.read_bytes()
+    assert b"No verified findings." in data
+    assert b"Discovery Candidates" in data
+    assert b"graphql" in data
+
+
+def test_pdf_candidate_uses_c_prefix(tmp_path):
+    out = tmp_path / "r.pdf"
+    write_pdf_report(MIXED_PAYLOAD, str(out))
+    data = out.read_bytes()
+    assert b"C#1" in data

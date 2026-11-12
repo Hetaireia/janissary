@@ -28,16 +28,19 @@ def _esc(value) -> str:
 
 
 def _normalize(payload):
-    """Return (meta, findings) from a summary dict or a bare findings list."""
+    """Return (meta, findings, candidates) from a summary dict or bare list."""
     if isinstance(payload, list):
-        return {}, payload
+        return {}, payload, []
     if not isinstance(payload, dict):
-        return {}, []
-    meta = {k: v for k, v in payload.items() if k != "findings"}
+        return {}, [], []
+    meta = {k: v for k, v in payload.items() if k not in ("findings", "candidates")}
     findings = payload.get("findings") or []
     if not isinstance(findings, list):
         findings = []
-    return meta, findings
+    candidates = payload.get("candidates") or []
+    if not isinstance(candidates, list):
+        candidates = []
+    return meta, findings, candidates
 
 
 def _sev(finding) -> str:
@@ -45,7 +48,7 @@ def _sev(finding) -> str:
     return s if s in _SEV_CSS else "info"
 
 
-def _render_finding(f: dict, idx: int) -> str:
+def _render_finding(f: dict, idx: int, *, is_candidate: bool = False) -> str:
     sev = _sev(f)
     cls = f.get("class") or f.get("category") or "?"
     param = f.get("parameter") or "?"
@@ -57,16 +60,24 @@ def _render_finding(f: dict, idx: int) -> str:
     vstatus = f.get("verification_status") or ""
     vreason = f.get("verification_reason") or ""
     verification = vstatus + (f" ({vreason})" if vreason else "")
+    container_cls = "finding candidate" if is_candidate else "finding"
+    idx_label = f"C#{idx + 1}" if is_candidate else f"#{idx + 1}"
 
     parts = [
-        f'<details class="finding sev-{_esc(sev)}">',
+        f'<details class="{container_cls} sev-{_esc(sev)}">',
         "  <summary>",
         f'    <span class="sev">{_esc(sev.upper())}</span>',
-        f'    <span class="idx">#{idx + 1}</span>',
-        f'    <span class="cls">{_esc(cls)}</span>',
-        f'    <code class="url">{_esc(url)}</code>',
-        f'    <span class="param">param=<b>{_esc(param)}</b></span>',
     ]
+    if is_candidate:
+        parts.append('    <span class="stream">unproven</span>')
+    parts.extend(
+        [
+            f'    <span class="idx">{idx_label}</span>',
+            f'    <span class="cls">{_esc(cls)}</span>',
+            f'    <code class="url">{_esc(url)}</code>',
+            f'    <span class="param">param=<b>{_esc(param)}</b></span>',
+        ]
+    )
     if payload:
         parts.append(
             f'    <span class="payload">payload=<code>{_esc(payload)}</code></span>'
@@ -133,6 +144,11 @@ pre.raw { background:#f6f8fa; border:1px solid var(--border);
           border-radius:4px; padding:8px; white-space:pre-wrap;
           word-break:break-all; max-height:400px; overflow:auto;
           margin:4px 0 0; }
+.finding.candidate { border-left-style: dashed; background:#fdfdfd; }
+.finding .stream { display:inline-block; padding:1px 6px; border-radius:8px;
+                   background:#fff5e6; color:#9a6700; border:1px solid #d4a843;
+                   font-size:10px; font-weight:700; text-transform:uppercase;
+                   letter-spacing:0.5px; }
 .empty { color:var(--muted); font-style:italic; }
 footer { margin-top:32px; color:var(--muted); font-size:12px; text-align:center; }
 """
@@ -140,7 +156,7 @@ footer { margin-top:32px; color:var(--muted); font-size:12px; text-align:center;
 
 def write_html_report(payload, path: str) -> None:
     """Render payload as a self-contained HTML report at `path`."""
-    meta, findings = _normalize(payload)
+    meta, findings, candidates = _normalize(payload)
     target = meta.get("target") or meta.get("url") or "?"
     timestamp = meta.get("timestamp") or ""
 
@@ -157,7 +173,12 @@ def write_html_report(payload, path: str) -> None:
 
     findings_html = "\n".join(_render_finding(f, i) for i, f in enumerate(findings))
     if not findings_html:
-        findings_html = '<p class="empty">No findings.</p>'
+        findings_html = '<p class="empty">No verified findings.</p>'
+    candidates_html = "\n".join(
+        _render_finding(c, i, is_candidate=True) for i, c in enumerate(candidates)
+    )
+    if not candidates_html:
+        candidates_html = '<p class="empty">No discovery candidates.</p>'
 
     stamp = f"<div><b>Timestamp:</b> {_esc(timestamp)}</div>" if timestamp else ""
 
@@ -174,11 +195,14 @@ def write_html_report(payload, path: str) -> None:
         '<div class="meta">\n'
         f"  <div><b>Target:</b> <code>{_esc(target)}</code></div>\n"
         f"  {stamp}\n"
-        f"  <div><b>Total findings:</b> {len(findings)}</div>\n"
+        f"  <div><b>Verified:</b> {len(findings)} &middot; "
+        f"<b>Candidates:</b> {len(candidates)}</div>\n"
         "</div>\n"
         f'<div class="summary">{summary_html}</div>\n'
-        "<h2>Findings</h2>\n"
+        "<h2>Verified Findings</h2>\n"
         f"{findings_html}\n"
+        "<h2>Discovery Candidates <small>(unproven)</small></h2>\n"
+        f"{candidates_html}\n"
         "<footer>Generated by JANISSARY. Findings carry raw HTTP/1.1 for "
         "direct verification in Burp Repeater.</footer>\n"
         "</body>\n"
