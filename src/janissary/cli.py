@@ -545,6 +545,60 @@ def _resolve_scan_deps(args: argparse.Namespace) -> ScanDeps | None:
     )
 
 
+def _emit_scan_result(
+    args: argparse.Namespace,
+    summary: ScanSummary,
+    real_stdout,
+    fmt: OutputFormat,
+) -> int:
+    """Print, export, and emit a scan's result; return the exit code.
+
+    Extracted from cmd_scan for ADR-030 Stage 6 so the OpenAPI loop
+    can emit a merged summary through the same path as a single scan.
+    real_stdout and fmt are passed in because the caller has already
+    redirected sys.stdout for machine formats before this is called;
+    capturing sys.stdout here would capture the redirected stream.
+    """
+    if not args.quiet:
+        _print_summary(summary)
+
+    if args.export:
+        payload = _summary_to_dict(summary)
+        ext = args.export.lower().rsplit(".", 1)[-1]
+        if ext == "json":
+            with open(args.export, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh, indent=2)
+        elif ext == "sarif":
+            _write_sarif(summary, args.export)
+        elif ext == "html":
+            from janissary.reporting.html_report import write_html_report
+
+            write_html_report(payload, args.export)
+        elif ext == "pdf":
+            from janissary.reporting.pdf_report import write_pdf_report
+
+            write_pdf_report(payload, args.export)
+        else:
+            with open(args.export, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh, indent=2)
+        print(f"[*] Results exported to {args.export}")
+
+    sys.stdout = real_stdout
+    if fmt is not OutputFormat.HUMAN:
+        meta = _summary_to_dict(summary)
+        meta.pop("findings", None)
+        meta.pop("groups", None)
+        OutputEmitter(fmt, redact=getattr(args, "redact_auth", False)).emit(
+            summary.findings, meta
+        )
+
+    if summary.aborted:
+        return 2
+    if summary.findings:
+        return 1
+    return 0
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -769,44 +823,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
                     f"(see --json / --jsonl / --export for detail)"
                 )
 
-    if not args.quiet:
-        _print_summary(summary)
-
-    if args.export:
-        payload = _summary_to_dict(summary)
-        ext = args.export.lower().rsplit(".", 1)[-1]
-        if ext == "json":
-            with open(args.export, "w", encoding="utf-8") as fh:
-                json.dump(payload, fh, indent=2)
-        elif ext == "sarif":
-            _write_sarif(summary, args.export)
-        elif ext == "html":
-            from janissary.reporting.html_report import write_html_report
-
-            write_html_report(payload, args.export)
-        elif ext == "pdf":
-            from janissary.reporting.pdf_report import write_pdf_report
-
-            write_pdf_report(payload, args.export)
-        else:
-            with open(args.export, "w", encoding="utf-8") as fh:
-                json.dump(payload, fh, indent=2)
-        print(f"[*] Results exported to {args.export}")
-
-    sys.stdout = real_stdout
-    if fmt is not OutputFormat.HUMAN:
-        meta = _summary_to_dict(summary)
-        meta.pop("findings", None)
-        meta.pop("groups", None)
-        OutputEmitter(fmt, redact=getattr(args, "redact_auth", False)).emit(
-            summary.findings, meta
-        )
-
-    if summary.aborted:
-        return 2
-    if summary.findings:
-        return 1
-    return 0
+    return _emit_scan_result(args, summary, real_stdout, fmt)
 
 
 def cmd_creds(args: argparse.Namespace) -> int:
