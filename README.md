@@ -10,10 +10,10 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D4AF37" alt="License"></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.10+-4B5057" alt="Python"></a>
-  <a href="https://github.com/Hetaireia/janissary/tags"><img src="https://img.shields.io/badge/version-7.11.1-D4AF37" alt="Version"></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/source-7.11.1-D4AF37" alt="Source version"></a>
   <a href="https://pypi.org/project/janissary/"><img src="https://img.shields.io/badge/pypi-7.10.2-4B5057" alt="PyPI"></a>
-  <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.921-D4AF37" alt="OWASP F1"></a>
-  <a href="https://hub.docker.com/r/oraclemode337/janissary"><img src="https://img.shields.io/badge/docker-7.10.2-4B5057" alt="Docker"></a>
+  <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.922-D4AF37" alt="OWASP F1"></a>
+
 </p>
 
 —
@@ -29,7 +29,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 
 ### Differential detection, measured
 
-Every finding is gated by a baseline comparison — nothing emits from a single response. Measured against the OWASP Benchmark DAST-applicable corpus under the pre-registered methodology in [`BENCHMARK.md`](BENCHMARK.md): **precision 1.000** on dev splits (0 FP observed), **recall 0.854**, **F1 0.921**. Three baseline runs on 7.3.0 gave a mean unassisted F1 of 0.903 ± 0.009; the FN-recovery pass at `JANISSARY_TIMEOUT=180` closes to 0.921. Current 7.5.0 figures: F1 0.906 ± 0.002 unassisted (n=3), recovery 0.921. Run artifacts are committed under [`benchmark/track_a/runs/`](benchmark/track_a/runs/).
+Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus, the current **v7.11.1 result is F1 0.922** (precision 1.000, recall 0.855; TP 988 / FP 0 / FN 168 on 2,258 cases), **baseline-only**, single run. It clears the registered `--min-f1 0.92` gate. FN-recovery adds 0 findings at v7.11.1, so this baseline result matches the historical **v7.3.0 recovered headline F1 0.921** (TP 987) that required a second recovery pass. Precision 1.000 is scoped to the OWASP Benchmark corpus (0 FP across all runs to date); it does not establish a real-world false-positive rate, which remains the target of the M89 negative regression corpus. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 ### WAF-aware pacing
 
@@ -43,10 +43,10 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 
 ## At a glance
 
-| | |
+| Item | Details |
 |---|---|
-| **Version** | 7.11.1 (git tag, 2026-11-06; PyPI and Docker Hub at 7.10.2) |
-| **Benchmark (OWASP)** | **F1 0.921** all DAST-applicable · **0.977** supported-classes · **0.906 ± 0.002** unassisted (n=3) · Precision 1.000 (0 FP, n=3) |
+| **Version** | Source metadata 7.11.1 · latest GitHub release v7.11.0 · PyPI 7.10.2 |
+| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
 | **Detection classes** | SQLi, XSS, SSRF, cmdi; traversal partial (recall 0.075 — see Known Limitations) |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | text · JSON · JSONL · SARIF 2.1.0 |
@@ -144,17 +144,18 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 ## Benchmark
 
 > [!IMPORTANT]
-> **Measurement status (Amendment 23).** The 7.5.0 baseline was measured end-to-end on 2026-10-28 (three independent runs, fresh containers, single-process, same target). Figures below distinguish the **unassisted** score from the **FN-recovery-scored** figure. The unassisted figure is what a clean run reproduces; the recovery figure additionally re-scans FN cases at higher timeout per Amendment 20. The 95% upper bound on real-world false-positive rate, locked held-out precision, and external reproduction are pending. See [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md) and [`artifacts/7.5.0-baseline/`](artifacts/7.5.0-baseline/).
+> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 | Metric | Value | Notes |
 |---|---|---|
-| **Precision (dev split, n=3)** | **1.000 (0 FP observed)** | Reproduced on 7.5.0, 2026-10-28 |
-| **Recall (unassisted, n=3)** | **0.828 ± 0.004** | Sample std, DAST-applicable |
-| **F1 (unassisted, n=3)** | **0.906 ± 0.002** | Sample std, DAST-applicable |
-| F1 (with FN-recovery protocol) | 0.921 | TP 987 / FP 0 / FN 169 |
-| F1 (supported-classes, excl. path-traversal) | 0.977 | Excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
-| 3-run unassisted baseline F1 (historical) | 0.903 ± 0.009 | 7.3.0; matched by 7.5.0 within 1σ |
-| TP / FP / FN per run (r1 / r2 / r3) | 961/0/195 · 960/0/196 · 953/0/203 | DAST-applicable |
+| **F1 (v7.11.1 baseline-only, single run)** | **0.922** | Clears registered gate 0.92 by 0.002 |
+| **Precision** | **1.000 (0 FP)** | OWASP DAST-applicable corpus, all committed runs to date |
+| **Recall (v7.11.1)** | **0.855** | TP 988 / FN 168 (DAST-applicable) |
+| **TP / FP / FN / TN (v7.11.1)** | 988 / 0 / 168 / 1102 | DAST-applicable, baseline-only |
+| F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings at v7.11.1 |
+| F1 (supported-classes, excl. path-traversal) | 0.978 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
+| **Historical v7.3.0 recovered F1** | **0.921** | TP 987; required FN-recovery pass to achieve |
+| Historical 3-run unassisted F1 (v7.3.0) | 0.903 ± 0.009 | Last 3-run protocol measurement was v7.5.0 (0.906 ± 0.002) |
 | Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |
 
 Reproduce:
@@ -165,15 +166,16 @@ python -m benchmark.track_a.runner \
     --tool janissary --run-number 1 \
     --target-base http://127.0.0.1:8080/benchmark \
     --cases-csv benchmark/track_a/case_vectors.csv \
-    --tools-env artifacts/7.5.0-baseline/invocations/tools_default.env
-python benchmark/track_a/score_dast_aware.py benchmark/track_a/runs/<run-dir>
+    --tools-env benchmark/track_a/tools.env
+python benchmark/track_a/score_dast_aware.py \
+    benchmark/track_a/runs/20261112T180530Z-janissary-r1
 ```
 
 ### What this measurement does and does not claim
 
-- ✅ **Measured on 7.5.0:** dev-split precision (0 FP in 3 independent runs).
-- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md).
-- The `0.921` headline reflects the **FN-recovery protocol** (Amendment 20). The **unassisted** 7.5.0 3-run mean is `0.906 ± 0.002`.
+- ✅ **Measured on v7.11.1** (2026-11-13, commit `ea7b3e5`, post-M80): single complete baseline-only corpus run, 0 FP, F1 0.922, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261112T180530Z-janissary-r1/`.
+- ✅ **Historical recovered headline:** v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The v7.11.1 baseline matches this level with recovery adding 0 — the improvement from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
+- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent external reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md). The `0.922` headline is a single run, not a 3-run mean; `0.921` remains the historical recovered figure.
 
 See [`LIMITATIONS.md`](LIMITATIONS.md) for what JANISSARY can and cannot prove. See [`docs/decisions/`](docs/decisions/) for the architectural decision record.
 
