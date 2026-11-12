@@ -13,11 +13,14 @@ import argparse
 import contextlib
 import json
 import sys
+from dataclasses import dataclass
 
 import requests
 
 from janissary import __version__
 from janissary.auth import (
+    AuthConfig,
+    SessionSpec,
     add_auth_flags,
     apply_to_session,
     auth_from_args,
@@ -431,6 +434,117 @@ def _cmd_scan_openapi_dry_run(args: argparse.Namespace) -> int:
     return 0
 
 
+@dataclass
+class ScanDeps:
+    """Resolved, non-per-target dependencies for one or more Scanner constructions.
+
+    cmd_scan resolves these once via _resolve_scan_deps and reuses the
+    result for a single scan or for an N-target OpenAPI scan (ADR-030
+    Stage 6). Per-target values (url, params, method, inject_in) are
+    supplied separately to _build_scanner.
+    """
+
+    proxies: dict[str, str] | None
+    auth_cfg: AuthConfig
+    auth_session: requests.Session | None
+    collaborator_client: object | None
+    json_template: dict | None
+    idor_alt_spec: SessionSpec | None
+
+
+def _resolve_scan_deps(args: argparse.Namespace) -> ScanDeps | None:
+    """Resolve the deps _build_scanner needs that are not per-target.
+
+    Returns None on any resolution error, having printed a message to
+    stderr. The caller returns 64 in that case. Extracted from cmd_scan
+    so the Stage 6 OpenAPI loop can reuse these without duplicating the
+    error-handling branches.
+    """
+    proxies = None
+    if args.proxy:
+        proxies = {"http": args.proxy, "https": args.proxy}
+
+    try:
+        auth_cfg = auth_from_args(args)
+    except (ValueError, OSError) as exc:
+        print(f"[!] auth: {exc}", file=sys.stderr)
+        return None
+    auth_session = None
+    if not auth_cfg.is_empty:
+        auth_session = requests.Session()
+        apply_to_session(auth_session, auth_cfg)
+
+    idor_alt_spec = None
+    if getattr(args, "idor", False):
+        if auth_cfg.sessions:
+            idor_alt_spec = auth_cfg.sessions[1]
+        elif getattr(args, "cookie_alt", None):
+            idor_alt_spec = SessionSpec(cookie=args.cookie_alt)
+        elif getattr(args, "bearer_alt", None):
+            idor_alt_spec = SessionSpec(bearer=args.bearer_alt)
+
+    collaborator_client = None
+    _collab_url = getattr(args, "collaborator", None)
+    _use_interactsh = getattr(args, "interactsh", False)
+    if _collab_url and _use_interactsh:
+        print(
+            "[!] --collaborator and --interactsh are mutually exclusive",
+            file=sys.stderr,
+        )
+        return None
+    if _collab_url:
+        from janissary.integrations.collaborator import (
+            CollaboratorClient,
+            CollaboratorError,
+        )
+
+        try:
+            collaborator_client = CollaboratorClient(
+                _collab_url,
+                timeout=args.timeout,
+            )
+        except CollaboratorError as exc:
+            print(f"[!] --collaborator: {exc}", file=sys.stderr)
+            return None
+    elif _use_interactsh:
+        from janissary.integrations.collaborator import CollaboratorError
+        from janissary.integrations.interactsh import InteractshClient
+
+        try:
+            collaborator_client = InteractshClient(
+                server=getattr(args, "interactsh_server", None),
+                token=getattr(args, "interactsh_token", None),
+                timeout=args.timeout,
+            )
+        except CollaboratorError as exc:
+            print(f"[!] --interactsh: {exc}", file=sys.stderr)
+            return None
+
+    _json_template = None
+    if getattr(args, "json_template", None):
+        import json as _json
+        from pathlib import Path as _Path
+
+        _jt_path = _Path(args.json_template)
+        if not _jt_path.exists():
+            print(f"[!] --json-template: {_jt_path} not found", file=sys.stderr)
+            return None
+        try:
+            _json_template = _json.loads(_jt_path.read_text(encoding="utf-8"))
+        except _json.JSONDecodeError as _exc:
+            print(f"[!] --json-template: invalid JSON: {_exc}", file=sys.stderr)
+            return None
+
+    return ScanDeps(
+        proxies=proxies,
+        auth_cfg=auth_cfg,
+        auth_session=auth_session,
+        collaborator_client=collaborator_client,
+        json_template=_json_template,
+        idor_alt_spec=idor_alt_spec,
+    )
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
@@ -539,82 +653,15 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if fmt is not OutputFormat.HUMAN:
         sys.stdout = sys.stderr
 
-    proxies = None
-    if args.proxy:
-        proxies = {"http": args.proxy, "https": args.proxy}
-
-    try:
-        auth_cfg = auth_from_args(args)
-    except (ValueError, OSError) as exc:
-        print(f"[!] auth: {exc}", file=sys.stderr)
+    deps = _resolve_scan_deps(args)
+    if deps is None:
         return 64
-    auth_session = None
-    if not auth_cfg.is_empty:
-        auth_session = requests.Session()
-        apply_to_session(auth_session, auth_cfg)
-
-    idor_alt_spec = None
-    if getattr(args, "idor", False):
-        from janissary.auth import SessionSpec as _SS
-
-        if auth_cfg.sessions:
-            idor_alt_spec = auth_cfg.sessions[1]
-        elif getattr(args, "cookie_alt", None):
-            idor_alt_spec = _SS(cookie=args.cookie_alt)
-        elif getattr(args, "bearer_alt", None):
-            idor_alt_spec = _SS(bearer=args.bearer_alt)
-
-    collaborator_client = None
-    _collab_url = getattr(args, "collaborator", None)
-    _use_interactsh = getattr(args, "interactsh", False)
-    if _collab_url and _use_interactsh:
-        print(
-            "[!] --collaborator and --interactsh are mutually exclusive",
-            file=sys.stderr,
-        )
-        return 64
-    if getattr(args, "collaborator", None):
-        from janissary.integrations.collaborator import (
-            CollaboratorClient,
-            CollaboratorError,
-        )
-
-        try:
-            collaborator_client = CollaboratorClient(
-                args.collaborator,
-                timeout=args.timeout,
-            )
-        except CollaboratorError as exc:
-            print(f"[!] --collaborator: {exc}", file=sys.stderr)
-            return 64
-    elif _use_interactsh:
-        from janissary.integrations.collaborator import CollaboratorError
-        from janissary.integrations.interactsh import InteractshClient
-
-        try:
-            collaborator_client = InteractshClient(
-                server=getattr(args, "interactsh_server", None),
-                token=getattr(args, "interactsh_token", None),
-                timeout=args.timeout,
-            )
-        except CollaboratorError as exc:
-            print(f"[!] --interactsh: {exc}", file=sys.stderr)
-            return 64
-
-    _json_template = None
-    if getattr(args, "json_template", None):
-        import json as _json
-        from pathlib import Path as _Path
-
-        _jt_path = _Path(args.json_template)
-        if not _jt_path.exists():
-            print(f"[!] --json-template: {_jt_path} not found", file=sys.stderr)
-            return 64
-        try:
-            _json_template = _json.loads(_jt_path.read_text(encoding="utf-8"))
-        except _json.JSONDecodeError as _exc:
-            print(f"[!] --json-template: invalid JSON: {_exc}", file=sys.stderr)
-            return 64
+    proxies = deps.proxies
+    auth_cfg = deps.auth_cfg
+    auth_session = deps.auth_session
+    collaborator_client = deps.collaborator_client
+    idor_alt_spec = deps.idor_alt_spec
+    _json_template = deps.json_template
 
     ws_payloads = None
     if getattr(args, "ws", False):
