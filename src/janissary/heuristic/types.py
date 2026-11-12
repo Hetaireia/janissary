@@ -20,6 +20,7 @@ OBSERVATION_FIXTURE_ALLOWED_FIELDS: frozenset[str] = frozenset(
         "payload_name",
         "payload_value",
         "param",
+        "is_baseline",
     }
 )
 
@@ -61,3 +62,9 @@ class Observation:
     # Rationale: M82 must be able to group repeated measurements of the
     # same probe, not treat each HTTP transaction as a distinct event.
     observation_id: str = ""
+
+    # True when this observation is a baseline sample (no payload),
+    # used by the engine to suppress signatures whose target text is
+    # present even without a payload. M81a matching-only; live
+    # baseline collection is out of scope.
+    is_baseline: bool = False

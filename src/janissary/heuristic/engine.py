@@ -34,6 +34,9 @@ class HeuristicMatch:
     evidence_excerpt: str
     confidence: float
     observation_index: int
+    suppressed: bool = False
+    suppression_reason: str = ""
+    suppressed_by_observation_index: int | None = None
 
 
 class HeuristicEngine:
@@ -47,11 +50,30 @@ class HeuristicEngine:
         self, signatures: tuple[HeuristicSignature, ...] = HEURISTIC_SIGNATURES
     ) -> None:
         self._signatures = signatures
+        self._suppressed_count: int = 0
+
+    @property
+    def suppressed_count(self) -> int:
+        """Payload matches suppressed in the most recent match() call."""
+        return self._suppressed_count
 
     def match(self, observations: list[Observation]) -> list[HeuristicMatch]:
-        """Return all matches across observations, in observation order."""
-        matches: list[HeuristicMatch] = []
+        """Return payload matches; baseline matches populate suppression.
+
+        Baseline observations (``is_baseline=True``) are matched first to
+        build a suppression set keyed by the strict triple
+        (signature_id, matched_pattern, target_layer). A payload match is
+        marked suppressed when its triple appears in that set. Baseline
+        matches are never returned as findings.
+
+        ``suppressed_by_observation_index`` on a suppressed match points
+        to the first baseline observation (in the original input sequence)
+        that produced the matching triple.
+        """
+        baseline_first_match: dict[tuple[str, str, str], int] = {}
         for idx, obs in enumerate(observations):
+            if not obs.is_baseline:
+                continue
             for sig in self._signatures:
                 target = self._select_target(sig.target_layer, obs)
                 if target is None:
@@ -59,6 +81,27 @@ class HeuristicEngine:
                 for pattern in sig.patterns:
                     m = re.search(pattern, target)
                     if m:
+                        key = (sig.id, pattern, sig.target_layer)
+                        if key not in baseline_first_match:
+                            baseline_first_match[key] = idx
+                        break
+
+        self._suppressed_count = 0
+        matches: list[HeuristicMatch] = []
+        for idx, obs in enumerate(observations):
+            if obs.is_baseline:
+                continue
+            for sig in self._signatures:
+                target = self._select_target(sig.target_layer, obs)
+                if target is None:
+                    continue
+                for pattern in sig.patterns:
+                    m = re.search(pattern, target)
+                    if m:
+                        key = (sig.id, pattern, sig.target_layer)
+                        suppressed = key in baseline_first_match
+                        if suppressed:
+                            self._suppressed_count += 1
                         matches.append(
                             HeuristicMatch(
                                 signature_id=sig.id,
@@ -68,6 +111,13 @@ class HeuristicEngine:
                                 evidence_excerpt=m.group(0)[:200],
                                 confidence=sig.base_confidence,
                                 observation_index=idx,
+                                suppressed=suppressed,
+                                suppression_reason=(
+                                    "baseline_match" if suppressed else ""
+                                ),
+                                suppressed_by_observation_index=(
+                                    baseline_first_match[key] if suppressed else None
+                                ),
                             )
                         )
                         break  # one pattern per signature per observation
@@ -77,6 +127,8 @@ class HeuristicEngine:
         self,
         matches: list[HeuristicMatch],
         observations: list[Observation],
+        *,
+        include_suppressed: bool = False,
     ) -> list[CandidateFinding]:
         """Convert matches to CandidateFinding.
 
@@ -86,7 +138,16 @@ class HeuristicEngine:
         """
         candidates: list[CandidateFinding] = []
         for m in matches:
+            if m.suppressed and not include_suppressed:
+                continue
             obs = observations[m.observation_index]
+            detail = (
+                f"Heuristic {m.signature_id} matched "
+                f"{m.target_layer} pattern {m.matched_pattern!r}; "
+                f"evidence: {m.evidence_excerpt!r}"
+            )
+            if m.suppressed:
+                detail = f"[suppressed: {m.suppression_reason}] " + detail
             candidates.append(
                 CandidateFinding(
                     param=obs.param,
@@ -95,11 +156,7 @@ class HeuristicEngine:
                     category=m.category,
                     severity="low",
                     finding_type=f"heuristic_{m.category.replace(':', '_')}",
-                    detail=(
-                        f"Heuristic {m.signature_id} matched "
-                        f"{m.target_layer} pattern {m.matched_pattern!r}; "
-                        f"evidence: {m.evidence_excerpt!r}"
-                    ),
+                    detail=detail,
                     response_status=obs.response_status,
                     response_length=len(obs.body or ""),
                     url=obs.url,
