@@ -257,8 +257,7 @@ def _merge_graphql_into_scan(summary, gql_summary):
     See docs/PHASE-6-PLAN.md FN-15 part 3c.
     """
     for f in gql_summary.findings:
-        summary.findings.append(f)
-        summary.finding_count += 1
+        summary.record(f)
     summary.total_requests += gql_summary.total_requests
     if gql_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
@@ -291,8 +290,7 @@ def _merge_ws_into_scan(summary, ws_summary):
     See docs/PHASE-6-PLAN.md FN-16.
     """
     for f in ws_summary.findings:
-        summary.findings.append(f)
-        summary.finding_count += 1
+        summary.record(f)
     summary.total_requests += ws_summary.total_requests
     if ws_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True

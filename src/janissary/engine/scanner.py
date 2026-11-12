@@ -390,6 +390,7 @@ class _VerifiedFindingsList(list):
                 f"Offender: {item!r}"
             )
         super().append(item)
+        return True
 
     def extend(self, items):
         for item in items:
@@ -429,9 +430,10 @@ class _DedupedFindingsList(_VerifiedFindingsList):
         fp = getattr(item, "fingerprint", None)
         if fp and isinstance(fp, str):
             if fp in self._seen_fingerprints:
-                return
+                return False
             self._seen_fingerprints.add(fp)
         super().append(item)
+        return True
 
     def extend(self, items):
         for item in items:
@@ -497,6 +499,19 @@ class ScanSummary:
     groups: list = field(default_factory=list)
     waf: dict | None = None
     pacer: dict | None = None
+
+    def record(self, finding) -> bool:
+        """Append to findings and increment finding_count only on add.
+
+        Returns True if the finding was recorded (append succeeded,
+        meaning no fingerprint duplicate was silently dropped); False
+        otherwise. The count can never diverge from len(findings)
+        because the increment is gated on the append result.
+        """
+        if self.findings.append(finding):
+            self.finding_count += 1
+            return True
+        return False
 
 
 # -------------------------------------------------------------------
@@ -987,8 +1002,7 @@ class Scanner:
                     if not isinstance(result, VerifiedFinding):
                         continue
                     finding = _to_scan_finding(result)
-                    summary.findings.append(finding)
-                    summary.finding_count += 1
+                    summary.record(finding)
                     if not quiet:
                         _say(f"  [{param}] SSRF {sev.upper()}: {ftype} | {detail[:80]}")
             pending = still_pending
@@ -1081,8 +1095,7 @@ class Scanner:
             if not isinstance(result, VerifiedFinding):
                 continue
             finding = _to_scan_finding(result)
-            summary.findings.append(finding)
-            summary.finding_count += 1
+            summary.record(finding)
 
         return summary
 
@@ -1214,8 +1227,7 @@ class Scanner:
             if not isinstance(result, VerifiedFinding):
                 continue
             finding = _to_scan_finding(result)
-            summary.findings.append(finding)
-            summary.finding_count += 1
+            summary.record(finding)
 
         return summary
 
@@ -1495,8 +1507,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         col_finding = _to_scan_finding(result)
-                        summary.findings.append(col_finding)
-                        summary.finding_count += 1
+                        summary.record(col_finding)
                         tag = cf["reason"] or "collapse_unknown"
                         by = summary.baselines[param]["arming"]["emitted_by_reason"]
                         by[tag] = by.get(tag, 0) + 1
@@ -1545,8 +1556,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         lfi_finding = _to_scan_finding(result)
-                        summary.findings.append(lfi_finding)
-                        summary.finding_count += 1
+                        summary.record(lfi_finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {name} -> lfi_content "
@@ -1588,8 +1598,7 @@ class Scanner:
                             if not isinstance(result, VerifiedFinding):
                                 continue
                             ssrf_finding = _to_scan_finding(result)
-                            summary.findings.append(ssrf_finding)
-                            summary.finding_count += 1
+                            summary.record(ssrf_finding)
                             if not quiet:
                                 _say(
                                     f"  [{param}] {name} -> ssrf_response | {sf['detail'][:80]}"
@@ -1633,8 +1642,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         blind_finding = _to_scan_finding(result)
-                        summary.findings.append(blind_finding)
-                        summary.finding_count += 1
+                        summary.record(blind_finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {name} -> blind_sqli "
@@ -1669,8 +1677,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         tb_finding = _to_scan_finding(result)
-                        summary.findings.append(tb_finding)
-                        summary.finding_count += 1
+                        summary.record(tb_finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {tb_finding.payload_name} -> "
@@ -1707,8 +1714,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         sc_finding = _to_scan_finding(result)
-                        summary.findings.append(sc_finding)
-                        summary.finding_count += 1
+                        summary.record(sc_finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {sc_finding.payload_name} -> "
@@ -1745,8 +1751,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         wr_finding = _to_scan_finding(result)
-                        summary.findings.append(wr_finding)
-                        summary.finding_count += 1
+                        summary.record(wr_finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {wr_finding.payload_name} -> "
@@ -1883,8 +1888,7 @@ class Scanner:
                         # malformed, which the analyzer precludes. Defensive.
                         continue
                     finding = _to_scan_finding(result)
-                    summary.findings.append(finding)
-                    summary.finding_count += 1
+                    summary.record(finding)
                     if not quiet:
                         _say(
                             f"  [{param}] {name} -> "
@@ -1925,8 +1929,7 @@ class Scanner:
                     if not isinstance(result, VerifiedFinding):
                         continue
                     finding = _to_scan_finding(result)
-                    summary.findings.append(finding)
-                    summary.finding_count += 1
+                    summary.record(finding)
 
             # Paired-probe: xpathi error oracle. Reuses the bare-quote
             # and balanced snapshots captured for the sqli quote oracle.
@@ -1962,8 +1965,7 @@ class Scanner:
                     if not isinstance(result, VerifiedFinding):
                         continue
                     finding = _to_scan_finding(result)
-                    summary.findings.append(finding)
-                    summary.finding_count += 1
+                    summary.record(finding)
 
             # Paired-probe: LDAP injection oracle.
             if ldap_wild_snap is not None:
@@ -1994,8 +1996,7 @@ class Scanner:
                     if not isinstance(result, VerifiedFinding):
                         continue
                     finding = _to_scan_finding(result)
-                    summary.findings.append(finding)
-                    summary.finding_count += 1
+                    summary.record(finding)
                     if not quiet:
                         _say(
                             f"  [{param}] ldap_wildcard -> "
@@ -2061,8 +2062,7 @@ class Scanner:
                         if not isinstance(result, VerifiedFinding):
                             continue
                         finding = _to_scan_finding(result)
-                        summary.findings.append(finding)
-                        summary.finding_count += 1
+                        summary.record(finding)
                         if not quiet:
                             _say(
                                 f"  [{param}] {finding.payload_name} -> "
