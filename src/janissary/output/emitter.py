@@ -1,4 +1,4 @@
-"""Machine-readable output for JANISSARY (schema v1.0).
+"""Machine-readable output for JANISSARY (schema v1.1).
 
 Contract:
   * stdout carries the machine payload when --json/--jsonl is set.
@@ -22,7 +22,7 @@ from enum import Enum
 from pathlib import Path
 from typing import IO, Any
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 TOOL_NAME = "janissary"
 
 # Always present in the serialized finding, even when the value is None, so
@@ -180,6 +180,8 @@ def _normalize_finding(finding: Any) -> dict:
         "method": _coerce_str(m.get("method")),
         "parameter": _coerce_str(param),
         "payload": _coerce_str(m.get("payload") or m.get("payload_value")),
+        "detail": _coerce_str(m.get("detail")),
+        "finding_type": _coerce_str(m.get("finding_type")),
         "evidence": _normalize_value(m.get("evidence")),
         "request": _normalize_request(m.get("request")),
         "response": _normalize_response(m.get("response")),
@@ -240,11 +242,39 @@ def _tool_version() -> str:
         return "unknown"
 
 
+def _normalize_stream(
+    items: list,
+    prefix: str,
+    record_type: str,
+    redact: bool,
+) -> list[dict]:
+    """Normalize a stream of findings, tagging each with record_type.
+
+    ``prefix`` is used for auto-generated id fallback (F-NNN / C-NNN)
+    when a finding lacks a fingerprint. ``record_type`` is "verified" or
+    "candidate" and disambiguates the stream; the engine-assigned
+    ``verification_status`` on each record is preserved unchanged.
+    """
+    out: list[dict] = []
+    for i, f in enumerate(items, start=1):
+        n = _normalize_finding(f)
+        if n.get("id") is None:
+            n["id"] = f"{prefix}-{i:03d}"
+        n["record_type"] = record_type
+        if redact:
+            n = _redact_finding(n)
+        out.append(n)
+    return out
+
+
 class OutputEmitter:
     """Serialize findings to stdout in HUMAN / JSON / JSONL form.
 
-    Returns the normalized finding list so callers can render human output
-    from the same source of truth.
+    ``emit`` accepts a mapping with ``findings`` (verified) and
+    ``candidates`` (unproven) lists, or a bare list of findings for
+    legacy callers. Emits schema 1.1: both streams top-level (JSON)
+    or tagged per-record with ``record_type`` (JSONL). Returns
+    ``{"findings": [...], "candidates": [...]}``.
     """
 
     def __init__(
@@ -260,20 +290,46 @@ class OutputEmitter:
 
     def emit(
         self,
-        findings: list,
+        payload: Mapping[str, Any] | list,
         scan_meta: Mapping[str, Any] | None = None,
-    ) -> list[dict]:
-        normalized: list[dict] = []
-        for i, f in enumerate(findings, start=1):
-            n = _normalize_finding(f)
-            if n.get("id") is None:
-                n["id"] = f"F-{i:03d}"
-            if self.redact:
-                n = _redact_finding(n)
-            normalized.append(n)
+    ) -> dict:
+        """Serialize findings and candidates to stdout.
+
+        ``payload`` accepts two forms:
+        - a Mapping with keys ``findings`` (verified) and
+          ``candidates`` (unproven); each item is ScanFinding-shaped
+        - a bare list, treated as verified findings only (legacy)
+
+        Every normalized record carries ``record_type`` ("verified"
+        or "candidate") in addition to its engine-assigned
+        ``verification_status``. ``record_type`` disambiguates the
+        stream; it never replaces or overrides verification_status.
+
+        Returns ``{"findings": [...], "candidates": [...]}``.
+        """
+        if isinstance(payload, list):
+            raw_findings = list(payload)
+            raw_candidates: list = []
+        elif isinstance(payload, Mapping):
+            raw_findings = list(payload.get("findings") or [])
+            raw_candidates = list(payload.get("candidates") or [])
+        else:
+            raise TypeError(
+                f"OutputEmitter.emit: payload must be Mapping or list, "
+                f"got {type(payload).__name__}"
+            )
+
+        normalized_findings = _normalize_stream(
+            raw_findings, "F", "verified", self.redact
+        )
+        normalized_candidates = _normalize_stream(
+            raw_candidates, "C", "candidate", self.redact
+        )
 
         if self.fmt is OutputFormat.JSON:
-            doc = self._build_document(normalized, scan_meta)
+            doc = self._build_document(
+                normalized_findings, normalized_candidates, scan_meta
+            )
             self._stdout.write(
                 json.dumps(
                     doc,
@@ -286,7 +342,7 @@ class OutputEmitter:
             self._stdout.flush()
 
         elif self.fmt is OutputFormat.JSONL:
-            for f in normalized:
+            for f in normalized_findings:
                 self._stdout.write(
                     json.dumps(
                         f,
@@ -296,24 +352,45 @@ class OutputEmitter:
                     )
                     + "\n"
                 )
+            for c in normalized_candidates:
+                self._stdout.write(
+                    json.dumps(
+                        c,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                        default=_json_default,
+                    )
+                    + "\n"
+                )
             self._stdout.flush()
 
-        return normalized
+        return {
+            "findings": normalized_findings,
+            "candidates": normalized_candidates,
+        }
 
     def _build_document(
         self,
         findings: list[dict],
+        candidates: list[dict],
         scan_meta: Mapping[str, Any] | None,
     ) -> dict:
         meta = dict(scan_meta or {})
         meta.setdefault("id", str(uuid.uuid4()))
         meta.setdefault("started_at", _iso_now())
         meta.setdefault("finished_at", _iso_now())
+        # M78 contract: candidates are top-level. Drop any stale copy
+        # that a caller may have placed in scan_meta so we never emit
+        # duplicate representations.
+        meta.pop("candidates", None)
+        meta.pop("candidate_count", None)
         return {
             "schema_version": SCHEMA_VERSION,
             "tool": TOOL_NAME,
             "tool_version": _tool_version(),
             "scan": meta,
             "finding_count": len(findings),
+            "candidate_count": len(candidates),
             "findings": findings,
+            "candidates": candidates,
         }

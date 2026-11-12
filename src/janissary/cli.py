@@ -44,26 +44,6 @@ from janissary.scope import (
 SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
 
-def _finding_to_dict(f) -> dict:
-    return {
-        "param": f.param,
-        "payload_name": f.payload_name,
-        "payload_value": f.payload_value,
-        "category": f.category,
-        "severity": f.severity,
-        "finding_type": f.finding_type,
-        "detail": f.detail,
-        "response_status": f.response_status,
-        "response_length": f.response_length,
-        "response_time": f.response_time,
-        "reflection_context": f.reflection_context,
-        "response_content_type": f.response_content_type,
-        "fingerprint": f.fingerprint,
-        "verification_status": f.verification_status,
-        "verification_reason": f.verification_reason,
-    }
-
-
 def _scan_completeness(summary: ScanSummary) -> dict:
     """Derive whether a scan ran to completion, and why not if it didn't.
 
@@ -94,6 +74,8 @@ def _scan_completeness(summary: ScanSummary) -> dict:
 
 
 def _summary_to_dict(summary: ScanSummary) -> dict:
+    from janissary.output.emitter import _normalize_stream
+
     return {
         "target": summary.target,
         "params": summary.params,
@@ -111,8 +93,10 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "waf": summary.waf,
         "pacer": summary.pacer,
         "groups": [g.to_dict() for g in summary.groups],
-        "findings": [_finding_to_dict(f) for f in summary.findings],
-        "candidates": [_finding_to_dict(f) for f in summary.candidates],
+        "findings": _normalize_stream(summary.findings, "F", "verified", redact=False),
+        "candidates": _normalize_stream(
+            summary.candidates, "C", "candidate", redact=False
+        ),
     }
 
 
@@ -140,18 +124,25 @@ def _print_summary(summary: ScanSummary) -> None:
     group_n = len(summary.groups)
     plural = "" if group_n == 1 else "s"
     print(f"  Findings:        {summary.finding_count} in {group_n} group{plural}")
+    n_candidates = len(summary.candidates)
+    if n_candidates:
+        print(f"  Candidates:      {n_candidates} (unproven)")
     # negative-results reporting: a clean scan must be distinguishable from a
     # scan that never ran. Emit an explicit positive confirmation so CI logs
-    # and human readers see "ran, clean" not "silent exit 0".
+    # and human readers see "ran, clean" not "silent exit 0". A scan with
+    # candidates but zero verified findings is not clean — it needs triage.
     if (
         summary.finding_count == 0
         and not summary.aborted
         and not summary.scan_incomplete
     ):
-        print(
-            f"  Negative result: no findings after "
-            f"{summary.total_requests} request(s); target responded normally."
-        )
+        if n_candidates == 0:
+            print(
+                f"  Negative result: no findings after "
+                f"{summary.total_requests} request(s); target responded normally."
+            )
+        else:
+            print(f"  No verified findings; {n_candidates} candidate(s) need triage.")
 
     if summary.auth_state in ("expired", "recovery_failed"):
         print(f"  Auth state:      {summary.auth_state}")
@@ -595,9 +586,11 @@ def _emit_scan_result(
     if fmt is not OutputFormat.HUMAN:
         meta = _summary_to_dict(summary)
         meta.pop("findings", None)
+        meta.pop("candidates", None)
         meta.pop("groups", None)
         OutputEmitter(fmt, redact=getattr(args, "redact_auth", False)).emit(
-            summary.findings, meta
+            {"findings": summary.findings, "candidates": summary.candidates},
+            meta,
         )
 
     if summary.aborted:
