@@ -65,9 +65,10 @@
 > cases (482 excluded via `dast_excluded.txt`); 93 structurally skipped
 > (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri).
 >
-> **Known structural limit:** pathtraver recall 0.075 (10/133 at
-> v7.3.0); v7.11.1 shows pathtraver combined recall 10/123 (0.081).
-> See `docs/pathtraver.md` for the oracle-ceiling analysis.
+> **Known structural limit:** pathtraver recall 0.075 at both v7.3.0
+> and v7.11.1 (10 TP / 123 FN / 133 total) — structurally capped and
+> unchanged across versions. See `docs/pathtraver.md` for the
+> oracle-ceiling analysis.
 
 ---
 

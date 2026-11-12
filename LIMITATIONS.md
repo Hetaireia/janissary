@@ -1,6 +1,6 @@
 # Limitations
 
-Last updated: 2026-11-05. Linked from README. Updated every release.
+Last updated: 2026-11-13. Linked from README. Updated every release.
 
 This is the honest inventory of what Janissary can and cannot prove.
 Absence of a limitation here does not mean absence of a limitation;
@@ -126,9 +126,12 @@ as scope, not bug.
 ### Path traversal
 
 **Status:** partially supported. Overall recall 0.075 on the OWASP
-Benchmark (per-subcategory F1 range 0.049-0.308). Scored in the
-DAST-applicable metric (included in the 0.921 headline); excluded
-from the supported-classes metric (the 0.977 figure) per ADR-027 D8
+Benchmark (per-subcategory F1 range 0.049-0.308) — unchanged at
+v7.3.0 and v7.11.1. This accounts for 123 of the 168 remaining DAST
+false negatives at v7.11.1 (73%); the remainder are weakrand (16),
+securecookie (8), trustbound (16), and cmdi (5). Scored in the
+DAST-applicable metric (included in the 0.922 headline); excluded
+from the supported-classes metric (the 0.978 figure) per ADR-027 D8
 amended (2026-11-05). Content-signature gates exist but are narrow;
 parameters that produce no distinctive traversal content in the
 response are missed.
@@ -146,13 +149,13 @@ amended, 2026-11-05).
   `verification_status='unproven'` and
   `verification_reason='graphql_recon'` — recon observations, not
   vulnerability proofs. See FN-15 (FIXED).
-- **WebSocket:** passive reconnaissance only — plaintext detection,
-  missing-Origin (CSWSH) detection, blind echo detection, no-auth
-  handshake check. The full Phase 2.2 learn/probe/verify pipeline
-  (traffic sampling, schema fingerprinting, message-sequence oracle)
-  is not built. Findings surface from the standalone `janissary ws`
-  subcommand, not through `Scanner.scan()` or `VerificationEngine`.
-  Tracked as FN-16.
+- **WebSocket:** partial support — passive reconnaissance (plaintext,
+  missing-Origin CSWSH, blind echo, no-auth handshake) plus the
+  learn/probe/verify pipeline (FN-16 6a/6b). Findings emit
+  `verification_status='unproven'` and route through
+  `Scanner.scan_ws()` → `_merge_ws_into_scan()` (M75c) →
+  `VerificationEngine`, not only the standalone `janissary ws`
+  subcommand. Tracked as FN-16; see "WebSocket recon findings" below.
 - **gRPC:** no support. Phase 2.3.
 
 ## Candidate-only classes
