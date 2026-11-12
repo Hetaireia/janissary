@@ -257,7 +257,12 @@ def _merge_graphql_into_scan(summary, gql_summary):
     See docs/PHASE-6-PLAN.md FN-15 part 3c.
     """
     for f in gql_summary.findings:
-        summary.record(f)
+        if f.verification_status == "unproven":
+            summary.candidates.append(f)
+        else:
+            summary.record(f)
+    for f in gql_summary.candidates:
+        summary.candidates.append(f)
     summary.total_requests += gql_summary.total_requests
     if gql_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
@@ -290,7 +295,12 @@ def _merge_ws_into_scan(summary, ws_summary):
     See docs/PHASE-6-PLAN.md FN-16.
     """
     for f in ws_summary.findings:
-        summary.record(f)
+        if f.verification_status == "unproven":
+            summary.candidates.append(f)
+        else:
+            summary.record(f)
+    for f in ws_summary.candidates:
+        summary.candidates.append(f)
     summary.total_requests += ws_summary.total_requests
     if ws_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
@@ -878,8 +888,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
         heuristic_findings = scanner.run_heuristic()
         if heuristic_findings:
             for f in heuristic_findings:
-                summary.findings.append(f)
-            summary.finding_count = len(summary.findings)
+                if f.verification_status == "unproven":
+                    summary.candidates.append(f)
+                else:
+                    summary.record(f)
             if not args.quiet:
                 print(
                     f"[*] Heuristic: {len(heuristic_findings)} candidate(s) "
@@ -896,8 +908,10 @@ def cmd_scan(args: argparse.Namespace) -> int:
         idor_findings = scanner.run_idor(idor_alt_spec)
         if idor_findings:
             for f in idor_findings:
-                summary.findings.append(f)
-            summary.finding_count = len(summary.findings)
+                if f.verification_status == "unproven":
+                    summary.candidates.append(f)
+                else:
+                    summary.record(f)
             if not args.quiet:
                 print(
                     f"[*] IDOR: {len(idor_findings)} candidate(s) "
