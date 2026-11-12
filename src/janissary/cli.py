@@ -599,21 +599,104 @@ def _emit_scan_result(
     return 0
 
 
+def _run_openapi_scan(args: argparse.Namespace) -> int:
+    """Execute the per-operation scan loop for --openapi (ADR-030 Stage 6c).
+
+    Parses the spec, builds one Scanner per build_scan_targets output,
+    merges the per-target ScanSummary objects, and emits the result
+    through _emit_scan_result -- the same path a single scan uses.
+
+    No --dry-run check here: the caller gates --dry-run before calling.
+    No extension scans (--graphql / --ws / --host-bypass / --heuristic /
+    --idor): those are separate phases, not per-target operations, and
+    their per-target semantics are undefined. See ADR-030 Stage 6 scope.
+    """
+    from janissary.engine.summary_merge import merge_scan_summaries
+    from janissary.importers.dispatch import build_scan_targets
+    from janissary.importers.openapi import OpenAPIImportError, parse_spec
+
+    deps = _resolve_scan_deps(args)
+    if deps is None:
+        return 64
+
+    try:
+        result = parse_spec(args.openapi)
+    except OpenAPIImportError as exc:
+        print(f"[!] --openapi: {exc}", file=sys.stderr)
+        return 64
+
+    fmt = getattr(args, "output_format", OutputFormat.HUMAN)
+    real_stdout = sys.stdout
+    if fmt is not OutputFormat.HUMAN:
+        sys.stdout = sys.stderr
+
+    print(
+        f"[runner] imported {len(result.imported)} operations from spec",
+        file=sys.stderr,
+    )
+    if result.skipped:
+        print(
+            f"[runner] skipped {len(result.skipped)} operations:",
+            file=sys.stderr,
+        )
+        for skipped in result.skipped:
+            print(
+                f"  {skipped.method.upper()} {skipped.path}: {skipped.reason}",
+                file=sys.stderr,
+            )
+    for note in result.notes:
+        print(f"[runner] note: {note}", file=sys.stderr)
+
+    summaries: list[ScanSummary] = []
+    try:
+        for op in result.imported:
+            for tgt in build_scan_targets(op):
+                if not args.quiet:
+                    print(
+                        f"[*] {op.method.upper()} {tgt['url']} ({tgt['location']})",
+                        file=sys.stderr,
+                    )
+                try:
+                    scanner = _build_scanner(
+                        args,
+                        target=tgt["url"],
+                        params=tgt["params"],
+                        method=tgt["method"],
+                        inject_in=tgt["inject_in"],
+                        proxies=deps.proxies,
+                        session=deps.auth_session,
+                        collaborator=deps.collaborator_client,
+                        auth_cfg=deps.auth_cfg,
+                        json_template=tgt["json_template"],
+                    )
+                    summaries.append(scanner.scan(quiet=args.quiet))
+                except Exception as exc:
+                    print(
+                        f"[!] target failed: {op.method.upper()} "
+                        f"{tgt['url']} ({tgt['location']}): {exc}",
+                        file=sys.stderr,
+                    )
+    except BaseException:
+        sys.stdout = real_stdout
+        raise
+
+    if summaries:
+        merged = merge_scan_summaries(summaries)
+    else:
+        merged = ScanSummary(target=args.openapi, params=[], method="GET")
+
+    return _emit_scan_result(args, merged, real_stdout, fmt)
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
         return 0
 
     if getattr(args, "openapi", None):
-        if not getattr(args, "dry_run", False):
-            print(
-                "[!] --openapi without --dry-run: the per-operation scan loop "
-                "is ADR-030 Stage 6 and is not implemented yet. "
-                "Use --dry-run to enumerate targets.",
-                file=sys.stderr,
-            )
-            return 64
-        return _cmd_scan_openapi_dry_run(args)
+        if getattr(args, "dry_run", False):
+            return _cmd_scan_openapi_dry_run(args)
+        return _run_openapi_scan(args)
 
     if not args.url:
         print(
