@@ -39,6 +39,45 @@ class HeuristicMatch:
     suppressed_by_observation_index: int | None = None
 
 
+@dataclass(frozen=True)
+class MatchGroup:
+    """Aggregation of heuristic matches sharing (url, method, param).
+
+    M82a: multi-signal aggregation model. Groups matches produced by
+    ``HeuristicEngine.match()`` by their endpoint and parameter so that
+    downstream (M82b) can emit one candidate per parameter with
+    observation counts, distinct payload families, and evidence
+    attribution.
+
+    Suppressed matches aggregate alongside unsuppressed ones — the
+    caller (M82b) decides the filtering policy. M82a is model-only:
+    no CandidateFinding fields are populated here.
+
+    R3 (M82a scope): ``categories`` and ``confidences`` are retained as
+    frozensets. No reduction policy is baked in — M82b decides how to
+    collapse a multi-signature group into one candidate.
+
+    R1 (M82a scope): ``first_observation_id`` and ``last_observation_id``
+    are the observation IDs at ``first_observation_index`` and
+    ``last_observation_index`` respectively. They are NOT the
+    lexicographically smallest/largest IDs.
+    """
+
+    url: str
+    method: str
+    param: str
+    matches: tuple[HeuristicMatch, ...]
+    signature_ids: frozenset[str]
+    categories: frozenset[str]
+    confidences: frozenset[float]
+    payload_families: frozenset[str]
+    contributing_observation_ids: tuple[str, ...]
+    first_observation_index: int
+    last_observation_index: int
+    first_observation_id: str
+    last_observation_id: str
+
+
 class HeuristicEngine:
     """Match observations against heuristic signatures.
 
@@ -167,6 +206,70 @@ class HeuristicEngine:
                 )
             )
         return candidates
+
+    def aggregate(
+        self,
+        matches: list[HeuristicMatch],
+        observations: list[Observation],
+    ) -> list[MatchGroup]:
+        """Aggregate matches into per-parameter groups (M82a).
+
+        Groups matches by ``(url, method, param)``. Within each group,
+        retains distinct signatures, categories, confidences and
+        payload families; deduplicates contributing observation IDs;
+        and records first/last original observation indices plus the
+        observation IDs at those indices (not lexicographic extrema).
+
+        Suppressed matches aggregate alongside unsuppressed ones.
+        M82a does not filter — M82b decides candidate integration
+        (confidence/category reduction, suppression handling).
+
+        Returns groups sorted by ``first_observation_index`` ascending.
+        """
+        buckets: dict[tuple[str, str, str], list[HeuristicMatch]] = {}
+        for m in matches:
+            obs = observations[m.observation_index]
+            key = (obs.url, obs.method, obs.param)
+            buckets.setdefault(key, []).append(m)
+
+        groups: list[MatchGroup] = []
+        for (url, method, param), group_matches in buckets.items():
+            signature_ids = frozenset(m.signature_id for m in group_matches)
+            categories = frozenset(m.category for m in group_matches)
+            confidences = frozenset(m.confidence for m in group_matches)
+
+            contributing_ids: set[str] = set()
+            payload_families: set[str] = set()
+            for m in group_matches:
+                obs = observations[m.observation_index]
+                if obs.observation_id:
+                    contributing_ids.add(obs.observation_id)
+                if obs.payload_name:
+                    payload_families.add(obs.payload_name)
+
+            first_idx = min(m.observation_index for m in group_matches)
+            last_idx = max(m.observation_index for m in group_matches)
+
+            groups.append(
+                MatchGroup(
+                    url=url,
+                    method=method,
+                    param=param,
+                    matches=tuple(group_matches),
+                    signature_ids=signature_ids,
+                    categories=categories,
+                    confidences=confidences,
+                    payload_families=frozenset(payload_families),
+                    contributing_observation_ids=tuple(sorted(contributing_ids)),
+                    first_observation_index=first_idx,
+                    last_observation_index=last_idx,
+                    first_observation_id=observations[first_idx].observation_id,
+                    last_observation_id=observations[last_idx].observation_id,
+                )
+            )
+
+        groups.sort(key=lambda g: g.first_observation_index)
+        return groups
 
     @staticmethod
     def _select_target(layer: str, obs: Observation) -> str | None:
