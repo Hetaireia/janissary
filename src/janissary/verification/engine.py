@@ -43,6 +43,8 @@ _EVIDENCE_FIELDS = (
     "method",
     "raw_request",
     "raw_response",
+    "confidence",
+    "evidence_excerpt",
 )
 
 

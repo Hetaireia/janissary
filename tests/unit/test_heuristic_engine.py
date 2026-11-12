@@ -161,3 +161,26 @@ def test_heuristic_match_is_frozen():
     )
     with pytest.raises(FrozenInstanceError):
         m.signature_id = "Y"
+
+
+def test_select_target_headers_uses_real_newline():
+    obs = Observation(
+        url="http://x/",
+        body="",
+        headers={"Set-Cookie": "a=b\nc=d"},
+    )
+    tgt = HeuristicEngine._select_target("headers", obs)
+    assert "\n" in tgt
+    assert "\\n" not in tgt
+
+
+def test_select_target_both_uses_real_newline():
+    obs = Observation(
+        url="http://x/",
+        body="body-text",
+        headers={"X": "y"},
+    )
+    tgt = HeuristicEngine._select_target("both", obs)
+    assert "body-text" in tgt
+    assert "\n" in tgt
+    assert "\\n" not in tgt

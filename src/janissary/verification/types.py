@@ -52,6 +52,15 @@ class CandidateFinding:
     # the engine — useful for debugging the discovery layer in isolation)
     discovery_reason: str | None = None
 
+    # Heuristic metadata carried through promotion. Populated by the
+    # heuristic engine; defaulted to 0.0/"" for Track A candidates.
+    # NOTE: confidence is heuristic metadata, not a calibrated probability.
+    # NOTE: evidence_excerpt is an internal data-model field and is NOT
+    #       currently serialised to JSON/JSONL/SARIF. Its reporting contract
+    #       is deferred to a future schema version.
+    confidence: float = 0.0
+    evidence_excerpt: str = ""
+
 
 @dataclass(frozen=True)
 class VerifiedFinding:
@@ -92,6 +101,11 @@ class VerifiedFinding:
     # Verification metadata — the whole point of the type
     verification_status: VerificationStatus = "verified"
     verification_reason: str | None = None
+
+    # Heuristic metadata propagated from CandidateFinding. Not serialised;
+    # see CandidateFinding for the reporting-contract note.
+    confidence: float = 0.0
+    evidence_excerpt: str = ""
 
 
 @dataclass(frozen=True)

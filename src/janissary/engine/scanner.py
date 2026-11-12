@@ -35,6 +35,10 @@ from janissary.detection.lfi_oracle import check_lfi_content_oracle
 from janissary.detection.ssrf_response_oracle import check_ssrf_response_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
+from janissary.heuristic.provider import (
+    ObservationProvider,
+    _compute_observation_id,
+)
 from janissary.heuristic.types import Observation
 from janissary.integrations.graphql import GraphQLClient, detect
 from janissary.integrations.graphql_discovery import GraphQLDiscoveryModule
@@ -296,6 +300,13 @@ class ScanFinding:
     verification_status: str = "verified"
     verification_reason: str | None = None
 
+    # Heuristic metadata. Populated from VerifiedFinding when the finding
+    # originated as a heuristic candidate. Track A findings carry defaults.
+    # NOTE: confidence is heuristic metadata, not a calibrated probability.
+    # NOTE: evidence_excerpt is internal-only; not currently serialised.
+    confidence: float = 0.0
+    evidence_excerpt: str = ""
+
     def __post_init__(self) -> None:
         if not self.fingerprint:
             self.fingerprint = compute_fingerprint(
@@ -331,6 +342,8 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
         raw_response=verified.raw_response,
         verification_status=verified.verification_status,
         verification_reason=verified.verification_reason,
+        confidence=verified.confidence,
+        evidence_excerpt=verified.evidence_excerpt,
     )
     finding._engine_emitted = True
     return finding
@@ -614,6 +627,9 @@ class Scanner:
         self._collect_observations = collect_observations
         self.verbose = verbose
         self._observations: list[Observation] = []
+        # Runtime provider identity for inline-collected observations.
+        # Embeds id(self); NOT stable across processes.
+        self._provider_source_id = f"scanner:{id(self):x}"
         self._session_rotator = None
         if auth_sessions:
             from janissary.engine.session_rotator import SessionRotator
@@ -696,21 +712,29 @@ class Scanner:
         """Return a defensive copy of collected observations."""
         return list(self._observations)
 
-    def run_heuristic(self) -> list[ScanFinding]:
+    def run_heuristic(
+        self,
+        provider: ObservationProvider | None = None,
+    ) -> list[ScanFinding]:
         """Run heuristic (Track B) engine on collected observations. (M38)
 
         Per ADR-022 D2: candidates route through _ENGINE.verify() -> _to_scan_finding(),
         same emission path Track A uses. Requires collect_observations=True,
         otherwise returns [] (no observations collected).
         """
-        if not self._observations:
+        if provider is None:
+            from janissary.heuristic.provider import ScannerProvider
+
+            provider = ScannerProvider(self)
+        observations = provider.observations()
+        if not observations:
             return []
         from janissary.heuristic.engine import HeuristicEngine
         from janissary.verification.types import VerifiedFinding as _VF
 
         engine = HeuristicEngine()
-        matches = engine.match(self._observations)
-        candidates = engine.to_candidates(matches, self._observations)
+        matches = engine.match(observations)
+        candidates = engine.to_candidates(matches, observations)
         findings: list[ScanFinding] = []
         for c in candidates:
             result = _ENGINE.verify(c)
@@ -1292,17 +1316,31 @@ class Scanner:
             return retry
         return r
 
-    def run_idor(self, alt_session_spec) -> list[ScanFinding]:
+    def run_idor(
+        self,
+        alt_session_spec,
+        *,
+        provider: ObservationProvider | None = None,
+    ) -> list[ScanFinding]:
         """Cross-identity IDOR probe (M42, ADR-024 D4-D7).
 
-        Iterates self._observations (requires collect_observations=True),
-        refetches each ID-like URL under alt_session_spec (identity B),
-        compares to identity A's observation. Returns ScanFinding list
-        with verification_status="unproven" via IdorConfirmer.
+        Iterates observations from the supplied provider. When no provider
+        is supplied, ScannerProvider reads this scanner's collected
+        observations (requires collect_observations=True). Each ID-like
+        URL is refetched under alt_session_spec (identity B) and compared
+        with identity A's observation. Returns ScanFinding items with
+        verification_status="unproven" via IdorConfirmer.
 
         Returns [] if observations are empty or alt_session_spec is None.
         """
-        if not self._observations or alt_session_spec is None:
+        if alt_session_spec is None:
+            return []
+        if provider is None:
+            from janissary.heuristic.provider import ScannerProvider
+
+            provider = ScannerProvider(self)
+        observations = provider.observations()
+        if not observations:
             return []
         from janissary.auth import AuthConfig as _AC
         from janissary.auth import apply_to_session
@@ -1325,7 +1363,7 @@ class Scanner:
         findings: list[ScanFinding] = []
         seen: set[str] = set()
         try:
-            for obs in self._observations:
+            for obs in observations:
                 url = obs.url
                 if not url or url in seen:
                     continue
@@ -1483,12 +1521,12 @@ class Scanner:
                 snapshot = ResponseSnapshot.from_response(r, normalizer=self.normalizer)
 
                 if self._collect_observations and len(self._observations) < 1000:
+                    _obs_url = (
+                        getattr(getattr(r, "request", None), "url", None) or self.target
+                    )
                     self._observations.append(
                         Observation(
-                            url=(
-                                getattr(getattr(r, "request", None), "url", None)
-                                or self.target
-                            ),
+                            url=_obs_url,
                             body=(r.text or ""),
                             headers=dict(r.headers or {}),
                             method=self.method,
@@ -1496,6 +1534,10 @@ class Scanner:
                             payload_name=name,
                             payload_value=value,
                             param=param,
+                            source_id=self._provider_source_id,
+                            observation_id=_compute_observation_id(
+                                _obs_url, self.method, param, name, value
+                            ),
                         )
                     )
 

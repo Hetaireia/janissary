@@ -105,6 +105,8 @@ class HeuristicEngine:
                     url=obs.url,
                     method=obs.method,
                     discovery_reason=f"heuristic:{m.signature_id}",
+                    confidence=m.confidence,
+                    evidence_excerpt=m.evidence_excerpt,
                 )
             )
         return candidates
@@ -113,7 +115,7 @@ class HeuristicEngine:
     def _select_target(layer: str, obs: Observation) -> str | None:
         if layer == "body":
             return obs.body or ""
-        headers = "\\n".join(f"{k}: {v}" for k, v in obs.headers.items())
+        headers = "\n".join(f"{k}: {v}" for k, v in obs.headers.items())
         if layer == "headers":
             return headers
         if layer == "both":

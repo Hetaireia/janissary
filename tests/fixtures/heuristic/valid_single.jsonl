@@ -1,0 +1,1 @@
+{"body": "response text", "headers": {"Server": "nginx"}, "method": "GET", "param": "q", "payload_name": "sql_quote", "payload_value": "'", "response_status": 200, "url": "http://x/scan?q=v"}
