@@ -8,24 +8,66 @@
 
 ---
 
-> **Current measured results (navigational index).** This block is not part
-> of the frozen pre-registration below. It exists so a reader reaches the
-> governing numbers without reading 1,900 lines of amendment history. The
+> **Measurement status (navigational index).** This block is not part of the
+> frozen pre-registration below. It exists so a reader reaches the governing
+> numbers without reading 1,900 lines of amendment history. The
 > pre-registration text that follows was frozen 2026-09-28; every post-freeze
 > change is a timestamped amendment at the end of this file.
 >
-> - **Headline:** DAST-applicable F1 **0.921** (TP 987, FP 0, FN 169,
->   TN 1102; P 1.000, R 0.854). Governing amendment: Amendment 21
->   (2026-10-25), reaffirmed by Amendment 27 (2026-11-06).
-> - **Supplemental:** supported-classes F1 **0.977** (TP 977, FP 0, FN 46),
->   a filtered projection excluding `pathtraver-{00,01,02,03}`. Does not
->   supersede 0.921; see Amendment 27 guardrails.
-> - **Corpus denominator:** FULL CORPUS 2740 cases; DAST-APPLICABLE 2258
->   cases (482 excluded via `dast_excluded.txt`); 93 structurally skipped
->   (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri).
-> - **Gate:** `--min-f1 0.92 --max-fp 0` reads DAST-applicable.
-> - **Known structural limit:** pathtraver recall 0.075 (10/133); see
->   `docs/pathtraver.md` for the oracle-ceiling analysis.
+> **Historical headline (v7.3.0, Amendment 21, 2026-10-25; reaffirmed by
+> Amendment 27, 2026-11-06):** DAST-applicable F1 **0.921**
+> (TP 987, FP 0, FN 169, TN 1102; P 1.000, R 0.854). This is the
+> FN-recovery-scored figure — baseline TP 950 plus 37 recovered in the
+> recovery pass — for tool version **v7.3.0**. It remains the historical
+> recovered headline, comparable to the current v7.11.1 baseline-only
+> result (below); the earlier version needed the recovery pass to reach
+> the same level the current version achieves at baseline.
+>
+> **Intermediate baseline (v7.11.0, 2026-11-07, baseline-only,
+> single run):** DAST-applicable TP **970**, FP **0**, FN **186**,
+> TN **1102**; P 1.000, R 0.839, F1 **0.913**. Source run
+> `benchmark/track_a/runs/20261107T044811Z-janissary-r1`, manifest
+> `tool_version: 7.11.0`. First v7.11.x baseline measurement; superseded
+> by the v7.11.1 baseline in Amendment 29. Locally rescorable but the
+> run directory is untracked (`.gitignore:166`); not independently
+> reproducible from a clean checkout.
+>
+> **Current baseline-only headline (v7.11.1, Amendment 29, 2026-11-13):**
+> DAST-applicable F1 **0.922** (TP 988, FP 0, FN 168, TN 1102;
+> P 1.000, R 0.855). Single complete corpus run, baseline-only
+> (`JANISSARY_TIMEOUT=60`), harness commit `ea7b3e5` (post-M80).
+> Clears the registered `--min-f1 0.92` gate by 0.002. FN-recovery
+> rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168
+> FN comprise 123 pathtraver (structurally capped), 16 weakrand,
+> 8 securecookie, 16 trustbound, 5 cmdi. Of the 168, 22 are
+> mode-skipped (`header_any`/`out_of_scope_uri`) and unreachable at any
+> timeout. Source run:
+> `benchmark/track_a/runs/20261112T180530Z-janissary-r1` (committed).
+>
+> **Gate status.** The pre-registration gate is `--min-f1 0.92`. The
+> v7.11.1 baseline-only headline clears it (F1 0.922). The v7.11.0
+> baseline (0.913) and the historical v7.3.0 baseline (0.903 mean, three
+> runs) did not; both versions required the recovery protocol to clear
+> the gate (v7.3.0 recovered 0.921). The repository's
+> `.github/workflows/ci.yml` (1,475 bytes, one pytest job) does **not**
+> invoke `score_dast_aware.py` or any benchmark command; the gate is
+> enforced in documentation and by review, not by CI.
+>
+> **Supplemental supported-classes (v7.3.0, Amendment 27):** F1
+> **0.977** (TP 977, FP 0, FN 46), filtered projection of the 0.921
+> measurement excluding `pathtraver-{00,01,02,03}`. Does not supersede
+> 0.921. The analogous v7.11.1 baseline-only supplemental is F1
+> **0.978** (TP 978, FP 0, FN 45); the two are directly comparable
+> under the supported-classes scope. Neither supersedes the
+> DAST-applicable headline.
+>
+> **Corpus denominator:** FULL CORPUS 2740 cases; DAST-APPLICABLE 2258
+> cases (482 excluded via `dast_excluded.txt`); 93 structurally skipped
+> (89 header_any, 3 out_of_scope_stream, 1 out_of_scope_uri).
+>
+> **Known structural limit:** pathtraver recall 0.075 (10/133 at
+> v7.3.0); v7.11.1 shows pathtraver combined recall 10/123 (0.081).
+> See `docs/pathtraver.md` for the oracle-ceiling analysis.
 
 ---
 
@@ -1949,3 +1991,264 @@ corpus, protocol, or 0.921 measurement ADR-level + fresh 3-run.
 
 **Does not claim.** No recall improvement (0.075); no supersession of 0.921;
 no gate-scope change; no independent measurement of 0.977.
+
+### Amendment 28 — 2026-11-13 — Measurement-status reconciliation
+
+**Scope:** the navigational index block at the top of this file has been
+corrected for accuracy. No measurement, corpus, protocol,
+`dast_excluded.txt`, or prior amendment text has been changed. No new
+benchmark run was performed.
+
+**What was verified while reconciling the governing numbers:**
+
+1. **The v7.11.0 run `20261107T044811Z-janissary-r1` is real, complete,
+   and locally rescorable.**
+   - `findings.jsonl`: 2,029 findings.
+   - `manifest.json`: `tool_version: 7.11.0`, `harness_commit: 77f0576…`,
+     `case_count: 2740`, `target_base: http://127.0.0.1:8080/benchmark`.
+   - Rescoring against the current committed
+     `benchmark/track_a/score_dast_aware.py` produces exactly
+     TP=970, FP=0, FN=186, TN=1102 on the DAST-applicable subset, with
+     `wrong_family=0`, `orphan=0`, `out_of_scope=717`. F1=0.913.
+
+2. **The run's artifact directory is not tracked in git.**
+   - `git ls-files -- benchmark/track_a/runs/20261107T044811Z-janissary-r1`
+     returns no files.
+   - `git log --all -- benchmark/track_a/runs/20261107T044811Z-janissary-r1`
+     shows no commit has ever touched that path.
+   - By contrast, the October v7.3.0 and v7.5.0 run artifacts are each
+     tracked at four files apiece; commits `b26b43d`, `934de43`, `4280f50`,
+     `f71830e`, `f27e5a4`, `0648ba1` all touched `benchmark/track_a/runs/`.
+   - Consequence: this measurement is locally rescorable from the working
+     tree, but independent reproduction of this specific run from a clean
+     checkout is not established. Whether the untracked status reflects a
+     deliberate `.gitignore:166` decision or a lapse from the earlier
+     practice is not determined by this amendment.
+
+3. **The ±5 in `JANISSARY-ASCENSION.md` is a projection, not a measurement.**
+   `docs/handover/session-2026-11-07-resume.txt:16` records the figure as
+   "Corrected target for future runs: TP=970±5, FP=0, findings≈2030±40."
+   It is a target for a follow-up run, not a measured standard deviation
+   of the recorded run. A single-run measurement cannot produce a stdev,
+   and the amendment does not treat the ±5 as a measured statistic.
+
+4. **The Ascension document's version attribution is incorrect.**
+   `JANISSARY-ASCENSION.md` L168–170 states the v7.11.1 dedup was
+   "validated on fresh runtime run (`20261107T044811Z-janissary-r1`)" at
+   commit `4dbe0f1`. Two errors:
+   - The run's manifest records `tool_version: 7.11.0`, not 7.11.1.
+   - Tag `v7.11.1` points to commit
+     `ca20c2c556c0ff781f4d6972ecff4fddd381a590`, not `4dbe0f1`. The hash
+     `4dbe0f1` is not a valid git object.
+   Additionally, the Ascension document claims the runtime numbers are
+   "recorded in the tag message"; the v7.11.1 tag message contains the
+   phrase "TP-safe, FP=0" but no run directory, no TP count, and no ±5.
+
+5. **No complete v7.11.1 corpus measurement exists.**
+   Ten run directories dated 2026-11-07 after 16:00Z carry
+   `tool_version: 7.11.1`: two one-case smoke tests (`cases_sqli.csv`),
+   one confirmed ten-case e2e subset (`_e2e_subset.csv`, manifest
+   `case_count: 10`), one unconfirmed ten-case subset (score output
+   `findings=11`, manifest not inspected), and six incomplete
+   full-corpus attempts (findings counts 36, 84, 137, 237, 372, 452).
+   The largest complete-run finding count is 2,029 (v7.11.0); the
+   largest partial here is 452. No run completes the corpus at v7.11.1.
+
+6. **The two TP baselines are single runs; the available variance
+   statistic does not establish a version-to-version difference.**
+   The v7.3.0 baseline recorded TP=950 (Amendment 21's r1, pre-recovery).
+   The v7.11.0 baseline recorded TP=970 (Nov 7 r1). The difference is
+   +20 TP.
+   Amendment 22 recorded a **3-run sample standard deviation of ±16.6 TP**
+   for the v7.3.0 baselines. That is a measure of within-version variance
+   across three runs at a single version, not a cross-version significance
+   threshold. No statistical test comparing the two baselines exists in
+   the repository. Whether the +20 TP difference is attributable to
+   detection changes, protocol drift, target state, or sampling variance
+   is not established by this amendment.
+
+7. **CI does not enforce the benchmark gate.**
+   `.github/workflows/ci.yml` (1,475 bytes) defines a single job (`test`,
+   running pytest). It contains no reference to `benchmark`, `score`,
+   `min-f1`, `max-fp`, `track_a`, or `gate`. The v7.11.0 F1 of 0.913 is
+   below the documented `--min-f1 0.92` threshold — this is a
+   documentation-level discrepancy, not a currently enforced CI failure.
+
+**Consequences for the governing numbers:**
+
+- The 0.921 (v7.3.0, Amendment 21, recovered protocol) remains the
+  DAST-applicable headline. It is labelled historical.
+- The 970 / FP 0 / FN 186 result (v7.11.0, baseline-only) is the latest
+  complete measurement. It is **not** promoted to a v7.11.x headline by
+  this amendment.
+- The ±5 in `JANISSARY-ASCENSION.md` is not carried forward.
+- No claim is made that the v7.11.1 dedup change preserved TP/FN on the
+  full corpus. The design intent is preservation; the measurement does
+  not exist.
+
+**Outstanding work item.** A fresh full-corpus benchmark run at v7.11.x
+is required to produce a version-pinned current headline. Its protocol
+would follow Amendment 20 (baseline + FN-recovery) and Amendment 22
+(three baseline runs, fresh target container per run, single-process
+per run, run artifacts committed under `benchmark/track_a/runs/`).
+
+**Does not claim:**
+
+- That the v7.11.0 measurement supersedes the v7.3.0 headline. Different
+  versions, different protocols (baseline vs recovered).
+- That current code meets the pre-registration gate.
+- That the Ascension document's TP=970 value is wrong. Only the version
+  attribution, ±5 labelling, tag-hash, and tag-message claim are corrected.
+- That the untracked status of the Nov 7 run is a policy violation rather
+  than an intentional ignore.
+- That any CI workflow is or has been failing due to the benchmark gate.
+
+**Files referenced:**
+- `benchmark/track_a/runs/20261107T044811Z-janissary-r1/` (manifest,
+  findings.jsonl, skipped.jsonl, timeouts.jsonl) — local only, untracked.
+- `benchmark/track_a/score_dast_aware.py`, `case_vectors.csv`,
+  `dast_excluded.txt` — committed.
+- `.github/workflows/ci.yml` — committed.
+- `JANISSARY-ASCENSION.md` L168–170 — citation corrected here.
+- `docs/handover/session-2026-11-07-resume.txt:16` — source of the
+  "target for future runs" framing.
+- `BENCHMARK.md` Amendment 22 — the source of the ±16.6 figure.
+
+### Amendment 29 — 2026-11-13 — First complete v7.11.1 corpus measurement
+
+**Status:** applied. Supersedes Amendment 28's claim that "no complete
+v7.11.1 corpus measurement exists." That was true at Amendment 28's
+writing; a fresh complete run on 2026-11-13 at harness commit `ea7b3e5`
+(post-M80) now provides the missing measurement.
+
+**Baseline result — complete v7.11.1 corpus, single run, baseline-only
+(`JANISSARY_TIMEOUT=60`):**
+
+| run dir | TP | FP | FN | TN | P | R | F1 |
+|---|---|---|---|---|---|---|---|
+| 20261112T180530Z-janissary-r1 | 988 | 0 | 168 | 1102 | 1.000 | 0.855 | **0.922** |
+
+Full corpus: TP=988, FP=0, FN=427, TN=1325, F1=0.822.
+Supported-classes (Amendment 27 scope): TP=978, FP=0, FN=45, TN=967, F1=0.978.
+Classification: `wrong_family=0`, `orphan=0`, `out_of_scope=738`, `timeouts=0`.
+
+**Gate status:** 0.922 clears the registered `--min-f1 0.92` threshold
+by 0.002. The gate is met for the first time at a baseline-only protocol.
+
+**FN breakdown (DAST-applicable, 168 total):**
+
+| Category | FN |
+|---|---|
+| pathtraver-00 / -01 / -02 / -03 | 42 / 39 / 33 / 9 = **123** |
+| weakrand-01 / -03 / -05 | 3 / 8 / 5 = **16** |
+| securecookie-00 | **8** |
+| trustbound-00 / -01 | 10 / 6 = **16** |
+| cmdi-00 / -01 / -02 | 1 / 2 / 2 = **5** |
+| xss-*, sqli-*, ldapi-00, xpathi-00 | 0 |
+| **Total** | **168** |
+
+**FN-recovery pass (Amendment 20 protocol, `JANISSARY_TIMEOUT=180`):**
+
+The 206 recovery candidates were the vulnerable baseline cases with zero
+findings — 168 DAST-applicable and 38 from the `crypto-*` / `hash-*`
+categories Amendment 13 excludes from DAST scoring. Recovery ran in
+`20261112T195341Z-janissary-r1` (206 cases, 242 s, 0 timeouts) and
+produced **0 new findings**.
+
+**Recovery coverage of DAST FN:**
+
+| | Count |
+|---|---|
+| DAST FN total | 168 |
+| Mode-skipped before scan (`header_any` / `out_of_scope_uri`) | 22 |
+| Rescanned by recovery | **146** |
+| Fired | **0** |
+
+The 22 mode-skipped comprise 14 pathtraver cases (5 pathtraver-00,
+4 pathtraver-01, 5 pathtraver-02), 4 `securecookie-00`, 2 `trustbound-00`,
+and 2 `trustbound-01`. All require input vectors the harness classifies
+as `header_any` (or `out_of_scope_uri`) and skips by design — the skip
+is not a timeout failure. They are structurally unreachable at any
+timeout, consistent with Amendment 20's cap analysis extended beyond
+pathtraver.
+
+The 18 excluded-category candidates that *were* rescanned
+(`crypto-*` / `hash-*` vulnerable, zero baseline findings) also produced
+0 findings — consistent with Amendment 13's position that these
+categories are unobservable to black-box DAST.
+
+**Why recovery added 0.**
+
+Amendment 20's 32 recoveries at v7.3.0 were concentrated in
+sqli / xss / cmdi — categories whose oracles required longer than
+`timeout=60` to fire. Amendments 12–19 replaced those oracles with
+faster paths during the v7.3.0 → v7.11.1 interval. Those cases now fire
+in the baseline at `timeout=60`; recovery has nothing to add. The 146
+DAST FN cases that *were* rescanned comprise the non-pathtraver remainder
+of the 123-pathtraver FN set (109 pathtraver cases not mode-skipped) plus
+the 16 weakrand, 4 securecookie (of 8), 8 trustbound (of 16), and 5 cmdi
+residuals. All fire 0 new findings at 3× baseline timeout.
+
+**Comparison to the historical recovered headline.**
+
+The v7.3.0 recovered result was **F1 0.921** (TP 987), the product of
+baseline + FN-recovery. The v7.11.1 baseline-only result is
+**F1 0.922** (TP 988), with recovery adding nothing. The v7.11.1
+baseline-only result has therefore reached the level the earlier
+version required a second recovery pass to achieve.
+
+This is an observed-equivalence statement, not a statistical
+significance claim. One run at each version; no test across versions
+has been performed.
+
+**Artifact provenance.**
+
+The baseline run directory
+`benchmark/track_a/runs/20261112T180530Z-janissary-r1/` is committed
+under this amendment (B-narrow disposition): `findings.jsonl`
+(5,759,412 B), `manifest.json` (415 B), `skipped.jsonl` (5,334 B),
+`timeouts.jsonl` (0 B). The `+rec` merged directory is **not** committed
+(its findings are byte-identical to the baseline); the recovery-attempt
+directory `20261112T195341Z-janissary-r1` is **not** committed (its
+zero-finding result is documented here).
+
+**Does not claim:**
+
+- That v7.11.1 is a statistically distinguishable improvement over
+  v7.3.0's recovered score. One run at each version; no significance
+  test.
+- That the 22 mode-skipped DAST FN are recoverable. They are
+  structurally unreachable.
+- That the 146 rescanned DAST FN are recoverable by longer timeout.
+  Recovery at 3× baseline timeout fired 0.
+- That the 38 excluded-category candidates establish anything about
+  crypto/hash detectability.
+
+**Files referenced:**
+- `benchmark/track_a/runs/20261112T180530Z-janissary-r1/` — baseline,
+  committed.
+- `benchmark/track_a/runs/20261112T195341Z-janissary-r1/` — recovery
+  attempt (0 findings), local-only.
+- `benchmark/track_a/runs/20261112T180530Z-janissary-r1+rec/` — merged
+  (byte-identical findings to baseline), local-only.
+- `benchmark/track_a/_fn_recovery_7_11_1.csv` — 206-case recovery
+  candidate list.
+- `benchmark/track_a/score_dast_aware.py` — scorer.
+- `benchmark/track_a/case_vectors.csv` — 2,740-case corpus map.
+- `benchmark/track_a/dast_excluded.txt` — excluded categories.
+
+**Known issue (non-blocking).** `dast_excluded.txt` was not designed for
+machine parsing; a whitespace-split classifier (as used by
+`_fn_extract_7_5_0.py` and `_fn_breakdown.py`) yields ~85 tokens
+including comment fragments and header strings. The classifications
+above were independently verified arithmetically (20 non-DAST skipped
++ 18 scanned = 38 excluded-vulnerable zero-finding candidates;
+22 DAST-vulnerable skipped = 168 − 146). A future cleanup should
+either machine-format the exclusion file or add a parser.
+
+**Supersedes:**
+- Amendment 28's statement "No complete v7.11.1 corpus measurement
+  exists." — it does, as of this amendment.
+- Amendment 27's implied "current" 0.921 headline. The current
+  DAST-applicable baseline headline is 0.922; 0.921 remains the
+  correct historical recovered figure.
