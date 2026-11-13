@@ -47,6 +47,8 @@ The scanner does not *select* between them by detected dialect; it sends the ful
 
 `UnstableTargetError` (`sqli_union.py:200`) is a pre-existing uncertainty signal — reuse, do not parallel.
 
+**Channel-table correction, 2026-11-14.** The table above was written before the scan-path reachability of each channel was traced. Corrections: (a) **Union extraction is not on the scan path.** `UnionExtractor` (`attack/sqli_union.py`) is reachable only via `cmd_attack_sqli_union` (`cli.py:1228`), which requires `--attack-confirm` and runs outside `Scanner.scan`. (b) **Error-pattern and Timing are gates inside the differential analyzer, not standalone oracles.** `DB_ERROR_PATTERNS` runs during normal diff analysis and produces a `db_error`-typed finding; `_check_timing` (`analyzer.py:645`) gates on `SLEEP_FLOOR` membership before the z-score test. Neither is a standalone call site. (c) Only two SQLi-specific standalone oracles exist on the scan path: `check_sqli_quote_oracle` (`analyzer.py:838`, called `scanner.py:1994`) and `check_blind_sqli_oracle` (`blind_sqli_oracle.py:54`, called `scanner.py:1700`). The channel table's "four channels" conflates oracles, gates, and an off-path tool; per-case records attach only at the two oracle call sites (§9.7).
+
 ## 4. Dialect × ORM-framework matrix
 
 Axis 1 (verified): the six dialects in `analyzer.py:126-175`.
@@ -104,6 +106,8 @@ A record with no `uncertainty` field is rejected. It claims more certainty than 
 **9.5 — SLEEP_FLOOR coverage. RESOLVED 2026-11-14 (final).** `SLEEP_FLOOR` (`analyzer.py:236-250`) is a live timing-gate map with 13 entries across five vulnerability classes. Consumed at `analyzer.py:646-648`; the z-score test at `analyzer.py:~675` runs only after the floor check passes. Two entries, `sql_sleep_mssql` and `sql_sleep_oracle`, have no producer in any in-repo payload source. Traced: (1) `DEFAULT_PAYLOADS` (`scanner.py:73`) contains neither; (2) no `--payloads` CLI flag exists (grep for `--payloads`/`payloads_file`/`load_payloads` empty); (3) `_ENGINE` is a singleton constructed once at `scanner.py:390`, not per-payload-source; (4) the only in-repo payload loaders are `_load_ws_payloads` (`cli.py:270`), GraphQL (`graphql.py:106`), SSRF (`collaborator.py:63`), and host-bypass — none is a SQLi channel. The two entries are dead in a live map. No fix required for L03: `SLEEP_FLOOR.get(payload_name, 0.0)` returns 0.0 for undeclared names and the gate rejects below `MIN_SLEEP_FLOOR`; dead entries are inert. If future work adds an MSSQL or Oracle SQLi payload, the floor is already defined.
 
 **9.6 — Canonical dialect identifier. RESOLVED 2026-11-14.** `postgresql` is canonical. `postgres` in `sqli_union.py:51` is an internal alias. The consumers do not intersect (`sqli_union.py:247,424` vs `analyzer.py:405,858`), so no live impact. Any shared schema uses `postgresql`.
+
+**9.7 — SQLi record schema scope. RESOLVED 2026-11-14.** Per-case records are scoped to SQLi payload observations only: `payload_name` beginning `sql_` or `sqli_blind_`, both firing and non-firing. Blind SQLi records both `true` and `false` observations linked by role tag to the same classification record. Cross-class `db_error` and `timing_anomaly` observations from non-SQLi payloads are outside this schema. Schema in `docs/l03_sqli_record_schema.md`. Attachment points: `scanner.py:1700` (blind) and `scanner.py:1994` (quote); no other site on the scan path produces SQLi oracle evidence.
 
 ## 10. Acceptance criteria
 
