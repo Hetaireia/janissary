@@ -46,7 +46,7 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 | Item | Details |
 |---|---|
 | **Version** | Source metadata 7.11.1 · latest GitHub release v7.11.0 · PyPI 7.10.2 |
-| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.977** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
+| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
 | **Detection classes** | SQLi, XSS, SSRF, cmdi; traversal partial (recall 0.075 — see Known Limitations) |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | text · JSON · JSONL · SARIF 2.1.0 |
@@ -73,16 +73,63 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 
 ## Architecture
 
+JANISSARY separates discovery from the decision to report a verified finding.
+
+Discovery modules identify candidate behaviour. Where a workflow routes
+candidates through the `VerificationEngine`, they pass through an ordered
+confirmer chain. The engine is the sole production boundary for verified
+findings. Unproven candidates may also be retained directly by discovery
+integrations without entering that verification path.
+
 ```mermaid
-flowchart LR
-    CLI[janissary CLI] --> Engine[Scan engine]
-    Engine --> Recon[Recon<br/>fingerprint · WAF · pacer]
-    Engine --> Oracles[Differential oracles]
-    Recon --> Findings[Findings store]
-    Oracles --> Findings
-    Findings --> Output[text · JSON · JSONL · SARIF]
+flowchart TD
+    CLI["CLI and scan orchestration"]
+
+    CLI --> RECON["Recon: fingerprinting, WAF detection and pacing"]
+    CLI --> HTTP["HTTP differential scanning"]
+    RECON -. "target context and pacing" .-> HTTP
+    CLI --> GQL["GraphQL discovery"]
+    CLI --> WS["WebSocket discovery"]
+    CLI --> HB["Host-header bypass discovery"]
+    CLI --> HEUR["Heuristic discovery"]
+    CLI --> IDOR["IDOR cross-identity probing"]
+
+    HTTP --> CAND["CandidateFinding"]
+    GQL --> CAND
+    WS --> CAND
+    HEUR --> CAND
+    IDOR --> CAND
+
+    CAND --> VE["VerificationEngine"]
+    VE --> CONF["Ordered confirmer chain"]
+
+    CONF --> VERIFIED["VerifiedFinding: verified"]
+    CONF --> UNPROVEN["VerifiedFinding: unproven"]
+    VE --> FAILED["FailedVerification: rejected result"]
+
+    VERIFIED --> FINDINGS["ScanSummary.findings"]
+    UNPROVEN --> CANDIDATES["ScanSummary.candidates"]
+    HB --> CANDIDATES
+
+    FINDINGS --> OUTPUT["CLI and reporting outputs"]
+    CANDIDATES --> OUTPUT
 ```
 
+A `verified` result means the configured confirmer accepted the candidate under
+JANISSARY's verification rules; it should not be read as a guarantee of
+independent exploitability. An `unproven` candidate is retained for review but
+is not promoted to a verified finding.
+
+`FailedVerification` is a separate engine result, not a third finding status.
+It is not retained in a dedicated `ScanSummary` collection.
+
+The confirmer order matters. Specific confirmers classify GraphQL, WebSocket,
+heuristic, IDOR and corroborator-only observations as unproven before the
+fallback `AnalyzerImplicitConfirmer` is reached. Host-header bypass discovery
+is retained as an unproven candidate and does not enter that verification path.
+
+The CLI combines the applicable scan workflows and exposes findings and
+candidates through its reporting formats.
 ---
 
 ## See it work
@@ -144,7 +191,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 ## Benchmark
 
 > [!IMPORTANT]
-> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.977**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 | Metric | Value | Notes |
 |---|---|---|
@@ -153,7 +200,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 | **Recall (v7.11.1)** | **0.855** | TP 988 / FN 168 (DAST-applicable) |
 | **TP / FP / FN / TN (v7.11.1)** | 988 / 0 / 168 / 1102 | DAST-applicable, baseline-only |
 | F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings at v7.11.1 |
-| F1 (supported-classes, excl. path-traversal) | 0.977 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
+| F1 (supported-classes, excl. path-traversal) | 0.978 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
 | **Historical v7.3.0 recovered F1** | **0.921** | TP 987; required FN-recovery pass to achieve |
 | Historical 3-run unassisted F1 (v7.3.0) | 0.903 ± 0.009 | Last 3-run protocol measurement was v7.5.0 (0.906 ± 0.002) |
 | Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |
@@ -336,10 +383,10 @@ Being explicit about scope is part of being honest about precision:
 
 - **SPA Catch-All False Positives (Issue #1).** Applications returning HTTP 200 for arbitrary routes can trigger the admin-panel probe's initial status-code classifier. The probe runs a structural DOM differential against the root page (ADR-005 gated corroborator: `root@U@fingerprint` + hamming-distance threshold + `root@U@signature@U@match`) before emission — candidates failing the structural gate are discarded. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate but which are not actual admin panels. No React/Angular/Vue regression corpus exists yet (L01 remaining gap).
 - **Mid-scan auth expiry (ADR-010).** Two consecutive 401 responses *when auth is configured* abort the scan with `scan@U@incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth@U@required` output state — structured `ScanSummary.auth_state` is emitted (`unknown`/`authenticated`/`unauthenticated`/`expired`/`recovery_failed`) and rendered on abort; no `AuthStateManager` (health checks, reauth, OAuth2 refresh) exists yet, so an `expired` session cannot return to `authenticated`.
-- **Framework-specific SQLi is not implemented (L03).** No DBMS-fingerprint or dialect-profile module exists. Generic payloads handle parenthesised queries (Juice Shop); ORM-specific edge cases are untested and have no delivery date.
-- **Path traversal — partial, recall 0.075** (per-subcategory F1 0.049—0.308). Scored in the DAST-applicable metric (0.921 headline); excluded from the supported-classes metric (0.977) per ADR-027 D8 amended (2026-11-05). Content-signature gates exist but are narrow. Documented in [`docs/pathtraver.md`](docs/pathtraver.md) as a property of the benchmark target.
+- **Framework-specific SQLi (L03) is not implemented.** JANISSARY recognises database error patterns across multiple SQL dialects, but does not yet provide ORM profiles, dialect-keyed payload selection or framework-specific delivery-path analysis. The failure-classification work is documented in [`docs/l03_sqli_classification.md`](docs/l03_sqli_classification.md); per-case records, a measurement protocol and implementation remain future work.
+- **Path traversal — partial, recall 0.075** (per-subcategory F1 0.049—0.308). Scored in the DAST-applicable metric (0.922 headline); excluded from the supported-classes metric (0.978) per ADR-027 D8 amended (2026-11-05). Content-signature gates exist but are narrow. Documented in [`docs/pathtraver.md`](docs/pathtraver.md) as a property of the benchmark target.
 - **SSRF payload scope.** Nine payloads ship today: five OOB via collaborator (`ssrf@U@http`, `ssrf@U@https`, `ssrf@U@gopher`, `ssrf@U@dict`, `ssrf@U@dns@U@only`) and four cloud-metadata via response-body markers (`ssrf@U@metadata@U@aws`, `ssrf@U@metadata@U@aws@U@v6`, `ssrf@U@metadata@U@gcp`, `ssrf@U@metadata@U@azure`). The `file://` payload remains deferred; confidence-aware OOB attribution is not implemented (L05 remaining gap). See [`docs/ssrf.md`](docs/ssrf.md).
-- **IDOR candidate detection ships in M42.** Insecure Direct Object Reference candidates surfaced as unproven findings via `--idor` (requires two identities). Cross-identity probes, not full exploitation; manual triage required. Five authorisation-boundary integration tests pin the candidate-only behaviour (`91e9281`); public-resource suppression awaits a design decision (L06b). See [`docs/decisions/ADR-024-idor-candidate-probe.md`](docs/decisions/ADR-024-idor-candidate-probe.md).
+- **IDOR candidate detection.** The `--idor` workflow requires two identities and emits unproven candidates based on cross-identity response comparisons. It does not establish whether a resource is legitimately public. Public-resource candidates are intentionally retained for analyst triage; no automatic suppression heuristic is applied (ADR-031). Manual assessment is required.
 
 ---
 
@@ -360,9 +407,9 @@ See [`SECURITY.md`](SECURITY.md).
 
 The architectural decisions governing current and planned work are in [`docs/decisions/`](docs/decisions/) (ADR-016 through ADR-021 for the Phase 0 Foundation, and prior ADRs for the verification engine itself).
 
-Two near-term direction items are captured as ADRs:
+Shipped discovery capabilities and deferred direction:
 
-- **Heuristic discovery mode (Track B):** shipped as `--heuristic`. Candidates route through `_ENGINE.verify()`; those that pass become normal findings and those that fail are dropped (a separate unproven-candidate stream is tracked as M41). Never promotes to verified findings without engine corroboration. See ADR-016, ADR-017, ADR-019.
+- **Heuristic discovery (Track B):** shipped as `--heuristic`. Heuristic matches pass through the `VerificationEngine` and are retained as unproven candidates. Discovery does not independently establish a verified vulnerability. See ADR-016, ADR-017 and ADR-019.
 - **Crawler:** deferred with explicit triggers (named enterprise demand or 3+ user asks). When built, ships open-source. See ADR-021.
 
 Detailed phased planning and milestone tracking are maintained privately and are not part of this repository.
