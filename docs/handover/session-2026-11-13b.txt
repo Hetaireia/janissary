@@ -1,0 +1,226 @@
+JANISSARY — Session Handover (2026-11-13c)
+
+Supersedes: JANISSARY — Session Handover (2026-11-13b), which claimed HEAD 4399b66,
+            tests 1342, and L01/L02/L05 unverified. All three claims were wrong.
+Session close: 2026-11-13
+Repo: C:\Users\M5 E60\janissary-project\janissary
+HEAD == origin/main == 2d0e650
+Working tree: clean except ?? benchmark/track_a/_fn_recovery_7_11_1.csv (deliberate)
+
+================================================================================
+1. Repository state
+================================================================================
+
+Three commits shipped this session, all documentation:
+
+| SHA     | Message                                                                               | Contents      |
+|---------|---------------------------------------------------------------------------------------|---------------|
+| 9be8c5d | docs(quality): cite code evidence for L01/L02/L05; add citation convention            | 1 file, +5/-3 |
+| 1f4f0c4 | docs: correct supported-classes F1 to 0.977                                           | 2 files, +4/-4|
+| 2d0e650 | docs(readme): reflect structured auth_state; correct L03 status; add L01/L05/L06 gaps | 1 file, +5/-5 |
+
+Files touched:
+- docs/quality/REMEDIATION-REGISTER.md — L01/L02/L05 evidence lines rewritten with
+  src/ file:line citations; citation convention paragraph added to header.
+- README.md — 0.978 -> 0.977 (3x); auth-state claim replaced with structured
+  ScanSummary.auth_state description; L03 corrected to Not Started; L01/L05/L06
+  remaining gaps added.
+- LIMITATIONS.md — 0.978 -> 0.977 (1x).
+
+Local-only, gitignored, uncommitted:
+- renders/dashboard-refined.html — hand-maintained. M30 figures corrected to
+  TP=988 / FP=0 / FN=168 / F1 0.922; M79, M81, M82 ticked done 13-NOV-2026.
+
+================================================================================
+2. Test and benchmark state
+================================================================================
+
+Tests: 1390 collected — 1389 passed, 1 skipped. CORRECTS the prior handover's
+"1342 tests (1230 unit + 112 integration)", which does not exist at HEAD.
+Verified two ways: `pytest -q` directly (53.01s), and
+`pre-commit run pytest-full --all-files --hook-stage pre-push` (Passed).
+The pre-push hook passes with the committed config; no config change was needed.
+
+Benchmark: unchanged. v7.11.1 DAST-applicable F1 = 0.922
+(TP 988 / FP 0 / FN 168), Amendment 29. Supported-classes supplemental 0.977,
+pending re-check against the committed Amendment 29 run.
+
+================================================================================
+3. Substantive deliverables
+================================================================================
+
+3.1 Register citations corrected (9be8c5d)
+
+  L01: Evidence previously cited the README notation
+       `root@U@signature@U@match` as if it were a code literal. It is not.
+       The gate is implemented as fingerprint -> root_signature -> hamming:
+       baseline_struct.py:95 (_root_signature_from), baseline_struct.py:27-28
+       (dom_fingerprint, hamming), consumed by collapse_oracle.py:18.
+       Mechanism confirmed present; status "Mitigated" stands.
+
+  L02: Evidence previously cited bd7f1c3, which is an import-ordering style fix
+       ("style(test): fix import ordering in test_auth_state (I001)"), not the
+       feature commit. Corrected to dc09b70 ("feat(auth): structured auth_state
+       reporting in scan output (JAN-L02 partial)"). e96f31c (abort-path tests)
+       was already correct.
+
+  L05: Evidence previously gave a date ("shipped 2026-11-10") with no SHA.
+       Corrected to: scanner.py:124 (AWS IMDSv1), :136 (GCP), :142 (Azure);
+       redirect-chain metadata path 466cb1f (ADR-029 BL-1, 7 tests);
+       OOB-via-redirect 212b5d1 (ADR-029 BL-1b, 4 tests); Interactsh CI
+       enablement 4a68c7a; workflow-scope caveat recorded 49f2c78.
+       Note ADR-029, not 028 — renumbered in 2827751.
+
+3.2 Citation convention added (9be8c5d)
+
+  Header of REMEDIATION-REGISTER.md now states: every Evidence line must cite
+  at least one src/ file:line and, for a mitigation claim, the introducing SHA.
+  A citation that does not survive grep is not evidence. Packages without a
+  code citation are Not Started regardless of narrative.
+
+3.3 README corrected (1f4f0c4, 2d0e650)
+
+  - 0.978 -> 0.977 in four places (README L49, L147, L156; LIMITATIONS L134).
+    The 0.978 was self-contradictory: README's own Known Limitations bullet
+    already said 0.977.
+  - Removed the claim "the abort reason string is the only signal" — false since
+    dc09b70. Replaced with the structured auth_state values and the honest
+    remaining gap (no AuthStateManager, no path back to authenticated).
+  - L03 "constant target for improvement" -> "not implemented (L03)". The
+    register says Not Started; no DBMS-fingerprint or dialect-profile module.
+  - Added L01 regression-corpus gap, L05 OOB-attribution gap, L06a test coverage
+    (91e9281) and L06b design-decision gap.
+
+================================================================================
+4. Audit items verified this session
+================================================================================
+
+L01, L02, L05 were verified against HEAD by the four-question pass:
+
+  Q1 does the code path still exist as described — grep the cited artefact
+  Q2 does it behave as described — read the surrounding lines
+  Q3 has a later commit already fixed it — git log -S / --grep
+  Q4 is it still open — the only branch that yields work
+
+All three statuses were substantively correct; only the citations were wrong.
+No status changes were warranted. L01 remains Mitigated and release-blocking
+(Gate 1 FAIL, Gate 5 names L01/L02). L05's remaining gap is test-only and may
+close without code change.
+
+================================================================================
+5. Register status distribution (after 9be8c5d)
+================================================================================
+
+  Resolved:                L09, L10, L11
+  Superseded:              L04b
+  In Progress:             L04a (M83 Phase 2)
+  Mitigated:               L01, L05
+  Partial:                 L02, L06
+  Accepted Limitation:     L07 (deliberate, ADR-021)
+  Accepted Gap:            L08
+  Not Started:             L03, L06b, L12
+
+VERIFIED against HEAD this session: L01, L02, L05.
+NOT verified:                      L03, L06, L06b, L07, L08, L12.
+
+Release-blocking per the register's gate table: L01, L02 only. The prior
+handover's "nine genuinely open" overcounts: L07 and L08 are recorded decisions,
+not open work. Seven need code or test work; two block release.
+
+================================================================================
+6. Environment and infrastructure
+================================================================================
+
+6.1 WSL is REQUIRED for git commit, not preferred.
+
+  PowerShell `git commit` produces no output and does not commit. The .githooks
+  files exec /home/oraclemode/janissary-venv/bin/pre-commit, a WSL path Windows
+  git cannot resolve; the hook fails and the commit aborts. The only working
+  invocation is:
+
+  wsl bash -c "cd '/mnt/c/Users/M5 E60/janissary-project/janissary' && source /home/oraclemode/janissary-venv/bin/activate && git <cmd>"
+
+  This is stronger than the prior handover's §6.3, which presented WSL as a
+  preference and --no-verify as an escape hatch. It is neither: WSL is the only
+  path that runs the hook at all.
+
+6.2 tools/ascension.py is retired. Dashboard is hand-maintained.
+
+  e545af0 "chore(ascension): retire generator pipeline; dashboard is
+  hand-maintained". The generator is gone. renders/dashboard-refined.html is
+  hand-edited HTML, gitignored, local-only.
+
+  CONSEQUENCE: the `update ascension` function in $PROFILE is broken. It calls
+  ".\.venv\Scripts\python.exe" tools\ascension.py, which fails with
+  [Errno 2] No such file or directory (confirmed by execution). It also tries to
+  commit tools/ascension_state.json, which no longer exists. Recommend deleting
+  the function, or repurposing it to commit renders/ with a .gitignore exception.
+
+6.3 Four distinct Python environments encountered
+
+  system (/usr/lib/python3.14) — no janissary installed
+  /home/oraclemode/janissary-venv — the working venv, has janissary + deps
+  .venv (Windows) — referenced by $PROFILE, not used by hooks
+  build/lib — stale build output, matched by greps
+
+  Only the second has the package installed. Any command not routed through it
+  produces ModuleNotFoundError: No module named 'janissary'.
+
+================================================================================
+7. Stale claims found this session
+================================================================================
+
+The session's recurring finding: narrative claims mostly right, citations wrong.
+Four instances, all now corrected except the last:
+
+  1. Test count: 1342 (1230+112) -> 1390 (1389 pass, 1 skip).
+     The wrong figure does not exist in any tracked file; it was only in the
+     handover document.
+  2. L01 evidence cited README notation as a code literal.
+  3. L02 evidence cited a style-fix SHA as the feature commit.
+  4. docs/HANDOVER-2026-11-05.md:617 still describes tools/ascension.py as the
+     dashboard generator, retired in e545af0. NOT corrected — left for the next
+     session, since it is a historical handover rather than a live document.
+
+The citation convention (9be8c5d) exists to prevent recurrence in the register.
+The handover corpus has no equivalent and continues to carry retired claims.
+
+================================================================================
+8. Entry points for the next session
+================================================================================
+
+1. L02 — release-blocking, citations now correct. Next action: AuthStateManager
+   when reauth is specified (health checks, OAuth2 refresh). Reconcile with
+   tri-session (M41) rather than building a parallel subsystem. This is real
+   work, likely a session of its own.
+
+2. L06b — smallest genuinely-open item. Its next action is a decision, not code:
+   write an ADR choosing one of three public-resource suppression designs, or
+   record the decision to keep analyst triage as the control. Evidence cites
+   detection/idor.py:79 and test_run_idor_public_resource_shape_emits_unproven_
+   not_verified (91e9281) — both checkable in one command.
+
+3. L01 — release-blocking but the remaining gap is a regression corpus
+   (React/Angular/Vue fixtures). The gate itself is real and correctly cited.
+
+4. L03 — Not Started, larger. Requires a DBMS-fingerprint/dialect-profile module
+   and an FN-classification table before payload work.
+
+5. Remaining unverified: L06, L07, L08, L12. Run the four-question pass before
+   working any of them.
+
+6. Housekeeping: delete or fix the `update ascension` $PROFILE function;
+   correct docs/HANDOVER-2026-11-05.md:617.
+
+================================================================================
+9. What NOT to do
+================================================================================
+
+- Do not re-add $JANISSARY_VENV or any portability indirection to
+  .pre-commit-config.yaml. It was proposed this session, found unnecessary
+  (the committed config works), and an attempted sed-based edit corrupted three
+  files with paths truncated to /bin/. Reverted, stash dropped, never committed.
+- Do not edit .githooks or .pre-commit-config.yaml from PowerShell. The venv
+  path cannot be resolved from the Windows side and the hooks fail silently.
+- Do not trust a handover's test count or file citations without checking them.
+  That is this session's entire finding.
