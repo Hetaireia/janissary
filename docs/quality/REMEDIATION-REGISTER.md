@@ -11,7 +11,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 |---|---|---|
 | 1 — Precision | **FAIL** | L09 resolved, but no FP regression corpus exists yet. |
 | 2 — Detection | **PARTIAL** | Per-class recall published; no 3-run CI requirement enforced. |
-| 3 — Reliability | **PARTIAL** | Auth state now reported (bd7f1c3); reauth workflow and abort-path tests outstanding. |
+| 3 — Reliability | **PARTIAL** | Auth state now reported (dc09b70); SARIF coverage in `1c8aaa8`; reauth workflow outstanding. |
 | 4 — Evidence | **PARTIAL** | `verification_status` in all formats; category contract not enforced. |
 | 5 — Release | **PARTIAL** | v7.11.0 clean, but L01/L02 remain open. |
 
@@ -30,8 +30,8 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L02 — Mid-Scan Authentication Expiry
 - **Status:** Partial
 - **Priority:** P0
-- **Evidence:** `dc09b70` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. `e96f31c` adds abort-path coverage: 3 tests against real ResponseSnapshot/compute_arming_state with 3 mocks, plus the auth_configured gate test. 7 tests total in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged. `1c8aaa8` — SARIF now carries `auth_state` at `properties.auth_state` (sibling of `completeness`, not nested inside it); two tests in `tests/unit/test_scan_completeness.py`. JSON carries it at `_summary_to_dict` top level. **JSONL carries no scan-level record** — `emitter.py` JSONL branch writes findings and candidates only; `scan_meta` is a parameter but consumed only by `_build_document` (JSON branch). Filed as wire-format work.
-- **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Abort-path unit tests now exist (`e96f31c`). SARIF and JSON carry structured `auth_state`; JSONL does not carry scan-level metadata at all — a wire-format addition, not an `auth_state` bug.
+- **Evidence:** `dc09b70` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. `e96f31c` adds abort-path coverage: 3 tests against real ResponseSnapshot/compute_arming_state with 3 mocks, plus the auth_configured gate test. 7 tests total in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged. `1c8aaa8` — SARIF now carries `auth_state` at `properties.auth_state` (sibling of `completeness`, not nested inside it); two tests in `tests/unit/test_scan_completeness.py`. JSON carries it at `_summary_to_dict` top level. **JSONL carries no scan-level record** — `emitter.py` JSONL branch writes findings and candidates only; `scan_meta` is a parameter but consumed only by `_build_document` (JSON branch). Excluded by design per L10: JSONL is the finding stream; `--json` is the complete-document format.
+- **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Abort-path unit tests now exist (`e96f31c`). SARIF and JSON carry structured `auth_state`; JSONL does not carry scan-level metadata at all — excluded by design per L10, not an `auth_state` bug.
 - **Next Action:** Extend with an `AuthStateManager` when reauth is specified. Reconcile with tri-session (M41) rather than a parallel subsystem.
 - **Closure Criterion:** Structured auth state in all output formats (JSON, JSONL, SARIF — not just text). Reauth tested against a mock IdP.
 
@@ -73,14 +73,14 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Evidence:** M42 shipped, candidate-only (`--idor`), requires two identities. `run_idor` routes through `_ENGINE.verify()` (`scanner.py:1339`). L06a `91e9281` adds five authorisation-boundary integration tests to `tests/integration/test_scanner_idor.py`: 200/200 public-resource shape asserts `unproven` and not `verified`; length within 5pct asserts candidate; length beyond 5pct asserts no candidate; A-observation-non-2xx asserts no candidate; B-5xx asserts no candidate. Committed with 1088 unit / 1183 unit+integration passing and both ruff gates green.
 - **Remaining Gap:** Semantic verification beyond the status+body predicate is L06b. No role/tenant matrix.
 - **Next Action:** None for L06a -- the boundary is covered. L06b carries the remaining design work.
-- **Closure Criterion:** L06a met by `91e9281`. Full closure depends on L06b.
+- **Closure Criterion:** L06a met by `91e9281`. L06b resolved by ADR-031. Remaining: role/tenant matrix for semantic verification.
 
 ### JAN-L06b — IDOR Public-Resource Suppression
-- **Status:** Not Started
+- **Status:** Resolved
 - **Priority:** P2
-- **Evidence:** `is_idor_candidate` (`detection/idor.py:79`) compares A-status, B-status, and body equality-or-5pct-length only. It carries no public/private resource signal, so a 200/200 matching-body response emits an `unproven` candidate whether the resource is legitimately public or an IDOR. `test_run_idor_public_resource_shape_emits_unproven_not_verified` (`91e9281`) pins the current behaviour: the detector reports and defers to analyst triage.
-- **Remaining Gap:** Suppressing public resources requires a signal the detector does not have. Three candidate designs, not yet chosen: (i) a `public_resources` pattern list on the target spec, checked before emission; (ii) a response-header heuristic (`Cache-Control: public`, absent `Vary`); (iii) no code change -- treat analyst triage as the intended control and document it as such. (i) and (ii) trade false positives for false negatives; (iii) preserves current behaviour and is already the de-facto design.
-- **Next Action:** Write an ADR choosing one of the three designs, or recording the decision to keep triage as the control. Do not narrow the detector without that decision -- a suppression heuristic that is wrong in either direction is worse than the honest `unproven` boundary.
+- **Evidence:** `is_idor_candidate` (`detection/idor.py:79`) compares A-status, B-status, and body equality-or-5pct-length only. It carries no public/private resource signal, so a 200/200 matching-body response emits an `unproven` candidate whether the resource is legitimately public or an IDOR. `test_run_idor_public_resource_shape_emits_unproven_not_verified` (`91e9281`) pins the current behaviour: the detector reports and defers to analyst triage. **ADR-031** records this as the intended control.
+- **Remaining Gap:** None. Public-resource suppression is a deliberate non-goal: the detector emits `unproven` candidates and analyst triage is the control (ADR-031). Options (i) and (ii) were rejected; neither is foreclosed if triage volume becomes a measured problem.
+- **Next Action:** None. Decision recorded in ADR-031 (option iii: triage as the control). No detector change.
 - **Closure Criterion:** A recorded design decision (ADR) plus fixtures that assert whichever behaviour is chosen. If (iii) is chosen, closure is the ADR alone.
 
 ### JAN-L07 — Discovery / Modern SPA Coverage
@@ -94,7 +94,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L08 — JWT and Prototype Pollution
 - **Status:** Accepted Gap
 - **Priority:** P1/P2
-- **Evidence:** README line 174: not implemented, no committed delivery date.
+- **Evidence:** `README.md:72`: not implemented, no committed delivery date.
 - **Remaining Gap:** Neither implemented, not even as Discovery signatures.
 - **Next Action:** Implement as Discovery candidates first; graduate only after verification contracts exist.
 - **Closure Criterion:** Discovery signatures exist; verified contracts defined.
@@ -133,4 +133,4 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 
 ---
 
-*Last updated: 2026-11-11 (L09 resolved in 039291c; L02 partial in bd7f1c3 with abort-path tests in e96f31c; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 resolved — block in a795234, SARIF wiring in 4a8f63f, JSONL accepted-absent; L06 split into L06a (five authorisation-boundary fixtures in `91e9281`) and L06b (public-resource suppression, design-only); L06 status In Progress -> Partial). Next review scheduled.*
+*Last updated: 2026-11-14 (L09 resolved in 039291c; L02 partial in dc09b70 with abort-path tests in e96f31c and SARIF auth_state in 1c8aaa8; L04 split into L04a/L04b with corrected denominators from docs/pathtraver.md; L11 resolved — denominator at BENCHMARK.md:975, stale figures fixed in bc7e335, navigational index in ad8cb13; L10 resolved — block in a795234, SARIF wiring in 4a8f63f, JSONL accepted-absent; L06 split into L06a (five authorisation-boundary fixtures in `91e9281`) and L06b (public-resource suppression, design-only); L06 status In Progress -> Partial; L06b Resolved via ADR-031; bd7f1c3 -> dc09b70 throughout). Next review scheduled.*
