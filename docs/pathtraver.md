@@ -1,136 +1,120 @@
-<p align="center">
-  <img src="branding/janissary-emblem-gold.svg" alt="JANISSARY" width="40">
-</p>
+# Pathtraver Retrospective Audit Amendment
 
-# Pathtraver on OWASP Benchmark: what we can see, and what we can't
+**Status:** amendment to the November retrospective audit (§4 "M83 audit" of the
+session handover dated 2026-11-13)
+**Supersedes:** the outcome table in §4 of that handover
+**Applies to:** tool v7.11.1, harness commit `ea7b3e5`, baseline run
+`benchmark/track_a/runs/20261112T180530Z-janissary-r1`
 
-If you scroll the results table in `BENCHMARK.md` to the bottom, the
-first four rows are pathtraver subcategories. F1 ranges from 0.049 to
-0.308. That looks like a scanner failure. This document explains why it
-isn't, in enough detail that you can verify the claim yourself.
+---
 
-## What the OWASP Benchmark pathtraver family tests
+## 1. Corrected outcome counts
 
-Every pathtraver case is a directory-traversal test. Each servlet reads
-a parameter, concatenates it into a file path, and does one of three
-things with the resolved path:
+The handover recorded "14 skipped (header_any mode)". That figure is wrong by a
+factor of seven. `skipped.jsonl` for the baseline run contains **101** lines,
+with three distinct modes:
 
-1. **Checks existence** and reports the result
-2. **Reads the file** and echoes its contents
-3. **Writes to the file** and confirms the write
+| Outcome | Cases | Evidence state | Disposition |
+|---|---|---|---|
+| Traversal findings | 10 | In `findings.jsonl`, existence oracle | `existence_divergence` |
+| SSRF-only findings | 60 | `class=ssrf` on pathtraver URLs; scorer treats as out-of-scope | Out of traversal scope; §5.3 capability model |
+| Executed, no finding | 49 | Absent from `findings.jsonl`, `skipped.jsonl`, `timeouts.jsonl` | `inconclusive` |
+| Skipped — `header_any` | 98 | In `skipped.jsonl`; payload never delivered | `payload_neutralised` |
+| Skipped — `out_of_scope_stream` | 3 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
+| Skipped — `out_of_scope_uri` | 1 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
 
-For a DAST scanner, only the first shape produces a detectable signal.
-The second shape returns file content — which in this benchmark is a
-static file the scanner can't distinguish from any other static content.
-The third shape returns a write confirmation — which for this target is
-identical on both the existing-path and the nonexistent-path payloads,
-because the servlet doesn't check the filesystem before writing.
+`timeouts.jsonl` is empty for this run. No vulnerable case is attributable to
+timeout.
 
-## What JANISSARY looks for
+## 2. What the handover got wrong
 
-The oracle is a paired differential across two payloads:
+1. **Skipped count.** Recorded 14; actual 101. Mode attribution was also
+   imprecise: the handover attributed all skips to `header_any`, but 4 of the
+   101 are `out_of_scope_stream` / `out_of_scope_uri`, which are scoping
+   decisions, not delivery failures.
+2. **Consequence for `payload_neutralised`.** The class applies to the **98**
+   `header_any` cases. It does **not** apply to the whole skipped set — the 4
+   out-of-scope cases are in a different category and belong under the SSRF /
+   scoping discussion, not under traversal delivery.
 
-- Payload A: a path that resolves (e.g. `../../../etc/passwd`)
-- Payload B: a path guaranteed not to resolve (e.g.
-  `../../../etc/passwd_janissary_noexist_<random>`)
+## 3. Arithmetic gap requiring re-derivation
 
-Both payloads are sent. If A's response says "file already exists" and
-B's response says "file doesn't exist yet", the target leaks existence,
-and JANISSARY fires. If both say the same thing — either both "exists",
-both "doesn't exist", or neither — the oracle stays silent.
+The handover states 133 vulnerable cases. The corrected breakdown by
+disposition gives:
 
-The design is intentional. A single response saying "file exists" isn't
-evidence of traversal; the app might say that about every path. Only a
-*difference* between the two probes is evidence the scanner acted on
-the path we gave it.
+    10 (findings) + 49 (executed silent) + 98 (header_any skipped) = 157
 
-## What the target actually does
+157 ≠ 133. The difference is 24. This means either the 133 census is wrong, or
+the outcomes above count cases that are not in the 133.
 
-We probed the OWASP Benchmark target directly across a sample of 72 pathtraver cases (four subcategories). The current ground-truth CSV (`benchmark/track_a/case_vectors.csv`) marks 133 pathtraver cases vulnerable; the 72 we sampled split three ways:
+**M83 must re-derive the 133 figure** from `benchmark/track_a/case_vectors.csv`
+∩ `benchmark/track_a/_pathtraver_only.csv` before any achievable-recall
+denominator is stated. The 133 figure appears in:
 
-| Shape | Count | Behavior |
-|---|---|---|
-| Existence divergence | 4 / 72 | Response differs between exists and nonexistent payloads. Oracle fires. |
-| Fixed-string scaffold | 22 / 72 | Response contains `Access to file:` followed by a fixed string `already exists` on **both** payloads. No divergence possible. |
-| Write-sink scaffold | 46 / 72 | Response echoes the resolved path but is otherwise identical on both payloads. No observable outcome beyond the echo. |
+- `docs/pathtraver.md:57` (provenance note)
+- The handover's §4 table
+- The Amendment 29 commentary
 
-**Provenance note.** The shape counts above come from a 72-case hand sample whose selection is not preserved in this repo. What *is* verifiable from committed artefacts: `benchmark/track_a/case_vectors.csv` marks 133 pathtraver cases vulnerable; the full run (`artifacts/7.5.0-baseline/summary/run-1-recovery-score.txt`) reports TP=10 across the four pathtraver subcategories, i.e. recall 0.075, with the remaining 123 cases producing no finding. The 4/22/46 split should be read as a representative sample, not an exhaustive census. The conclusion — that the dominant loss mode is a scaffold with no observable outcome — holds on the full corpus: 123 of 123 non-firing cases fall into the "no divergence" bucket by construction of the oracle.
+If the re-derivation shows a number other than 133, all three must be corrected.
 
-The 22 "fixed-string scaffold" cases are the interesting ones. Their
-response contains the word "already exists" regardless of whether the
-file the scanner named actually exists. That's the servlet's template,
-not a filesystem read. A scanner that grepped for "already exists" would
-fire — and be wrong on all 22 of them. JANISSARY doesn't, because the
-oracle requires the divergence, not the string.
+## 4. Exit-code semantics recorded
 
-The 46 "write-sink scaffold" cases are the bulk of the loss. These
-servlets write to a path derived from the parameter and then confirm
-"Now ready to write to file: <path>". The path is echoed back. Whether
-the file existed before the write isn't reflected in the response —
-status, headers, and body are identical between existing and
-nonexistent-path payloads except for the echoed string, which the
-scanner provided. There is nothing to differentiate.
+`benchmark/track_a/runner.py:18-20` states:
 
-We verified this by re-running the entire pathtraver FN set through the
-recovery pass (see Amendment 20). Zero recovered. The oracle's cap is a
-property of the target, not a bug in the detector.
+> "Per-case stdout appended to findings.jsonl. Per-case exit … error other
+> than exit code 1 (findings) is a hard fail."
 
-## What a target that would leak the signal looks like
+Therefore:
 
-A Flask app with this handler:
+- `manifest.json` `"exit_code": 1` on the baseline run means **findings are
+  present**, not that the scan failed.
+- Exit codes other than 0 and 1 indicate genuine failures.
 
-    @app.route("/read")
-    def read():
-        p = request.args.get("path")
-        if os.path.exists(p):
-            return f"Found: {open(p).read()}"
-        return "No such file"
+The handover's §4 table did not record this. Any future reference to the
+baseline run should note that `exit_code: 1` is the expected signal for
+"findings present", not a reproducibility defect.
 
-Here, response A says "Found: <contents>" and response B says "No such
-file". Clean divergence. The oracle fires. Scan that against JANISSARY
-and it's detected.
+## 5. §4.1 of the retrospective audit — non-reproduction
 
-The OWASP Benchmark target replaces the `open()` with a template that
-doesn't read. This is a known design choice of the benchmark — it
-isolates the *injection* from the *exploitation*. The scanner sees the
-injection point but can't observe the consequence.
+The November audit's §4.1 reported a bug in `heuristic/engine.py`
+`_select_target()`:
 
-## What we could do about it, and why we didn't
+> "The header aggregation uses a literal backslash-n sequence rather than an
+> actual newline separator."
 
-Three options we considered:
+Verification against HEAD `0ca5bfe`:
 
-**Time-based detection.** Send a payload that causes a slow filesystem
-operation (e.g. reading a large file) and detect the delay. This would
-require the benchmark's servlets to have differing file sizes on
-existent vs nonexistent paths, which they don't.
+- `heuristic/engine.py:380` — `headers = "\n".join(f"{k}: {v}" for k, v in
+  obs.headers.items())` — `"\n"` is a genuine newline character.
+- `heuristic/engine.py:384` — `return (obs.body or "") + chr(10) + headers` —
+  `chr(10)` is byte-identical to `"\n"`.
 
-**Error-based detection.** Send a payload that causes the servlet to
-throw, and match on the exception. Verified — the write-sink servlets
-throw on both the exists and noexist payloads with identical
-exceptions. No signal.
+Both use genuine newlines. The audit's claim **does not reproduce**. Either
+the bug was fixed between 11 November and HEAD, or the audit misread `chr(10)`
+as a literal backslash sequence. No fix is required at HEAD.
 
-**Static analysis of the target source.** Look at the servlet code
-directly and check whether the parameter flows to a `File` sink. This
-is a SAST technique. It's legitimate and effective, but it's not what
-JANISSARY is — JANISSARY is a black-box DAST tool.
+## 6. Items retired from the handover's outstanding list
 
-The remaining option is: accept the cap, document it, and exclude these
-cases from the DAST-applicable denominator where appropriate. That's
-what `benchmark/track_a/score_dast_aware.py` does for hash and crypto
-(259 cases, SAST-only). The pathtraver cases are structurally different
-— they're DAST-applicable in principle, just not against this target.
-We report them, we document why they're low, we don't hide them.
+The following were listed as pending in §4/§5 of the handover but are already
+addressed at HEAD or by this session's verification:
 
-## What this costs us
+| Item | Disposition |
+|---|---|
+| `_select_target()` backslash-n bug | Does not reproduce; no fix needed |
+| Exit-code-1 semantics unrecorded | Recorded in §4 above |
+| 14 skipped figure | Corrected to 101 in §1 above |
 
-Current DAST-applicable F1 is **0.921** (TP 987, FP 0, FN 169). The
-pathtraver subcategories contribute **123 of those 169 FN**. Amendment 27
-(ADR-027 D8, Path Z) reports the filtered figure — excluding
-`pathtraver-{00,01,02,03}` — as a labelled supplemental: F1 0.977
-(TP 977, FP 0, FN 46). The headline remains 0.921; promoting the
-filtered number would be gaming the metric. The 0.921 figure is honest.
+## 7. Items deferred to M83
 
-If your target *does* leak the existence signal — which most real
-file-serving apps do, because they have to handle nonexistent files
-somehow — the pathtraver recall climbs fast. The oracle detects what
-it can observe. That's the design.
+| Item | Reason |
+|---|---|
+| Re-derivation of 133 census | §3 above; requires census query |
+| Denominator rule decision | M83 scope; three options with arithmetic |
+| Inconclusive adjudication rule | M83 scope; three options |
+| Disposition of 60 SSRF-only cases | M83 scope; §5.3 capability model |
+| `docs/pathtraver.md:57` provenance note | Already corrected in commit applying 5 edits; §5.2 harness still needed to close the claim |
+
+---
+
+*This amendment is authoritative for the retrospective counts. Future documents
+referring to the M83 audit must cite this amendment, not the handover §4 table.*
