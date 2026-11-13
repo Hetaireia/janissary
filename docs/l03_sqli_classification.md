@@ -34,7 +34,7 @@ Without that distinction, "false negative" is one bucket and any recall improvem
 - `sql_sleep_mysql` — `' OR SLEEP(5)--`
 - `sql_sleep_pg` — `'; SELECT pg_sleep(5)--`
 
-The scanner does not *select* between them by detected dialect; it sends the full set. Both statements are true and distinct: no dialect-keyed selection, but dialect-specific payloads exist in the set. Any classification record must name which payload produced the observation. Note: `analyzer.py:237-249` carries expected-sleep durations for four SQL sleep payloads (`sql_sleep_mysql`, `sql_sleep_mssql`, `sql_sleep_pg`, `sql_sleep_oracle`); only two appear in `DEFAULT_PAYLOADS`. The map is not consumed by the timing trigger (§3 timing row) and the two unmatched entries are orphans. Open item 9.5.
+The scanner does not *select* between them by detected dialect; it sends the full set. Both statements are true and distinct: no dialect-keyed selection, but dialect-specific payloads exist in the set. Any classification record must name which payload produced the observation. Note: `analyzer.py:236-250` defines `SLEEP_FLOOR`, a live timing-gate configuration map with 13 entries across five vulnerability classes: SQL sleep (mysql, mssql, pg, oracle), SQL benchmark/blind (sql_benchmark, sql_blind_sleep_true, sql_blind_sleep_false), NoSQL (nosql_where_sleep), command injection (cmd_semicolon/pip/backtick/dollar_sleep), SSTI (ssti_jinja_sleep). Consumed at `analyzer.py:646-648` before the z-score test. Two entries, `sql_sleep_mssql` and `sql_sleep_oracle`, have no producer in `DEFAULT_PAYLOADS`; whether another source produces them is unestablished. Resolved in §9.5. **Correction 2026-11-14:** an earlier revision of this paragraph incorrectly stated the map is not consumed by the timing trigger. It is.
 
 **Observability channels:**
 
@@ -43,7 +43,7 @@ The scanner does not *select* between them by detected dialect; it sends the ful
 | Error-pattern | `detection/analyzer.py:126-175` (`DB_ERROR_PATTERNS`) | DBMS error string in response body |
 | Union extraction | `attack/sqli_union.py` (`UnionExtractor`, `ExtractionStep`) | Extracted data appearing in response body |
 | Boolean blind | `detection/blind_sqli_oracle.py:36,42` (`_coherent`, `_coherent_for_length`) | Response coherence / length change on boolean flip |
-| Timing | `analyzer.py:~675` — statistical delta vs baseline mean; both `delta >= MIN_TIMING_DELTA` and `z >= MIN_TIMING_Z` required; emits `timing_anomaly` | Response delay beyond baseline noise |
+| Timing | `analyzer.py:646-648` gate: payload must be in `SLEEP_FLOOR` with floor >= `MIN_SLEEP_FLOOR` (3.0). Then `analyzer.py:~675`: statistical delta vs baseline mean, both `delta >= MIN_TIMING_DELTA` and `z >= MIN_TIMING_Z` required; emits `timing_anomaly`. | Response delay beyond baseline noise |
 
 `UnstableTargetError` (`sqli_union.py:200`) is a pre-existing uncertainty signal — reuse, do not parallel.
 
@@ -65,7 +65,7 @@ Matrix cells record **what was observed** for a payload × dialect × framework,
 | Error-pattern | dialect error string returned for this payload | no error AND delivery path shows binding/escaping | no error, path unobservable |
 | Union extraction | extracted data appears in body | no extracted data AND syntax observably stripped | no extracted data, path unobservable |
 | Boolean blind | response differs reproducibly on boolean flip | response identical AND binding observable | response identical, path unobservable |
-| Timing | elapsed delta >= MIN_TIMING_DELTA and z >= MIN_TIMING_Z vs baseline mean, reproducible across N runs | no `timing_anomaly` AND path shows no execution | no `timing_anomaly`, path unobservable |
+| Timing | payload in `SLEEP_FLOOR` with floor >= `MIN_SLEEP_FLOOR` (3.0), AND elapsed delta >= `MIN_TIMING_DELTA`, AND z >= `MIN_TIMING_Z` vs baseline mean, reproducible across N runs | no `timing_anomaly` AND path shows no execution | no `timing_anomaly`, path unobservable |
 
 **Reproducibility threshold:** a boolean or timing observation must reproduce across N runs (N per M83 phase 2 protocol) before counting as evidence at all. A single flip is not evidence.
 
@@ -95,15 +95,15 @@ A record with no `uncertainty` field is rejected. It claims more certainty than 
 
 **9.1 — DBMS_SIGNATURES reconciliation. RESOLVED 2026-11-14.** Divergence confirmed: `DBMS_SIGNATURES` has 5 keys (mysql, postgres, mssql, oracle, sqlite) vs `DB_ERROR_PATTERNS`' 6. HSQLDB is absent from all of `sqli_union.py`; `postgres` vs `postgresql` name mismatch. Consumers disjoint (`sqli_union.py:247,424` vs `analyzer.py:405,858`) so no live bug. A shared classification record must declare a canonical identifier; `postgresql` (the analyzer' key) is the more general form.
 
-**9.2 — Register L03 evidence correction.** The current line says "payloads are dialect-agnostic." Two payloads are dialect-targeted by name (§3). "No dialect-keyed selection" is true; "dialect-agnostic payloads" is not. Corrected in the same commit as this document.
+**9.2 — Register L03 evidence correction.** The current line says "payloads are dialect-agnostic." Two payloads are dialect-targeted by name (§3). "No dialect-keyed selection" is true; "dialect-agnostic payloads" is not. The Evidence-line correction landed in `a7d087e`; the register Next Action correction landed in `215c807`.
 
 **9.3 — Timing channel. RESOLVED 2026-11-14.** Channel exists: `analyzer.py:~675` emits `timing_anomaly` (critical if `z>=6 AND delta>=3.0s`, else high) when `delta >= MIN_TIMING_DELTA` AND `z >= MIN_TIMING_Z`. It is a statistical anomaly detector against baseline mean, not an expected-duration comparison. §3 and §5 corrected accordingly.
 
-**9.4 — ORM framework grounding.** Axis 2 has no in-repo citation. Either pin to the two benchmark targets' stacks (§4) or declare frameworks generically. The matrix can be written either way; the choice should be explicit.
+**9.4 — ORM framework grounding. RESOLVED 2026-11-14.** Four benchmark apps are named in-repo (`benchmark/track_c/apps.json`): dvwa, juice-shop, crAPI, webgoat. Repository evidence stops at the names: no file in `benchmark/track_c/*.md` documents any app's ORM or web framework. Framework attribution (Juice Shop as Node/Express, crAPI as Java/Spring, webgoat as Java/Spring, dvwa as raw PHP/MySQL) is external knowledge and must be verified against each app's own build file before use as a classification-record axis value. Axis 2 is therefore: per-app stack, grounded in the app's own source, not asserted from reputation.
 
-**9.5 — Expected-sleep map coverage.** `analyzer.py:237-249` names four SQL sleep payloads; `DEFAULT_PAYLOADS` sends two. The `sql_sleep_mssql` and `sql_sleep_oracle` entries are not consumed by the timing trigger (which uses statistical delta, not expected duration) and are not sent by the scanner. Are they planned, dead, or consumed by a path not found in this pass? Read-only: search `analyzer.py` for `sql_sleep_mssql`, `sql_sleep_oracle`, and any expected-duration constant definition or lookup.
+**9.5 — SLEEP_FLOOR coverage. RESOLVED 2026-11-14.** `SLEEP_FLOOR` (`analyzer.py:236-250`) is a live timing-gate map with 13 entries across five vulnerability classes. Consumed at `analyzer.py:646-648`; the z-score test at `analyzer.py:~675` runs only after the floor check passes. Two entries, `sql_sleep_mssql` and `sql_sleep_oracle`, have no producer in `DEFAULT_PAYLOADS`. Whether another payload source produces them is not established: `detection/__init__.py:9,28` exports the map, so external consumers are possible but unverified. Finding is narrow: two entries with no producer in the default set, not dead entries in a dead map. Follow-up (read-only, future): trace every payload source that supplies `payload_name`.
 
-**9.6 — Canonical dialect identifier.** `postgres` and `postgresql` both name the same DBMS in different modules. A shared classification schema (per §11 next steps) must pick one. Recommendation: `postgresql`, matching the analyzer' key and the more general name.
+**9.6 — Canonical dialect identifier. RESOLVED 2026-11-14.** `postgresql` is canonical. `postgres` in `sqli_union.py:51` is an internal alias. The consumers do not intersect (`sqli_union.py:247,424` vs `analyzer.py:405,858`), so no live impact. Any shared schema uses `postgresql`.
 
 ## 10. Acceptance criteria
 
