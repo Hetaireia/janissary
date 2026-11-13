@@ -95,7 +95,7 @@ Which classes count toward the "classified denominator" for achievable recall?
 
 **Note on the numerator.** The recall numerator is 10 in the current run because no non-firing case has been classified as `existence_divergence` in retrospect. Under R1b or R1c, the denominator is 59 regardless of how the 49 executed-silent cases are eventually classified — the recall does not improve merely by moving non-findings between `inconclusive` and `no_observable_divergence`. That distinction matters only for a supplementary statement of how much of the executed set was structurally unobservable.
 
-**Census caveat.** Before Rule 1 can be applied, the 133 census must be re-derived (see `pathtraver_audit_amendment.md` §3). The 10 + 49 + 98 = 157 arithmetic does not currently reconcile with 133.
+**Census status (updated 2026-11-14).** The 133 census is closed: 10 findings + 60 SSRF-only + 49 executed-silent + 14 payload-neutralised = 133 (`docs/pathtraver_audit_amendment.md` §3; recorded in the remediation register L04a). The earlier `10 + 49 + 98 = 157` arithmetic was superseded by the Amendment 29 census re-derivation. Rule 1 can be applied against the closed decomposition.
 
 ### Rule 2 — inconclusive adjudication
 
