@@ -3,6 +3,8 @@
 **Source of truth for the Quality & Reliability Programme (JAN-L01 to JAN-L12).**
 Statuses are evidence-derived from code, tests, benchmark artefacts, and commit history. They are not inferred from roadmap labels.
 
+**Citation convention:** every package's Evidence line must cite at least one `src/` `file:line` and, for any claimed mitigation, the introducing SHA. A citation that does not survive `grep` is not evidence. Packages without a code citation are `Not Started` regardless of narrative.
+
 ## Precision Assurance Gates (Current Status)
 
 | Gate | Status | Reason |
@@ -20,7 +22,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L01 — SPA Catch-All False Positives
 - **Status:** Mitigated
 - **Priority:** P0
-- **Evidence:** Issue #1 open. README documents structural DOM gate (`root@U@signature@U@match`) discarding candidates.
+- **Evidence:** Structural DOM gate implemented as `fingerprint`->`root_signature`->`hamming` distance in `src/janissary/engine/baseline_struct.py:95` (`_root_signature_from`), `baseline_struct.py:27-28` (`dom_fingerprint`, `hamming`), consumed by `src/janissary/detection/collapse_oracle.py:18`. README notation `root@U@signature@U@match` describes this pipeline; it is not a code literal. Issue #1 open.
 - **Remaining Gap:** Residual: SPA routes with near-identical DOM to root still pass. No regression corpus.
 - **Next Action:** Build multi-stage route pipeline (root + nonexistent negative control). Add React/Angular/Vue regression fixtures.
 - **Closure Criterion:** Regression corpus passes with zero verified admin-panel FPs.
@@ -28,7 +30,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L02 — Mid-Scan Authentication Expiry
 - **Status:** Partial
 - **Priority:** P0
-- **Evidence:** `bd7f1c3` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. `e96f31c` adds abort-path coverage: 3 tests against real ResponseSnapshot/compute_arming_state with 3 mocks, plus the auth_configured gate test. 7 tests total in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged.
+- **Evidence:** `dc09b70` — `ScanSummary.auth_state` with values `unknown` (default), `authenticated`, `unauthenticated`, `expired`, `recovery_failed`. Set at `scan()` start from `auth_configured`; set on two-consecutive-401 abort. `_summary_to_dict` emits the key; `_print_summary` renders it on abort. `e96f31c` adds abort-path coverage: 3 tests against real ResponseSnapshot/compute_arming_state with 3 mocks, plus the auth_configured gate test. 7 tests total in `tests/unit/test_auth_state.py`. ADR-010 safety unchanged.
 - **Remaining Gap:** No `AuthStateManager` (health checks, reauth workflow, OAuth2 refresh). `expired` vs `recovery_failed` distinguishes rotation-inactive from rotation-exhausted, but there is no path back to `authenticated` after a `recovery_failed` abort. Abort-path unit tests now exist (`e96f31c`).
 - **Next Action:** Extend with an `AuthStateManager` when reauth is specified. Reconcile with tri-session (M41) rather than a parallel subsystem.
 - **Closure Criterion:** Structured auth state in all output formats (JSON, JSONL, SARIF — not just text). Reauth tested against a mock IdP.
@@ -60,7 +62,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L05 — SSRF / OOB Coverage
 - **Status:** Mitigated
 - **Priority:** P1
-- **Evidence:** BL-1 redirect-chain shipped 2026-11-10. Interactsh (M14) shipped. AWS/GCP/Azure metadata shipped.
+- **Evidence:** Metadata payloads at `src/janissary/engine/scanner.py:124` (AWS IMDSv1), `:136` (GCP), `:142` (Azure). Redirect-chain metadata path `466cb1f` (ADR-029 BL-1, 7 tests); OOB-via-redirect `212b5d1` (ADR-029 BL-1b, 4 tests). Interactsh CI enablement `4a68c7a`; workflow-scope caveat recorded `49f2c78`.
 - **Remaining Gap:** `file://` deferred by design. No confidence-aware OOB attribution.
 - **Next Action:** Add interaction-to-payload attribution tests. Verify negative controls produce zero verified SSRF.
 - **Closure Criterion:** Negative-control suite produces zero verified SSRF.
