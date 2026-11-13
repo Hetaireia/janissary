@@ -1,3 +1,3 @@
 #!/bin/sh
 # LF only. bare `pre-commit` is on PATH under Git Bash
-exec pre-commit hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit --hook-dir "$(pwd)" -- "$@"
+exec /home/oraclemode/janissary-venv/bin/pre-commit hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit --hook-dir "$(pwd)" -- "$@"
