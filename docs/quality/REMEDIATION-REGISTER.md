@@ -40,7 +40,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 - **Priority:** P0
 - **Evidence:** No ORM-profile module, no dialect-keyed payload selection, no delivery-path analysis. Detection-side DBMS classification does exist: `detection/analyzer.py:126-175` carries `DB_ERROR_PATTERNS` keyed by six dialects (mysql, postgresql, hsqldb, mssql, oracle, sqlite), and `test_db_error_forces_sqli_category` pins that path. `scanner.py:1918` consumes `db_error` as a finding type only — no dialect-keyed payload selection. Two payloads are dialect-targeted by name (`sql_sleep_mysql`, `sql_sleep_pg`, `scanner.py:73`), but the scanner sends the full set rather than selecting between them. Classification frame and open items in `docs/l03_sqli_classification.md`. FN-12 (`LIMITATIONS.md:35`) is FIXED (2026-11-01) and concerns non-2xx baselines, not framework SQLi; it is not L03 evidence.
 - **Remaining Gap:** No ORM profiles, no dialect selection, no delivery-path analysis.
-- **Next Action:** Build FN-classification table (delivered/neutralised/indistinguishable) before touching payloads.
+- **Next Action:** Classification frame written (`docs/l03_sqli_classification.md`); 9.1 (dialect-list reconciliation) and 9.3 (timing channel) resolved 2026-11-14. Remaining: decide 9.4 (ORM axis), resolve 9.5 (expected-sleep map coverage), then schema → measurement → implementation in M83 order.
 - **Closure Criterion:** DBMS/framework corpus passes; no precision regression.
 
 ### JAN-L04a — Path Traversal Recall (observable cases)
