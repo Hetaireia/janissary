@@ -38,7 +38,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L03 — Framework-Specific SQL Injection
 - **Status:** Not Started
 - **Priority:** P0
-- **Evidence:** No DBMS-fingerprint or dialect-profile module exists. LIMITATIONS documents FN-12 exception only.
+- **Evidence:** No ORM-profile module, no dialect-keyed payload selection, no delivery-path analysis. Detection-side DBMS classification does exist: `detection/analyzer.py:126-175` carries `DB_ERROR_PATTERNS` keyed by six dialects (mysql, postgresql, hsqldb, mssql, oracle, sqlite), and `test_db_error_forces_sqli_category` pins that path. `scanner.py:1918` consumes `db_error` as a finding type only — payloads are dialect-agnostic. FN-12 (`LIMITATIONS.md:35`) is FIXED (2026-11-01) and concerns non-2xx baselines, not framework SQLi; it is not L03 evidence.
 - **Remaining Gap:** No ORM profiles, no dialect selection, no delivery-path analysis.
 - **Next Action:** Build FN-classification table (delivered/neutralised/indistinguishable) before touching payloads.
 - **Closure Criterion:** DBMS/framework corpus passes; no precision regression.
