@@ -1779,6 +1779,7 @@ def _render_sarif(
     runs: list[tuple[_SarifRunInput, str | None]],
     path: str,
     scan_properties: dict | None = None,
+    run_extras: dict | None = None,
 ) -> None:
     """Render normalized SARIF run inputs to disk (ADR-019 D1).
 
@@ -1789,6 +1790,11 @@ def _render_sarif(
     scan_properties, when given, is attached as properties.completeness on
     every run. It carries the scan-level completeness block derived by
     _scan_completeness, so SARIF reports the same information as JSON.
+
+    run_extras, when given, is merged into properties alongside completeness
+    (e.g. auth_state), so scan-level facts that are not completeness metrics
+    stay at the properties level rather than nested inside the completeness
+    block.
     """
     from janissary.sarif_rules import TOOL_NAME, TOOL_URI
 
@@ -1812,6 +1818,8 @@ def _render_sarif(
             props["track"] = track
         if scan_properties:
             props["completeness"] = scan_properties
+        if run_extras:
+            props.update(run_extras)
         if props:
             run["properties"] = props
         sarif_runs.append(run)
@@ -1834,18 +1842,20 @@ def _write_sarif(source: ScanSummary | list, path: str) -> None:
     findings have no verification_status field).
     """
     scan_props = None
+    run_extras = None
     if isinstance(source, ScanSummary):
         verified = _from_scan_summary(source, verification_filter="verified")
         discovery = _from_scan_summary(source, verification_filter="unproven")
         runs = [(verified, "verified"), (discovery, "discovery")]
         scan_props = _scan_completeness(source)
+        run_extras = {"auth_state": source.auth_state}
     elif isinstance(source, list):
         runs = [(_from_agent_findings(source), None)]
     else:
         raise TypeError(
             f"_write_sarif: unsupported source type {type(source).__name__}"
         )
-    _render_sarif(runs, path, scan_props)
+    _render_sarif(runs, path, scan_props, run_extras)
 
 
 # -------------------------------------------------------------------

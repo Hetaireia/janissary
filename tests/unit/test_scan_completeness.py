@@ -132,3 +132,38 @@ def test_sarif_completeness_true_for_clean_scan(tmp_path):
     for run in doc["runs"]:
         assert run["properties"]["completeness"]["scan_complete"] is True
         assert run["properties"]["completeness"]["reasons"] == []
+
+
+def test_sarif_includes_auth_state_at_run_properties(tmp_path):
+    """L02: SARIF carries auth_state at properties.auth_state (sibling of completeness)."""
+    import json
+
+    from janissary.cli import _write_sarif
+
+    s = _summary(params=["x"], baselines=1)
+    s.auth_state = "expired"
+    path = tmp_path / "auth.sarif"
+    _write_sarif(s, str(path))
+
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert len(doc["runs"]) == 2
+    for run in doc["runs"]:
+        assert run["properties"]["auth_state"] == "expired"
+        assert "auth_expired" in run["properties"]["completeness"]["reasons"]
+        # auth_state must not be nested inside the completeness block
+        assert "auth_state" not in run["properties"]["completeness"]
+
+
+def test_sarif_auth_state_defaults_to_unknown(tmp_path):
+    """L02: a scan with no auth configured reports auth_state=unknown."""
+    import json
+
+    from janissary.cli import _write_sarif
+
+    s = _summary(params=["x"], baselines=1)
+    path = tmp_path / "unknown.sarif"
+    _write_sarif(s, str(path))
+
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    for run in doc["runs"]:
+        assert run["properties"]["auth_state"] == "unknown"
