@@ -176,4 +176,4 @@ Total cases: all 133 (or the re-derived census), not the 72-case sample. The 72-
 
 ---
 
-*Decisions needed before harness work can begin: Rule 1 (denominator), Rule 2 (inconclusive adjudication), Rule 3 (leakage disposition). The recommendations are R1b or R1c, R2a, R3a.*
+*Decisions recorded: R1b (denominator = executed cases only), R2a (strict inconclusive), R3a (leakage folded into inconclusive). The §5 options tables are retained for provenance; the recorded choices are authoritative.*

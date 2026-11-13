@@ -6,13 +6,20 @@
 # Rule 1 (amended in session-0.3.5): whole-tree gate at two stages.
 #   commit -> ruff (check --fix, format, check, format --check)
 #   push   -> pytest (full suite)
-# All hooks use language: system and resolve binaries from PATH.
+# All hooks use language: system. Most resolve binaries from PATH; the
+# pytest-full hook uses an absolute path (see note below).
 # Requirement: run git commit / git push from an activated venv.
 # Remote `repo:`-style hooks are intentionally absent — GitHub clones hang
 # on first fetch in this environment.
 # Ruff version pinning is enforced by pyproject.toml.
 #
 # Escape hatch (explicit, not silent): SKIP=pytest-full git push ...
+#
+# NOTE: The pytest-full entry uses the venv absolute path
+# (/home/oraclemode/janissary-venv/bin/pytest) because `wsl bash -c`
+# invocations do not activate the venv and PATH resolves to system
+# Python, which does not have the package installed. If you clone this
+# repo with the venv at a different path, edit the pytest-full entry.
 
 default_stages: [pre-commit]
 
