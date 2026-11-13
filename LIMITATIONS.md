@@ -131,7 +131,7 @@ v7.3.0 and v7.11.1. This accounts for 123 of the 168 remaining DAST
 false negatives at v7.11.1 (73%); the remainder are weakrand (16),
 securecookie (8), trustbound (16), and cmdi (5). Scored in the
 DAST-applicable metric (included in the 0.922 headline); excluded
-from the supported-classes metric (the 0.978 figure) per ADR-027 D8
+from the supported-classes metric (the 0.977 figure) per ADR-027 D8
 amended (2026-11-05). Content-signature gates exist but are narrow;
 parameters that produce no distinctive traversal content in the
 response are missed.

@@ -46,7 +46,7 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 | Item | Details |
 |---|---|
 | **Version** | Source metadata 7.11.1 · latest GitHub release v7.11.0 · PyPI 7.10.2 |
-| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
+| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.977** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
 | **Detection classes** | SQLi, XSS, SSRF, cmdi; traversal partial (recall 0.075 — see Known Limitations) |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
 | **Output** | text · JSON · JSONL · SARIF 2.1.0 |
@@ -144,7 +144,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 ## Benchmark
 
 > [!IMPORTANT]
-> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.977**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 | Metric | Value | Notes |
 |---|---|---|
@@ -153,7 +153,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 | **Recall (v7.11.1)** | **0.855** | TP 988 / FN 168 (DAST-applicable) |
 | **TP / FP / FN / TN (v7.11.1)** | 988 / 0 / 168 / 1102 | DAST-applicable, baseline-only |
 | F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings at v7.11.1 |
-| F1 (supported-classes, excl. path-traversal) | 0.978 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
+| F1 (supported-classes, excl. path-traversal) | 0.977 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
 | **Historical v7.3.0 recovered F1** | **0.921** | TP 987; required FN-recovery pass to achieve |
 | Historical 3-run unassisted F1 (v7.3.0) | 0.903 ± 0.009 | Last 3-run protocol measurement was v7.5.0 (0.906 ± 0.002) |
 | Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |
