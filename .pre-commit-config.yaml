@@ -57,7 +57,7 @@ repos:
 
       - id: pytest-full
         name: pytest -q (full suite)
-        entry: pytest
+        entry: /home/oraclemode/janissary-venv/bin/pytest
         args: [-q]
         language: system
         pass_filenames: false
