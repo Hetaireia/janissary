@@ -1,6 +1,6 @@
 # M83 — Path Traversal Classification Scope
 
-**Status:** scope document, awaiting decision on three open rules
+**Status:** Scope accepted at Gate D and Gate D.1 on 2026-11-14. The implementation design is documented separately. Gate D and Gate D.1 approvals do not authorize implementation; Gate E approval is required before source changes begin.
 **Depends on:** `docs/pathtraver_audit_amendment.md`, audit §5.2
 **Prerequisite for:** any future achievable-recall statement for traversal
 

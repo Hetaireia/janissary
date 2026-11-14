@@ -35,6 +35,7 @@
 | `verified-policy` | Milestone's scope is a decision or policy, not an implementation. Decision recorded in an ADR. |
 | `verified-partial` | Committed source demonstrates some of the milestone's scope; specific gap named. |
 | `no-implementation-identified` | A bounded audit inspection found no source or test artefact matching the milestone's stated capability. This is a **bounded finding**, not proof that no equivalent functionality exists elsewhere. The inspection boundaries (paths searched, patterns used, whether the search was content-level or filename-level) are recorded per milestone. Related functionality that was found is named. |
+| `scoped` | Scope and acceptance criteria approved. Implementation design may be documented; implementation itself not yet started. A `scoped` milestone has passed its scope gate but has not entered Gate E. |
 | `claimed-delivered` | Dashboard claims delivery. Audit did not re-verify. Claim recorded with provenance. |
 | `claimed-pending` | Dashboard claims pending. Audit did not re-verify. Claim recorded with provenance. |
 | `proposed-unapproved` | Proposed milestone, not approved. Not authorized for scoping or implementation. |
@@ -92,7 +93,6 @@ Each entry below records a **bounded finding**, not proof that no equivalent fun
 | ID | Name | Inspection performed | Related functionality found |
 |---|---|---|---|
 | M39 | gRPC integration (end-to-end) | Filename enumeration in `src/` and `tests/` for files matching `grpc\|proto`. No `src/` file matched. `tests/` returned only `test_protocols_graphql.py`, `test_protocols_http.py`, `test_protocols_websocket.py`, `test_protocols_wiring.py` — these matched the substring `proto` in "protocols", not gRPC. No `test_grpc.py` exists. | ADR-014 records the dependency policy (§3). No gRPC-specific source or test files were identified by the recorded filename inspection. The audit did not establish whether equivalent functionality exists under differently named files. |
-| M83 | Traversal observability harness | Content search in `src/` for `case_records\|TraversalRecord\|observability_harness\|M83` — no matches. Content search in `tests/` for `case_records\|TraversalRecord\|observability\|M83` — no matches. | The traversal oracle exists (`check_pathtraver_oracle` at `analyzer.py:784`; `check_traversal_collapse` at `collapse_oracle.py:108`). The per-case evidence-record harness described by `docs/m83_scope.md` was not identified by the recorded content searches. The scope document exists; implementation was not identified within the inspected paths and search boundaries. |
 | M85 | OpenAPI live-scan hardening | Content search in `src/` for `live_scan\|openapi_live\|scan_hardening` — no matches. **Tests were not searched in the 2026-11-14 audit for this milestone.** | OpenAPI import and dispatch machinery exists (`importers/dispatch.py`, `importers/openapi.py`), per earlier session work (ADR-030 Stages 2–6). Whether live-scan hardening can reuse or extend it is untested in this audit pass. |
 | M86 | Scan coverage ledger | Content search in `src/` for `coverage_ledger\|scan_coverage\|skipped_reason\|coverage_report` — no matches. Content search in `tests/` for `coverage_ledger\|scan_coverage\|skipped_reason` — no matches. | Scan-completeness reporting exists (`_scan_completeness` at `cli.py:55-73`; SARIF wiring at `cli.py:1841`; tests in `tests/unit/test_scan_completeness.py`). The coverage ledger is a broader concept — what was attempted, skipped, unsupported — distinct from the completeness block, which reports four tracked scan-level conditions. |
 | M87 | AuthStateManager | Content search in `src/` for `AuthStateManager\|class AuthState\|def reauth\|oauth2_refresh\|OAuth2Refresh` — no matches. Content search in `tests/` for `AuthStateManager\|M87\|def test.*reauth\|mock.*idp` — one match, a docstring mention at `tests/unit/test_auth_state.py:3` describing what does *not* exist yet. | Structured `auth_state` reporting exists (`dc09b70`, `e96f31c`; `ScanSummary.auth_state` with values `unknown`, `authenticated`, `unauthenticated`, `expired`, `recovery_failed`). SARIF carries `auth_state` at `properties.auth_state` (`1c8aaa8`). No manager for reauthentication during a scan when a session expires was identified by the recorded bounded searches. Session primitives exist (`auth.py` `SessionSpec`; tri-session auth shipped as M18 per dashboard). |
@@ -107,6 +107,14 @@ Each entry below records a **bounded finding**, not proof that no equivalent fun
 - **M16, M24, M33, M34, M40, M41–M60, M72** (~26 milestones)
 
 Source: local dashboard. Audit did not re-verify.
+
+### 5.4 Scoped — implementation not yet started
+
+A milestone that has passed its scope gate but has not entered implementation. The design is approved; no source code has been written.
+
+| ID | Name | Scope | Design | Evidence |
+|---|---|---|---|---|
+| M83 | Traversal observability harness | `docs/m83_scope.md` | Gate D and Gate D.1 approved 2026-11-14 (documented in `docs/m83_gate_d_proposal.md`) | **Original 2026-11-14 audit finding** (recorded in §5.2 at commit `72f1161`): bounded content searches in `src/` for `case_records`, `TraversalRecord`, `observability_harness`, `M83`, and in `tests/` for `case_records`, `TraversalRecord`, `observability`, `M83` returned no matches. The traversal oracle exists (`check_pathtraver_oracle` at `analyzer.py:784`; `check_traversal_collapse` at `collapse_oracle.py:108`). The harness was not implemented at the time of the audit. **Subsequent status:** M83 passed Gate D and Gate D.1 on 2026-11-14; design is documented; implementation not started. Gate E must first inspect scanner control flow at `scanner.py:2125` to establish observation call count per subprocess (proposal §13). |
 
 ## 6. Proposed milestones (M91–M99)
 
