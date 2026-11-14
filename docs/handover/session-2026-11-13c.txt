@@ -1,0 +1,405 @@
+JANISSARY — Session Handover (2026-11-13c)
+
+Supersedes: docs/handover/session-2026-11-13b.txt (committed at 42d9ec0)
+Session close: 2026-11-14
+Repo: C:\Users\M5 E60\janissary-project\janissary
+HEAD == origin/main == cb84c4e
+Working tree at handover creation: two untracked files — the pre-existing CSV and this new handover file. No tracked modifications.
+
+================================================================================
+1. Repository state
+================================================================================
+
+Two M83 commits shipped this session, both pushed to origin/main:
+
+| SHA       | Message                                                                       | Files/Insertions |
+|-----------|-------------------------------------------------------------------------------|------------------|
+| c9b82cf   | feat(harness): M83 path traversal per-case recorder (Stage 1)                 | 5 files, +1025    |
+| cb84c4e   | feat(harness): M83 recording integration (Stages 2-5)                         | 7 files, +1465/-3 |
+
+Stage 1 (c9b82cf) is the recorder module: src/janissary/harness/__init__.py,
+src/janissary/harness/pathtraver.py, plus three unit test files. Verifies
+structural signature, evidence hashing, classification derivation, and
+recorder failure isolation.
+
+Stages 2-5 (cb84c4e) is the integration:
+  Stage 2: scanner.py +79 lines - record_case_dir parameter, lazy recorder
+           construction, call-site wrap at the traversal oracle, recording_status.json
+  Stage 3: cli.py +87 lines - --record-case-dir flag, _validate_record_case_dir,
+           early validation in cmd_scan (before URL check, returns 64 on failure),
+           forwarding via _build_scanner
+  Stage 4: runner.py +456/-3 lines - capability probe, collision-safe case_id,
+           pre-creation of per-case dirs (fail-closed), attempt bookkeeping,
+           five-disposition classification, enrichment by case_id, recording_summary
+  Stage 5: tests/integration/test_harness_e2e.py - real-fixture HTTP server +
+           real janissary subprocess, verifies all seven coverage artifacts
+
+Test files added across Stages 1-5:
+  tests/unit/test_harness_pathtraver_signature.py      34 tests
+  tests/unit/test_harness_pathtraver_classification.py 11 tests
+  tests/unit/test_harness_pathtraver_recorder.py       16 tests
+  tests/unit/test_scanner_recording.py                 10 tests
+  tests/unit/test_cli_record_case_dir.py               17 collected (16 pass, 1 skip)
+  tests/integration/test_harness_runner.py             16 tests
+  tests/integration/test_harness_e2e.py                1 test
+
+Total new tests: 105 collected (104 passed, 1 skipped). Baseline: 1391 passed, 1 skipped. Final suite: 1495 passed, 2 skipped.
+
+Untracked, unchanged, excluded throughout: benchmark/track_a/_fn_recovery_7_11_1.csv
+
+================================================================================
+2. Test and benchmark state
+================================================================================
+
+Tests: 1495 passed, 2 skipped (1497 collected). Pre-push hook confirms on push.
+
+Benchmark: unchanged. v7.11.1 DAST-applicable F1 = 0.922 (TP 988 / FP 0 / FN 168),
+Amendment 29. Supported-classes supplemental 0.977, pending re-check against the
+committed Amendment 29 run.
+
+Stage 5 E2E evidence:
+  - fixture: ThreadingHTTPServer on 127.0.0.1:ephemeral, unquote(self.path + body)
+    for decoded payload matching, three-way response (noexist / exists / baseline)
+  - real subprocess: Path(sys.executable).parent / "janissary"
+  - all seven coverage artifacts present: case_records.jsonl,
+    case_zero_observations.jsonl, case_recording_failed.jsonl,
+    case_recording_indeterminate.jsonl, case_missing.jsonl,
+    enrichment_conflicts.jsonl, recording_summary.json
+  - recording_summary.json has accounting_valid: true
+  - at least one has_observations record confirmed
+  - run-level recording_status.json has recording_enabled: true
+  - at least one case_records_raw.jsonl with content confirmed
+  - passed in 8.02s on real subprocess, 10.06s on first run
+
+================================================================================
+3. Substantive deliverables
+================================================================================
+
+3.1 Recorder module (Stage 1)
+
+  src/janissary/harness/pathtraver.py provides PathtraverRecorder with
+  structural signature (_structural_signature via fingerprint -> root_signature
+  -> hamming is NOT what this is; the signature is SHA-256 of normalised body
+  after UUID/hex/base64 masking and HTML tag stripping), evidence_hash (SHA-256
+  of complete original body before truncation), and _derive_classification
+  (six branches matching oracle silent branches in design §5 order:
+  fires -> payload leak -> baseline poison -> signal fail -> signals agree ->
+  unreconstructable).
+
+  BODY_STORE_LIMIT = 4096 characters. Recorder failure isolation is nested:
+  the try covers _build_record, json.dumps, and file write; the failure-log
+  write has its own try that never raises; diagnostics counters
+  records_attempted/records_written/failures_total are consistent for all paths.
+
+3.2 Scanner integration (Stage 2)
+
+  Scanner.__init__ gains record_case_dir: Path | None = None. When non-None,
+  harness module is imported lazily and PathtraverRecorder is constructed with
+  case_id=record_case_dir.name, raw_path=record_case_dir/"case_records_raw.jsonl",
+  failure_path=record_case_dir/"recorder_failures.jsonl".
+
+  Two methods added before scan():
+    _maybe_record_observation - `with contextlib.suppress(Exception):` around
+      recorder.record() with all eight kwargs. Silent failure from scan's
+      perspective.
+    _write_recording_status - writes recording_status.json with
+      recording_enabled:true, recorder_constructed:true, records_attempted,
+      records_written, failures_total, failure_log_written, scanner_version,
+      completed_at (ISO 8601 UTC). Best-effort: try/except Exception pass.
+
+  Call-site wrap: self._maybe_record_observation(...) inserted after
+  oracle = check_pathtraver_oracle(...) and before for f in oracle:.
+  Status write: self._write_recording_status() before final return summary.
+
+3.3 CLI integration (Stage 3)
+
+  --record-case-dir PATH flag on scan subparser. type=str, default=None,
+  metavar="PATH", help text mentions M83, empty, writable, sanitized basename,
+  pathtraver-only.
+
+  _validate_record_case_dir validates: no ".." path segments (checked against
+  Path.parts of the *supplied* path, not resolved), path exists, is a directory,
+  is not a symlink itself, contains no prior recorder output files
+  (case_records_raw.jsonl/recorder_failures.jsonl/recording_status.json), is
+  writable via exclusive open("x") probe (never overwrites user file; unlink
+  only on success), basename is pre-sanitized via _sanitize_case_id.
+
+  In cmd_scan: validation runs after show_version check, before openapi/
+  url/sessions branches. Returns 64 on failure. On success, converts
+  args.record_case_dir to Path. _build_scanner forwards to Scanner.
+
+3.4 Runner integration (Stage 4)
+
+  run_janissary now:
+  - Probes CLI capability via _probe_record_case_dir_support([*cmd_prefix,
+    "scan", "--help"]). Records enabled/disabled in run-level recording_status.json
+    with reason (flag_absent_in_binary / probe_failed / case_raw_dir_unwritable /
+    case_dir_pre_creation_failed).
+  - Generates case_selection (case_id -> {testname, mode, url}) using
+    _sanitize_case_id; returns 2 on collision before any scan.
+  - Pre-creates case_raw/<case_id>/ for every case; any directory creation failure returns 2 before launching any scan subprocess, with run-level reason "case_dir_pre_creation_failed".
+  - Writes case_attempts.jsonl (attempt_started/finished/errored with timestamps).
+  - Adds --record-case-dir <case_dir> to subprocess command when supported.
+  - Post-loop: _enrich_and_write reads case_raw/*/case_records_raw.jsonl, joins
+    on case_id (NOT url), classifies via _classify_case (design §8.3a precedence:
+    subprocess completion first, then run-level recording config, then per-case
+    status validation), writes case_records.jsonl / zero / failed / indeterminate
+    / missing / enrichment_conflicts, writes recording_summary.json with
+    accounting_valid + accounting_failure_reasons.
+  - Unmatched observations (case dirs not in case_selection) preserved in
+    case_records.jsonl as enriched:false with enrichment_reason.
+
+  Timeout ambiguity: attempt_finished with timed_out:true is classified as
+  missing/execution_state_indeterminate. Design §9 does not cover this case;
+  it is a known gap worth a future design amendment.
+
+3.5 Real-subprocess E2E (Stage 5)
+
+  Confirms the CLI-to-runner seam: real janissary executable is invoked with
+  --record-case-dir <path>, real scanner writes raw records and status,
+  real enrichment produces all seven artifacts with accounting_valid: true.
+  The mocked Stage 4 tests could not prove this; the real E2E does.
+
+================================================================================
+4. Resolved design questions
+================================================================================
+
+4.1 Multi-observation per subprocess (design §10 conditional limitation)
+
+  RESOLVED at cb84c4e. The scanner loop is `for param in self.params:` at
+  L1511. The pathtraver oracle call site at L2166 executes ONCE PER PARAM that
+  has traversal_snap set. Multiple observations per subprocess are possible
+  when a target has multiple params with traversal payloads. observation_id
+  in the recorder is a genuine identifier, not a formality.
+
+4.2 traversal_snap lifecycle
+
+  RESOLVED. Reset to None inside the `for param in self.params:` loop, after
+  baseline = self.collect_baseline(param). Param B cannot inherit Param A's
+  traversal snapshot. No lifecycle bug. The design's §13 Gate E prerequisite
+  is satisfied.
+
+================================================================================
+5. Deferred items (recorded, not actioned)
+================================================================================
+
+5.1 docs/m83_gate_d_proposal.md §8.1 clarification
+
+  The per-case recording_status.json written by _write_recording_status has
+  recording_enabled and recorder_constructed as literals True. These are
+  correct by construction (the file is only written when recording is enabled
+  and the recorder exists), but the design's §8.1 field list presents them as
+  if they could vary. A one-line clarification should be added to §8.1 on the
+  next amendment pass:
+
+    "In the per-case recording_status.json, recording_enabled and
+    recorder_constructed are constants True by construction: the file is
+    only written when the recorder exists. Their meaningful variation is in
+    the run-level recording_status.json, which records the capability-probe
+    outcome and is written regardless of whether recording was enabled."
+
+  Do NOT amend the proposal document as part of writing this handover. The
+  clarification is recorded here for the next session's amendment pass.
+
+5.2 Design §9 timeout ambiguity
+
+  Timeout (attempt_finished with timed_out:true) has no determinate reason in
+  the design's four-reason missing-case taxonomy. Current implementation
+  classifies it as missing/execution_state_indeterminate. A future design
+  amendment should either add a fifth reason or explicitly map timeout to an
+  existing one.
+
+5.3 WSL Git authentication fix (durable, not deferred)
+
+  Recorded here rather than deferred. See §6.4.
+
+================================================================================
+6. Environment and infrastructure
+================================================================================
+
+6.1 WSL is REQUIRED for git commit and git push
+
+  PowerShell git commit fails against .githooks (WSL venv path). WSL git
+  commands with `source /home/oraclemode/janissary-venv/bin/activate` are the
+  only working invocation. Continues from session-2026-11-13b §6.1.
+
+6.2 WSL git credential helper - NEW THIS SESSION
+
+  Silent failure mode: `git push` returned to prompt with no output, no error,
+  no auth prompt. Root cause: Git for Windows credential manager was not
+  resolving for WSL git. Fix:
+
+    wsl bash -c "git config --global credential.helper '/mnt/c/Program\ Files/Git/ucrt64/bin/git-credential-manager.exe'"
+
+  Verified working:
+    wsl bash -c "'/mnt/c/Program Files/Git/ucrt64/bin/git-credential-manager.exe' --version"
+    -> 2.9.1+6760f0ef069c994aa2bb1d703fb374986ee82a3e
+    wsl bash -c "git config --global --get credential.helper"
+    -> /mnt/c/Program\ Files/Git/ucrt64/bin/git-credential-manager.exe
+
+  After this fix, `git push origin main` succeeded with visible output:
+    472857d..cb84c4e  main -> main
+
+  Without this fix, future pushes from WSL will silently fail. If the
+  silent-return pattern recurs, re-check `git config --global --get
+  credential.helper` before assuming the push failed for another reason.
+
+6.3 Four distinct Python environments (unchanged from session-2026-11-13b §6.3)
+
+  /usr/lib/python3.14             - system, no janissary
+  /home/oraclemode/janissary-venv - the working venv
+  .venv (Windows)                 - referenced by $PROFILE, not used by hooks
+  build/lib                       - stale build output
+
+6.4 The twelve operational traps
+
+  Every command written this session, and every trap encountered, converged on
+  these twelve. Carry them forward verbatim.
+
+  1.  wsl bash -c variable interpolation. PowerShell expands $var before bash
+      sees it. \" does not escape. Use 'single quotes' for literal strings,
+      or avoid $ entirely.
+
+  2.  [IO.File] resolves relative paths against CurrentDirectory, not
+      PowerShell's Set-Location. Use (Resolve-Path $p).Path for every
+      [IO.File] call.
+
+  3.  PowerShell git commit fails against .githooks WSL venv path. No output,
+      no commit. Use wsl bash -c with `source .../activate` before git.
+
+  4.  Empty $edits = @( parse failure yields 0 items. Guard
+      `if ($edits.Count -eq 0) { throw }` before the loop. A guard checking
+      `$applied -ne $edits.Count` passes 0 -ne 0 silently.
+
+  5.  git show | Out-File is not byte-transparent. Encoding checks against
+      piped output are unreliable. Use [IO.File]::ReadAllBytes on the working
+      tree plus git show --stat as the authoritative pair.
+
+  6.  throw inside top-level if does not halt under $ErrorActionPreference =
+      'Continue'. Always set $ErrorActionPreference = 'Stop' as first line
+      of any script block. Verify-and-commit must be in the same script
+      block, inside the success branch of the guard.
+
+  7.  Anchor built from rendered paste instead of raw bytes. A terminal
+      rendering may strip markdown backticks or normalise whitespace.
+      Verify anchors against [IO.File]::ReadAllText content, not pasted
+      output.
+
+  8.  Verify and commit in separate paste lines. The commit will run against
+      a state the verify did not check. Gate the commit on the verify in the
+      same paste.
+
+  9.  PS placeholder template `<message>` run verbatim. A commit template
+      with angle-bracket placeholders must be filled in before execution.
+      A literal `<message>` message lands in history.
+
+  10. git show | Select-String with non-ASCII patterns fails silently. The
+      Unicode pattern does not match after piping. Verify ASCII substrings,
+      or use [IO.File]::ReadAllText on the working tree plus commit-stat
+      line counts.
+
+  11. Missing trailing newline on [IO.File]::WriteAllText -> ruff W292. Every
+      here-string file write must be followed by
+      [IO.File]::AppendAllText($p, [string][char]0x0A). Occurred three times
+      this session: test_harness_pathtraver_signature.py (data-id),
+      test_harness_runner.py (fail-closed test), test_harness_e2e.py.
+
+  12. PowerShell escape character is BACKTICK, not backslash. Inside a
+      PowerShell double-quoted string, "\\n" writes literal backslash+n.
+      Control characters use backtick-n (newline), backtick-r (carriage
+      return), backtick-t (tab), backtick-doublequote (literal quote). For
+      characters whose escape sequence is not obvious, prefer
+      [string][char]0xNN (0x0A = LF, 0x2014 = em dash, 0x00A7 = section sign,
+      0x60 = backtick). This is unambiguous at every layer.
+
+  Subsidiary (three additional but less frequent):
+  -  Multi-section `cmd1 && cmd2 && cmd3` in a single wsl bash -c chain can
+     silent-return to prompt with no output. One substantive command per
+     `wsl bash -c` invocation. The environment-activation prefix
+     (`cd ... && source ... &&`) is safe because it contains no quoting.
+  -  Heredoc through PowerShell -> bash truncates. Write heredoc content to
+     a file with [IO.File]::WriteAllText, then `bash /path/file.sh`.
+  -  Notepad paste strips markdown syntax (backticks, asterisks, pipes) when
+     copying from a rendered view. Use Get-Clipboard -Raw or a direct
+     [IO.File]::WriteAllText here-string for markdown files.
+
+================================================================================
+7. Stale claims and corrections - this session's findings
+================================================================================
+
+The previous handover (session-2026-11-13b) was correct on process and wrong
+on several specific claims. All corrected here:
+
+  1. Test count 1392 -> 1495/2skip. Baseline was 1391 + 1 skip, not 1390 + 1
+     skip. The 105 collected additions comprise 104 passing tests and one
+     skipped test. Baseline 1391 passed / 1 skipped; final 1495 passed / 2
+     skipped.
+
+  2. Session-2026-11-13b stated the deferred §8.1 clarification was recorded.
+     Actually recorded here for the first time (see §5.1). The proposal document
+     still has the original wording.
+
+  3. Session-2026-11-13b's "M83 Stage 1 complete" §3.1 was accurate. The
+     pre-creation fail-closed correction (§3.4 above) was introduced mid-Stage-4
+     via a reviewer's note; the previous handover predates that correction.
+
+  4. The operational trap list has grown from "the eight" to the twelve in §6.4
+     above. The additions: trailing newline W292, and PowerShell backtick-vs-
+     backslash escaping. Both fired three times apiece this session.
+
+================================================================================
+8. Entry points for the next session
+================================================================================
+
+M83 is closed. Its stages 1-5 are committed and pushed. No M83 work remains.
+
+Next priorities, in order:
+
+  1. L03 classification document (docs/l03_sqli_classification.md exists and is
+     committed, but the classification work itself is not done). The register's
+     Next Action for L03 reads: classification frame written; all open items
+     9.1-9.6 resolved; next is per-case record schema, measurement protocol,
+     implementation. L03 remains Not Started.
+
+  2. Remaining unverified packages: L03, L06, L06b, L07, L08, L12. Per
+     session-2026-11-13b §5, these need the four-question pass:
+       Q1 does the code path still exist as described
+       Q2 does it behave as described
+       Q3 has a later commit already fixed it
+       Q4 is it still open
+
+  3. docs/m83_gate_d_proposal.md §8.1 clarification (§5.1 above). One-line edit,
+     deferred to the next amendment pass.
+
+  4. docs/m83_gate_d_proposal.md §9 timeout taxonomy (§5.2 above). Design
+     amendment, more substantive than §5.1.
+
+================================================================================
+9. What NOT to do
+================================================================================
+
+- Do not re-add $JANISSARY_VENV or any portability indirection to
+  .pre-commit-config.yaml. The committed config works via the venv absolute
+  path. (Continues from session-2026-11-13b §9.)
+
+- Do not edit .githooks or .pre-commit-config.yaml from PowerShell. The venv
+  path cannot be resolved and hooks fail silently.
+
+- Do not run git push from WSL without first confirming the credential helper
+  is configured (§6.2). Silent failure looks identical to a no-op.
+
+- Do not trust a handover's test count or file citations without checking them.
+  Every session has found at least one stale citation.
+
+- Do not write markdown files through Notepad paste from a rendered view.
+  Markdown syntax is stripped. Use [IO.File]::WriteAllText from here-strings,
+  in chunks if necessary.
+
+- Do not commit the CSV at benchmark/track_a/_fn_recovery_7_11_1.csv. It is a
+  deliberate working artifact, untracked since the prior session.
+
+  Untracked CSV unchanged this session: yes, still ?? in git status.
+
+================================================================================
+END OF HANDOVER
+================================================================================
