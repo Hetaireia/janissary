@@ -1,0 +1,14 @@
+{
+  "case_count": 206,
+  "cases_csv": "benchmark/track_a/_fn_recovery_7_11_1.csv",
+  "exit_code": 0,
+  "finished_at": "2026-11-12T19:57:43Z",
+  "harness_commit": "ea7b3e50af0d148d000d50d6c9e7d395bc898532",
+  "run_number": 1,
+  "started_at": "2026-11-12T19:53:41Z",
+  "target_base": "http://127.0.0.1:8080/benchmark",
+  "target_version": "20cbf3d",
+  "tool": "janissary",
+  "tool_version": "7.11.1",
+  "track": "track_a"
+}
