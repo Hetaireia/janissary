@@ -374,6 +374,7 @@ def _build_scanner(
         collect_observations=getattr(args, "heuristic", False)
         or getattr(args, "idor", False),
         verbose=getattr(args, "verbose", False),
+        record_case_dir=getattr(args, "record_case_dir", None),
     )
 
 
@@ -689,10 +690,82 @@ def _run_openapi_scan(args: argparse.Namespace) -> int:
     return _emit_scan_result(args, merged, real_stdout, fmt)
 
 
+def _validate_record_case_dir(path_str: str) -> str | None:
+    """Validate --record-case-dir. Return error string or None.
+
+    Mirrors design §7 validation rules: no ".." path segment, exists,
+    is a directory, is not a symlink itself, contains no prior
+    recorder output files, is writable, and its basename is
+    pre-sanitized (recorder precondition).
+    """
+    from pathlib import Path
+
+    from janissary.harness.pathtraver import _sanitize_case_id
+
+    path = Path(path_str)
+    if any(part == ".." for part in path.parts):
+        return f"--record-case-dir must not contain '..' segments: {path_str}"
+    if not path.exists():
+        return f"--record-case-dir does not exist: {path_str}"
+    if not path.is_dir():
+        return f"--record-case-dir is not a directory: {path_str}"
+    if path.is_symlink():
+        return f"--record-case-dir must not be a symlink: {path_str}"
+    prior_names = (
+        "case_records_raw.jsonl",
+        "recorder_failures.jsonl",
+        "recording_status.json",
+    )
+    for name in prior_names:
+        if (path / name).exists():
+            return (
+                f"--record-case-dir contains prior recordings ({name}); "
+                f"use a fresh empty directory: {path_str}"
+            )
+    import contextlib
+    import os
+    import tempfile
+
+    probe_fd = None
+    probe_name = None
+    try:
+        probe_fd, probe_name = tempfile.mkstemp(
+            prefix=".janissary_write_probe_", dir=path
+        )
+        os.close(probe_fd)
+        probe_fd = None
+    except OSError as exc:
+        return f"--record-case-dir is not writable: {path_str} ({exc})"
+    finally:
+        if probe_fd is not None:
+            with contextlib.suppress(OSError):
+                os.close(probe_fd)
+        if probe_name is not None:
+            with contextlib.suppress(OSError):
+                os.unlink(probe_name)
+    if _sanitize_case_id(path.name) != path.name:
+        return (
+            f"--record-case-dir basename must contain only "
+            f"[A-Za-z0-9_-]: {path.name!r} sanitizes to "
+            f"{_sanitize_case_id(path.name)!r}"
+        )
+    return None
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "show_version", False):
         print(f"janissary {__version__}")
         return 0
+
+    # M83: validate and convert --record-case-dir before any scan branch
+    if getattr(args, "record_case_dir", None) is not None:
+        err = _validate_record_case_dir(args.record_case_dir)
+        if err:
+            print(f"[!] {err}", file=sys.stderr)
+            return 64
+        from pathlib import Path as _Path
+
+        args.record_case_dir = _Path(args.record_case_dir)
 
     if getattr(args, "openapi", None):
         if getattr(args, "dry_run", False):
@@ -2121,6 +2194,20 @@ def build_parser() -> argparse.ArgumentParser:
         default="",
         metavar="VAL",
         help="Known-good value for --inject-in path baseline. URL templates like /users/v1/{username} substitute this value as the baseline request, then fuzz the segment.",
+    )
+    scan.add_argument(
+        "--record-case-dir",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Record path-traversal oracle observations to this directory "
+            "(M83). Directory must be writable, free of prior recorder "
+            "output files (case_records_raw.jsonl, recorder_failures.jsonl, "
+            "recording_status.json), and its basename sanitized (only "
+            "[A-Za-z0-9_-]). The recorder captures pathtraver observations "
+            "only; non-pathtraver scans record nothing."
+        ),
     )
     scan.add_argument("--timeout", type=float, default=10.0)
     scan.add_argument("--delay", type=float, default=0.0)

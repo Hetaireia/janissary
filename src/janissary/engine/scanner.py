@@ -9,10 +9,12 @@ later passes.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import secrets
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import requests
@@ -620,6 +622,7 @@ class Scanner:
         collect_observations: bool = False,
         verbose: bool = False,
         auth_sessions: list | None = None,
+        record_case_dir: Path | None = None,
     ):
         self.target = repair_url(target)
         self.params = params
@@ -654,6 +657,16 @@ class Scanner:
 
             self._session_rotator = SessionRotator(auth_sessions)
         self.inject_in = inject_in.lower()
+        self._record_case_dir = record_case_dir
+        self._recorder = None
+        if record_case_dir is not None:
+            from janissary.harness.pathtraver import PathtraverRecorder
+
+            self._recorder = PathtraverRecorder(
+                case_id=record_case_dir.name,
+                raw_path=record_case_dir / "case_records_raw.jsonl",
+                failure_path=record_case_dir / "recorder_failures.jsonl",
+            )
         if self.inject_in not in {
             "auto",
             "query",
@@ -1422,6 +1435,60 @@ class Scanner:
             b_session.close()
         return findings
 
+    def _maybe_record_observation(
+        self,
+        *,
+        url: str,
+        param: str,
+        baseline,
+        snapshot_exists,
+        snapshot_noexist,
+        payload_exists: str,
+        payload_noexist: str,
+        oracle_result: list,
+    ) -> None:
+        """Invoke the recorder if present. Never raises."""
+        if self._recorder is None:
+            return
+        with contextlib.suppress(Exception):
+            self._recorder.record(
+                url=url,
+                param=param,
+                baseline=baseline,
+                snapshot_exists=snapshot_exists,
+                snapshot_noexist=snapshot_noexist,
+                payload_exists=payload_exists,
+                payload_noexist=payload_noexist,
+                oracle_result=oracle_result,
+            )
+
+    def _write_recording_status(self) -> None:
+        """Write recording_status.json for this case. Never raises."""
+        if self._recorder is None or self._record_case_dir is None:
+            return
+        try:
+            import json as _json
+            from datetime import datetime, timezone
+
+            from janissary import __version__ as _version
+
+            d = self._recorder.diagnostics
+            payload = {
+                "recording_enabled": True,
+                "recorder_constructed": True,
+                "records_attempted": d.records_attempted,
+                "records_written": d.records_written,
+                "failures_total": d.failures_total,
+                "failure_log_written": d.failure_log_written,
+                "scanner_version": _version,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+            (self._record_case_dir / "recording_status.json").write_text(
+                _json.dumps(payload), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
     def scan(self, quiet: bool = False) -> ScanSummary:
         summary = ScanSummary(
             target=self.target,
@@ -2129,6 +2196,16 @@ class Scanner:
                         payload_exists=traversal_snap_payload,
                         payload_noexist=noexist_path,
                     )
+                    self._maybe_record_observation(
+                        url=self.target,
+                        param=param,
+                        baseline=baseline,
+                        snapshot_exists=traversal_snap,
+                        snapshot_noexist=snap2,
+                        payload_exists=traversal_snap_payload,
+                        payload_noexist=noexist_path,
+                        oracle_result=oracle,
+                    )
                     for f in oracle:
                         req_obj = getattr(r2, "request", None)
                         candidate = CandidateFinding(
@@ -2175,5 +2252,7 @@ class Scanner:
             summary.waf = self.waf_profile.to_dict()
         if self._pacer is not None:
             summary.pacer = self._pacer.stats()
+
+        self._write_recording_status()
 
         return summary
