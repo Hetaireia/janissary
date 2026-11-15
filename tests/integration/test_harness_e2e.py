@@ -103,12 +103,40 @@ def test_end_to_end_real_subprocess(tmp_path, fixture_base):
 
     case_raw = run_dir / "case_raw"
     assert case_raw.exists()
-    found_raw = False
+
+    records = []
     for cd in case_raw.iterdir():
         if not cd.is_dir():
             continue
         raw = cd / "case_records_raw.jsonl"
-        if raw.exists() and raw.read_text().strip():
-            found_raw = True
-            break
-    assert found_raw, "no case_records_raw.jsonl with content produced"
+        if raw.exists():
+            for line in raw.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    records.append(json.loads(line))
+
+    assert records, "no case_records_raw.jsonl records produced"
+
+    paired_records = [
+        record
+        for record in records
+        if isinstance(record.get("probes"), dict)
+        and "exists" in record["probes"]
+        and "noexist" in record["probes"]
+    ]
+    assert paired_records, "no records contain both paired probe observations"
+
+    record = paired_records[0]
+    exists = record["probes"]["exists"]
+    noexist = record["probes"]["noexist"]
+
+    for probe in (exists, noexist):
+        assert probe["status"] == 200
+        assert probe["content_type"]
+        assert probe["evidence_hash"]
+        assert probe["structural_signature"]
+        assert probe["body_stored"]
+        assert probe["body_original_length"] > 0
+
+    assert "file already exists" in exists["body_stored"]
+    assert "file doesn't exist yet" in noexist["body_stored"]
+    assert exists["evidence_hash"] != noexist["evidence_hash"]

@@ -119,6 +119,17 @@ def test_record_schema_probe_fields(tmp_path):
         assert "body_original_length" in p
         assert "body_stored" in p
 
+    exists = record["probes"]["exists"]
+    noexist = record["probes"]["noexist"]
+
+    assert exists["body_stored"] == EXISTS_BODY
+    assert noexist["body_stored"] == NOEXIST_BODY
+    assert exists["body_original_length"] == len(EXISTS_BODY)
+    assert noexist["body_original_length"] == len(NOEXIST_BODY)
+    assert exists["evidence_hash"]
+    assert noexist["evidence_hash"]
+    assert exists["evidence_hash"] != noexist["evidence_hash"]
+
 
 def test_multiple_observations_per_case(tmp_path):
     recorder = _recorder(tmp_path)
