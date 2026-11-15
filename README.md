@@ -29,7 +29,7 @@ Most DAST tools are either expensive enterprise platforms or raw scripts that pr
 
 ### Differential detection, measured
 
-Every finding is gated by a baseline comparison — nothing emits from a single response. On the OWASP Benchmark DAST-applicable corpus, the current **v7.11.1 result is F1 0.922** (precision 1.000, recall 0.855; TP 988 / FP 0 / FN 168 on 2,258 cases), **baseline-only**, single run. It clears the registered `--min-f1 0.92` gate. FN-recovery adds 0 findings at v7.11.1, so this baseline result matches the historical **v7.3.0 recovered headline F1 0.921** (TP 987) that required a second recovery pass. Precision 1.000 is scoped to the OWASP Benchmark corpus (0 FP across all runs to date); it does not establish a real-world false-positive rate, which remains the target of the M89 negative regression corpus. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+Differential HTTP workflows compare candidate responses with baselines. Other discovery integrations may retain unproven candidates for review without promoting them to verified findings. On the OWASP Benchmark DAST-applicable corpus, the current **v7.11.1 result is F1 0.922** (precision 1.000, recall 0.855; TP 988 / FP 0 / FN 168 on 2,258 cases), **baseline-only**, single run. It clears the registered `--min-f1 0.92` gate. FN-recovery adds 0 findings at v7.11.1, so this baseline result matches the historical **v7.3.0 recovered headline F1 0.921** (TP 987) that required a second recovery pass. Precision 1.000 is scoped to the OWASP Benchmark corpus (0 FP across all runs to date); it does not establish a real-world false-positive rate, which remains the target of the M89 negative regression corpus. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 ### WAF-aware pacing
 
@@ -73,7 +73,7 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
 
 ## Architecture
 
-JANISSARY separates discovery from the decision to report a verified finding.
+JANISSARY uses a **dual-engine architecture**: the Discovery Engine identifies candidate behaviour, while the Verification Engine determines whether candidates routed through it qualify as verified findings. Discovery Engine is an architectural grouping of discovery integrations, not a single codebase class.
 
 Discovery modules identify candidate behaviour. Where a workflow routes
 candidates through the `VerificationEngine`, they pass through an ordered
@@ -85,6 +85,7 @@ integrations without entering that verification path.
 flowchart TD
     CLI["CLI and scan orchestration"]
 
+    subgraph DISCOVERY["ENGINE 1 — DISCOVERY"]
     CLI --> RECON["Recon: fingerprinting, WAF detection and pacing"]
     CLI --> HTTP["HTTP differential scanning"]
     RECON -. "target context and pacing" .-> HTTP
@@ -93,6 +94,7 @@ flowchart TD
     CLI --> HB["Host-header bypass discovery"]
     CLI --> HEUR["Heuristic discovery"]
     CLI --> IDOR["IDOR cross-identity probing"]
+    end
 
     HTTP --> CAND["CandidateFinding"]
     GQL --> CAND
@@ -100,16 +102,19 @@ flowchart TD
     HEUR --> CAND
     IDOR --> CAND
 
+    subgraph VERIFICATION["ENGINE 2 — VERIFICATION"]
     CAND --> VE["VerificationEngine"]
     VE --> CONF["Ordered confirmer chain"]
 
     CONF --> VERIFIED["VerifiedFinding: verified"]
     CONF --> UNPROVEN["VerifiedFinding: unproven"]
     VE --> FAILED["FailedVerification: rejected result"]
+    end
 
     VERIFIED --> FINDINGS["ScanSummary.findings"]
     UNPROVEN --> CANDIDATES["ScanSummary.candidates"]
-    HB --> CANDIDATES
+    HB --> DIRECT["Discovery-retained unproven candidate"]
+    DIRECT --> CANDIDATES
 
     FINDINGS --> OUTPUT["CLI and reporting outputs"]
     CANDIDATES --> OUTPUT
@@ -191,7 +196,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 ## Benchmark
 
 > [!IMPORTANT]
-> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases that are structurally unobservable on this target plus 45 oracle-logic misses (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases and 45 cases across weakrand (16), securecookie (8), trustbound (16), and cmdi (5). The recovery rescan covered 146 DAST false negatives; 22 cases were mode-skipped before scanning, so zero new findings does not mean all 168 residual cases were rescanned (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
 
 | Metric | Value | Notes |
 |---|---|---|
@@ -208,14 +213,24 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 Reproduce:
 
 ```bash
-# From repo root, with target on http://127.0.0.1:8080/benchmark
+# Score the committed v7.11.1 measurement without rerunning it:
+python benchmark/track_a/score_dast_aware.py \
+    benchmark/track_a/runs/20261112T180530Z-janissary-r1
+
+# For a fresh run, copy the example configuration and edit it:
+cp benchmark/track_a/tools.env.example benchmark/track_a/tools.env
+# Set JANISSARY_TIMEOUT=60 and TARGET_VERSION=20cbf3d in tools.env.
+
+# Run against the benchmark target; the runner prints the new run directory:
 python -m benchmark.track_a.runner \
     --tool janissary --run-number 1 \
     --target-base http://127.0.0.1:8080/benchmark \
     --cases-csv benchmark/track_a/case_vectors.csv \
     --tools-env benchmark/track_a/tools.env
-python benchmark/track_a/score_dast_aware.py \
-    benchmark/track_a/runs/20261112T180530Z-janissary-r1
+
+# Score the exact directory printed by the runner above:
+RUN_DIR="paste-the-exact-run-directory-printed-by-the-runner"
+python benchmark/track_a/score_dast_aware.py "$RUN_DIR"
 ```
 
 ### What this measurement does and does not claim
@@ -383,7 +398,7 @@ Being explicit about scope is part of being honest about precision:
 
 - **SPA Catch-All False Positives (Issue #1).** Applications returning HTTP 200 for arbitrary routes can trigger the admin-panel probe's initial status-code classifier. The probe runs a structural DOM differential against the root page (ADR-005 gated corroborator: `root@U@fingerprint` + hamming-distance threshold + `root@U@signature@U@match`) before emission — candidates failing the structural gate are discarded. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate but which are not actual admin panels. No React/Angular/Vue regression corpus exists yet (L01 remaining gap).
 - **Mid-scan auth expiry (ADR-010).** Two consecutive 401 responses *when auth is configured* abort the scan with `scan@U@incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth@U@required` output state — structured `ScanSummary.auth_state` is emitted (`unknown`/`authenticated`/`unauthenticated`/`expired`/`recovery_failed`) and rendered on abort; no `AuthStateManager` (health checks, reauth, OAuth2 refresh) exists yet, so an `expired` session cannot return to `authenticated`.
-- **Framework-specific SQLi (L03) is not implemented.** JANISSARY recognises database error patterns across multiple SQL dialects, but does not yet provide ORM profiles, dialect-keyed payload selection or framework-specific delivery-path analysis. The failure-classification work is documented in [`docs/l03_sqli_classification.md`](docs/l03_sqli_classification.md); per-case records, a measurement protocol and implementation remain future work.
+- **Framework-specific SQLi (L03) is not implemented.** JANISSARY recognises database error patterns across multiple SQL dialects, but does not yet provide ORM profiles, dialect-keyed payload selection or framework-specific delivery-path analysis. The failure-classification design and run-level record schema are documented in [`docs/l03_sqli_classification.md`](docs/l03_sqli_classification.md) and [`docs/l03_sqli_record_schema.md`](docs/l03_sqli_record_schema.md). The SQLi-specific record producer and final measurement-protocol implementation remain future work.
 - **Path traversal — partial, recall 0.075** (per-subcategory F1 0.049—0.308). Scored in the DAST-applicable metric (0.922 headline); excluded from the supported-classes metric (0.978) per ADR-027 D8 amended (2026-11-05). Content-signature gates exist but are narrow. Documented in [`docs/pathtraver.md`](docs/pathtraver.md) as a property of the benchmark target.
 - **SSRF payload scope.** Nine payloads ship today: five OOB via collaborator (`ssrf@U@http`, `ssrf@U@https`, `ssrf@U@gopher`, `ssrf@U@dict`, `ssrf@U@dns@U@only`) and four cloud-metadata via response-body markers (`ssrf@U@metadata@U@aws`, `ssrf@U@metadata@U@aws@U@v6`, `ssrf@U@metadata@U@gcp`, `ssrf@U@metadata@U@azure`). The `file://` payload remains deferred; confidence-aware OOB attribution is not implemented (L05 remaining gap). See [`docs/ssrf.md`](docs/ssrf.md).
 - **IDOR candidate detection.** The `--idor` workflow requires two identities and emits unproven candidates based on cross-identity response comparisons. It does not establish whether a resource is legitimately public. Public-resource candidates are intentionally retained for analyst triage; no automatic suppression heuristic is applied (ADR-031). Manual assessment is required.
@@ -409,7 +424,7 @@ The architectural decisions governing current and planned work are in [`docs/dec
 
 Shipped discovery capabilities and deferred direction:
 
-- **Heuristic discovery (Track B):** shipped as `--heuristic`. Heuristic matches pass through the `VerificationEngine` and are retained as unproven candidates. Discovery does not independently establish a verified vulnerability. See ADR-016, ADR-017 and ADR-019.
+- **Heuristic discovery (Track B):** shipped as `--heuristic`. Heuristic matches pass through the `VerificationEngine` and are retained as unproven candidates where the configured confirmer classifies them that way. Discovery does not independently establish a verified vulnerability. See ADR-016, ADR-017 and ADR-019.
 - **Crawler:** deferred with explicit triggers (named enterprise demand or 3+ user asks). When built, ships open-source. See ADR-021.
 
 Detailed phased planning and milestone tracking are maintained privately and are not part of this repository.
