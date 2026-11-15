@@ -121,6 +121,6 @@ A record with no `uncertainty` field is rejected. It claims more certainty than 
 
 ## 11. Next steps after this document
 
-1. Resolve 9.1 and 9.3 with read-only greps; record findings as amendments to this document.
-2. Decide 9.4 (grounded vs generic ORM axis).
-3. Only then: per-case record schema, then measurement protocol, then any implementation. The order mirrors M83: taxonomy → schema → measurement → implementation.
+Superseded 2026-11-15: items 9.1 through 9.7 are resolved (§9). The live artifact is the per-case record schema in `docs/l03_sqli_record_schema.md`. Implementation follows resolution of that schema's §7 open items.
+
+Remaining order: measurement protocol, then any implementation. The sequence mirrors M83: taxonomy → schema → measurement → implementation.
