@@ -792,23 +792,28 @@ def check_pathtraver_oracle(
 
     Fires critical when response A and response B diverge on the
     existence signal -- one says 'exists', the other says 'noexist'.
-    Silent when both agree, when either is ambiguous, or when the
-    signals leak from the payload or the baseline.
+    Silent when both agree, when either is ambiguous, or when a
+    payload echoes an oracle signal. A baseline EXISTS signal only
+    suppresses cases where the probes fail to establish a distinct pair.
     """
     for pv in (payload_exists, payload_noexist):
         if _PATHTRAVER_EXISTS.search(pv or "") or _PATHTRAVER_NOEXIST.search(pv or ""):
             return []
 
-    # Only the EXISTS string in baseline is poison. The NOEXIST
-    # string is the app's benign default when no file is requested
-    # and is the control state the differential depends on.
-    for s in baseline.snapshots:
-        if _PATHTRAVER_EXISTS.search(s.body):
-            return []
-
     sig_a = _pathtraver_signal(snapshot_exists.body)
     sig_b = _pathtraver_signal(snapshot_noexist.body)
     if sig_a is None or sig_b is None or sig_a == sig_b:
+        # Signals do not form a clean, distinct pair. The EXISTS string
+        # in baseline is poison: if a baseline snapshot already carries
+        # the exists-signal, a stray match in a payload response cannot
+        # be distinguished from the baseline. The NOEXIST string is the
+        # app's benign default and is the control state the differential
+        # depends on. A clean, distinct signal pair is already payload
+        # evidence regardless of baseline state, so the poison guard is
+        # only consulted when the signal pair is not already distinct.
+        for s in baseline.snapshots:
+            if _PATHTRAVER_EXISTS.search(s.body):
+                return []
         return []
 
     return [

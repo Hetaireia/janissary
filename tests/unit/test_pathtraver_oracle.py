@@ -127,12 +127,6 @@ def test_silent_when_both_signals_on_one_response():
     assert findings == []
 
 
-def test_silent_when_baseline_dirty():
-    baseline = make_baseline([EXISTS_BODY])
-    findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=NOEXIST_BODY))
-    assert findings == []
-
-
 def test_silent_when_payload_echoes_oracle():
     baseline = make_baseline([BENIGN])
     findings = _call(
@@ -147,8 +141,51 @@ def test_silent_when_payload_echoes_oracle():
 
 def test_fires_when_baseline_reports_noexist():
     """The app's benign default is 'file doesn't exist yet'. That is
-    the control state, not baseline poison. Only an EXISTS string in
-    the baseline invalidates the oracle."""
+    the control state, not baseline poison. An EXISTS baseline only
+    suppresses a finding when the probe signals are not distinct."""
     baseline = make_baseline([NOEXIST_BODY, NOEXIST_BODY])
     findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=NOEXIST_BODY))
     assert len(findings) == 1
+
+
+def test_fires_on_clean_differential_despite_poisoned_baseline():
+    # Baseline carries "file already exists" -- poisoned under the old rule.
+    # Probes form a clean, distinct exists/noexist pair.
+    baseline = make_baseline([EXISTS_BODY])
+    findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=NOEXIST_BODY))
+    assert len(findings) == 1
+    assert findings[0]["type"] == "pathtraver_existence_oracle"
+    assert findings[0]["evidence"] == "exists|noexist"
+
+
+def test_fires_on_reverse_direction_despite_poisoned_baseline():
+    baseline = make_baseline([EXISTS_BODY])
+    findings = _call(baseline, snap(text=NOEXIST_BODY), snap(text=EXISTS_BODY))
+    assert len(findings) == 1
+    assert findings[0]["evidence"] == "noexist|exists"
+
+
+def test_does_not_fire_on_identical_signals_with_poisoned_baseline():
+    # Both probes show "exists" -- same signal, no differential.
+    # Baseline poisoned; the poison guard still bails because the
+    # signal pair is not distinct.
+    baseline = make_baseline([EXISTS_BODY])
+    findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=EXISTS_BODY))
+    assert findings == []
+
+
+def test_does_not_fire_when_signal_extraction_fails():
+    # Probes emit A1-shaped text that matches neither regex.
+    # Baseline poisoned. Signal extraction fails; no finding.
+    a1_body = "The beginning of file: 'x' is:\n\n\n"
+    baseline = make_baseline([EXISTS_BODY])
+    findings = _call(baseline, snap(text=a1_body), snap(text=a1_body))
+    assert findings == []
+
+
+def test_does_not_fire_when_baseline_clean_and_signals_identical():
+    # Regression: existing safe-case shape. Baseline clean, signals
+    # both "exists" -- not distinct. No finding.
+    baseline = make_baseline([BENIGN])
+    findings = _call(baseline, snap(text=EXISTS_BODY), snap(text=EXISTS_BODY))
+    assert findings == []
