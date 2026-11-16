@@ -1,3 +1,4 @@
 #!/bin/sh
-# LF only. bare `pre-commit` is on PATH under Git Bash
-exec /home/oraclemode/janissary-venv/bin/pre-commit hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit --hook-dir "$(pwd)" -- "$@"
+# LF only. Uses this repository's Windows .venv under Git for Windows.
+export PATH=".venv/Scripts:$PATH"
+exec ".venv/Scripts/pre-commit.exe" hook-impl --config=.pre-commit-config.yaml --hook-type=pre-commit --hook-dir . -- "$@"
