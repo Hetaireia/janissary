@@ -574,6 +574,20 @@ def test_xpath_error_oracle_silent_when_or_also_500():
     assert check_xpath_error_oracle(b, quote, or_payload) == []
 
 
+def test_xpath_error_oracle_rejects_3xx_control():
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="Error parsing XPath input: '&#x27;'")
+    or_payload = snap(status=302, text="Redirect")
+    assert check_xpath_error_oracle(b, quote, or_payload) == []
+
+
+def test_xpath_error_oracle_rejects_4xx_control():
+    b = make_baseline(["<html>OK</html>"] * 5)
+    quote = snap(status=500, text="Error parsing XPath input: '&#x27;'")
+    or_payload = snap(status=404, text="Not found")
+    assert check_xpath_error_oracle(b, quote, or_payload) == []
+
+
 def test_sqli_quote_oracle_silent_when_or_also_500():
     """The /traversal shape: any unrecognized input 500s, so a quote
     500 is not evidence of sqli. The balanced payload guards this."""

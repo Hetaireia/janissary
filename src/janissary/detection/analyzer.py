@@ -890,7 +890,7 @@ def check_xpath_error_oracle(baseline, quote_snapshot, or_snapshot):
         return []
     if quote_snapshot.status < 500:
         return []
-    if or_snapshot.status >= 500:
+    if not 200 <= or_snapshot.status < 300:
         return []
     if not any(pat.search(quote_snapshot.body) for pat in _XPATH_ERROR_PATTERNS):
         return []
