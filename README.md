@@ -172,7 +172,7 @@ Path traversal detection is implemented, including a paired-probe existence orac
 
 ### Benchmark qualifications
 
-The headline result comes from a single baseline-only run. The `.922` result clears the registered `.92` gate by a narrow margin. The `.978` result uses a different scoring scope. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
+The headline result comes from a single baseline-only run. The `.922` figure is a rescore of committed artifacts, not a clean-exit reproduction. The original runner exited with code 1 and its attempt log was lost; the scoring arithmetic is reproducible against the committed `findings.jsonl` and `manifest.json`, but the run was not a clean-exit scan. The `.922` result clears the registered `.92` gate by a narrow margin. The `.978` result uses a different scoring scope. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
 
 ## What this measurement does and does not claim
 

@@ -6,8 +6,14 @@ candidate is promoted to VerifiedFinding with status='unproven' and
 reason='no_confirmer_matched' — matching the roadmap's Phase 0.2(b)
 "not silently dropped" invariant.
 
-Rewiring the 17 emission sites through this engine is a subsequent
-commit. Until then, no production code depends on this class.
+All production emission sites have been rewired through this engine.
+It is the sole routing path for verified findings from heuristic,
+HTTP differential, WebSocket, GraphQL, IDOR, and specialised
+detector paths. Host-bypass observations are retained directly as
+candidates per ADR-030 Rule 1 and do not pass through verify().
+
+Current call sites: engine/scanner.py (21), heuristic/engine.py (2),
+heuristic/__init__.py (1) -- 24 total.
 
 See docs/ROADMAP.md Phase 0.1 and 0.2(b).
 """
