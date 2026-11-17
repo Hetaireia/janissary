@@ -971,7 +971,10 @@ class Scanner:
                 continue
             if r is None:
                 continue
-            baseline.add(ResponseSnapshot.from_response(r, normalizer=self.normalizer))
+            baseline.add(
+                ResponseSnapshot.from_response(r, normalizer=self.normalizer),
+                headers=dict(r.headers),
+            )
         return baseline
 
     def _ssrf_phase(
@@ -1300,7 +1303,9 @@ class Scanner:
         # Approximate request count -- GraphQLDiscoveryModule does not
         # instrument its own HTTP calls. These estimates keep
         # summary.total_requests from being misleadingly zero.
-        summary.approximate_requests += 4  # detect: typename/introspection/batch/suggestions
+        summary.approximate_requests += (
+            4  # detect: typename/introspection/batch/suggestions
+        )
 
         if not profile.reachable:
             summary.scan_incomplete = True
