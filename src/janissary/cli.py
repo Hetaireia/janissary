@@ -81,6 +81,7 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "params": summary.params,
         "method": summary.method,
         "total_requests": summary.total_requests,
+        "approximate_requests": summary.approximate_requests,
         "finding_count": summary.finding_count,
         "candidate_count": len(summary.candidates),
         "group_count": len(summary.groups),
@@ -255,6 +256,7 @@ def _merge_graphql_into_scan(summary, gql_summary):
     for f in gql_summary.candidates:
         summary.candidates.append(f)
     summary.total_requests += gql_summary.total_requests
+    summary.approximate_requests += getattr(gql_summary, 'approximate_requests', 0)
     if gql_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:
@@ -293,6 +295,7 @@ def _merge_ws_into_scan(summary, ws_summary):
     for f in ws_summary.candidates:
         summary.candidates.append(f)
     summary.total_requests += ws_summary.total_requests
+    summary.approximate_requests += getattr(ws_summary, 'approximate_requests', 0)
     if ws_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:
@@ -317,6 +320,7 @@ def _merge_host_bypass_into_scan(summary, hb_summary):
     for f in hb_summary.candidates:
         summary.candidates.append(f)
     summary.total_requests += hb_summary.total_requests
+    summary.approximate_requests += getattr(hb_summary, 'approximate_requests', 0)
     if hb_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:

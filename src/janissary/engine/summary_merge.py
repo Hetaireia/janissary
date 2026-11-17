@@ -59,6 +59,7 @@ def merge_scan_summaries(summaries: list[ScanSummary]) -> ScanSummary:
         for c in s.candidates:
             merged.candidates.append(c)
         merged.total_requests += s.total_requests
+        merged.approximate_requests += s.approximate_requests
         merged.baselines.update(s.baselines)
         if merged.waf is None and s.waf is not None:
             merged.waf = s.waf

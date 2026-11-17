@@ -312,7 +312,11 @@ SARIF 2.1.0 export is available via `--export *.sarif` on `scan` and `agent`. Ou
 
 Both JSON and JSONL preserve the verified/candidate distinction. The JSON envelope carries separate top-level `findings` and `candidates` arrays with independent counts. JSONL tags each record with a `record_type` field of `"verified"` or `"candidate"`. HTML and PDF reports render the two streams separately. SARIF exports both as separate runs (verified and discovery). A candidate cannot silently become a verified finding at the emitter boundary.
 
-`total_requests` is a **mixture of measured and estimated counts**. Sites that issue HTTP calls increment the field per call. Sites that delegate to a sub-module without HTTP instrumentation (XPathi, IDOR, host-bypass, WebSocket protocol probes, GraphQL detect and probe stages) add a fixed or formula-based estimate for the intended work. The field is a floor suitable for display and rough budgeting, not a byte-accurate request ledger; consumers requiring precise counts must instrument the HTTP layer directly.
+`total_requests` counts **every outbound HTTP attempt** made by JANISSARY, including retries and failed attempts. The counter increments before each `_paced_request()` call so that a request which raises `RequestException` is still counted. This is the measured stream.
+
+`approximate_requests` is a **formula-based estimate** for modules that delegate HTTP work to sub-systems without direct instrumentation: XPathi (len(payloads)+2), IDOR (max(len(candidates)*2, 10)), host-bypass (=3), WebSocket detect (+4), and WebSocket probes (+6). These are intent estimates, not measurements.
+
+The two fields are deliberately separate. Consumers requiring an upper-bound request cost should sum them; consumers requiring a byte-accurate count must instrument the HTTP layer directly. `total_requests` alone is a floor.
 
 ---
 

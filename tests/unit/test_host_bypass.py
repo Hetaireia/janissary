@@ -329,7 +329,8 @@ def test_scan_host_bypass_returns_populated_summary():
     assert summary.candidates[0].finding_type == "host_header_acl_bypass"
     assert summary.candidates[0].verification_status == "unproven"
     assert summary.method == "HOST-BYPASS"
-    assert summary.total_requests == 3
+    assert summary.approximate_requests == 3
+    assert summary.total_requests == 0
 
 
 def test_scan_host_bypass_clean_summary():

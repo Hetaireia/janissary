@@ -543,6 +543,11 @@ class ScanSummary:
     params: list[str]
     method: str
     total_requests: int = 0
+    # Formula-based estimate for modules without HTTP instrumentation
+    # (host-bypass, WebSocket protocol probes, GraphQL detect/probes).
+    # Separate from total_requests (measured per-call) so consumers can
+    # distinguish measured from estimated request counts.
+    approximate_requests: int = 0
     finding_count: int = 0
     aborted: bool = False
     abort_reason: str | None = None
@@ -1146,7 +1151,7 @@ class Scanner:
             summary.scan_incomplete = True
             summary.abort_reason = f"learn failed: {type(exc).__name__}"
             return summary
-        summary.total_requests += len(payloads) + 2
+        summary.approximate_requests += len(payloads) + 2
 
         joined_notes = " ".join(model.notes)
         if "no_probe_payloads_provided" in joined_notes:
@@ -1175,7 +1180,7 @@ class Scanner:
             summary.scan_incomplete = True
             summary.abort_reason = f"discover failed: {type(exc).__name__}"
             return summary
-        summary.total_requests += max(len(candidates) * 2, 10)
+        summary.approximate_requests += max(len(candidates) * 2, 10)
 
         for candidate in candidates:
             result = _ENGINE.verify(candidate)
@@ -1240,7 +1245,7 @@ class Scanner:
             return summary
 
         # Nominal request count: 1 baseline + up to 2 variants.
-        summary.total_requests = 3
+        summary.approximate_requests = 3
 
         for c in candidates:
             summary.candidates.append(self._candidate_to_scan_finding(c))
@@ -1295,7 +1300,7 @@ class Scanner:
         # Approximate request count -- GraphQLDiscoveryModule does not
         # instrument its own HTTP calls. These estimates keep
         # summary.total_requests from being misleadingly zero.
-        summary.total_requests += 4  # detect: typename/introspection/batch/suggestions
+        summary.approximate_requests += 4  # detect: typename/introspection/batch/suggestions
 
         if not profile.reachable:
             summary.scan_incomplete = True
@@ -1310,7 +1315,7 @@ class Scanner:
         )
 
         if include_probes:
-            summary.total_requests += 6  # depth_probe + alias_probe, rough
+            summary.approximate_requests += 6  # depth_probe + alias_probe, rough
 
         for candidate in candidates:
             result = _ENGINE.verify(candidate)
@@ -1346,9 +1351,9 @@ class Scanner:
             self.session,
             AuthConfig(cookie=new_spec.cookie, bearer=new_spec.bearer),
         )
+        summary.total_requests += 1
         try:
             retry = self._paced_request(self.target, param, value)
-            summary.total_requests += 1
         except requests.RequestException as exc:
             self._last_auth_retry_evidence = {
                 "request_outcome": "exception",
@@ -1723,6 +1728,7 @@ class Scanner:
             sqli_blind_true_payload = ""
             ldap_wild_resp = None
             for name, value, category, _severity in self._payloads:
+                summary.total_requests += 1
                 try:
                     r = self._paced_request(self.target, param, value)
                 except requests.RequestException as e:
@@ -1737,7 +1743,6 @@ class Scanner:
                     if not quiet:
                         _say(f"  [{param}] {name} - error: {e}")
                     continue
-                summary.total_requests += 1
                 if r is None:
                     if name in {"sql_single_quote", "sql_or_1eq1"}:
                         xpath_probe_event_ids[name] = self._record_xpath_probe_outcome(
