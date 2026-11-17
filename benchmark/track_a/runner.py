@@ -36,6 +36,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -150,6 +151,35 @@ def load_env(path: Path | None) -> dict:
 # ---------------------------------------------------------------------
 
 
+def _popen_with_retry(
+    cmd: list[str], creationflags: int, attempts: int = 3
+) -> subprocess.Popen:
+    """Popen with bounded retry on Windows ERROR_ACCESS_DENIED.
+
+    Windows CreateProcess can transiently fail with PermissionError when
+    AV/EDR holds a short-lived lock on a just-written image or on a PATH
+    lookup directory. Observed once in 2,740 spawns during a clean Track A
+    run (BenchmarkTest01512, 2026-11-17). Retry is bounded and specific to
+    PermissionError; every other OSError propagates unchanged.
+    """
+    last_exc: Exception | None = None
+    for i in range(attempts):
+        try:
+            return subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=creationflags,
+            )
+        except PermissionError as exc:
+            last_exc = exc
+            if i < attempts - 1:
+                time.sleep(0.2 * (2 ** i))
+    assert last_exc is not None
+    raise last_exc
+
 def _run_subprocess_tree(
     cmd: list[str], timeout: float
 ) -> tuple[int | None, str, str, bool]:
@@ -171,14 +201,7 @@ def _run_subprocess_tree(
     else:
         creationflags = 0
 
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stdin=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-        creationflags=creationflags,
-    )
+    proc = _popen_with_retry(cmd, creationflags)
     try:
         out, err = proc.communicate(timeout=timeout)
         return proc.returncode, out or "", err or "", False
