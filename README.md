@@ -1,10 +1,9 @@
 <p align="center">
-  <img src="docs/branding/janissary-horizontal.svg" alt="JANISSARY" width="480">
+  <img src="docs/branding/janissary-banner.png" alt="JANISSARY - Signal Over Noise." width="800">
 </p>
 
 <p align="center">
-  <strong>SIGNAL OVER NOISE.</strong><br/>
-  Differential DAST for teams who need results they can trust.
+  <img src="docs/branding/janissary-profile-avatar-512.png" alt="JANISSARY Emblem" width="96">
 </p>
 
 <p align="center">
@@ -13,15 +12,14 @@
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/source-7.11.1-D4AF37" alt="Source version"></a>
   <a href="https://pypi.org/project/janissary/"><img src="https://img.shields.io/badge/pypi-7.10.2-4B5057" alt="PyPI"></a>
   <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.922-D4AF37" alt="OWASP F1"></a>
-
 </p>
 
-—
+---
 
 > [!CAUTION]
 > **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By running any network command you accept the [Terms of Use](LEGAL.md). Review with `janissary terms show`.
 
-—
+---
 
 ## Why JANISSARY
 
@@ -61,73 +59,34 @@ HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run. OpenAPI
 | **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
 | **Install** | `pip install janissary` (7.10.2) or clone for the 7.11.x line |
 
-## What it does
+## Detection and capability matrix
 
-| Area | Capability | Status |
+| Capability | Public status | Documentation |
 |---|---|---|
-| **Injection** | SQL injection (error, UNION, blind) · reflected XSS · command injection | ✅ shipped |
-| | XPathi error and result-row detection paths | ⚠️ implemented; benchmark coverage not established |
-| **Out-of-band** | SSRF via collaborator (Burp Pro / interactsh / interact.sh) · [docs](docs/ssrf.md) | ✅ shipped |
-| | Cloud metadata SSRF (AWS / GCP / Azure) via response markers | ✅ shipped |
-| **Path traversal** | Content-signature differential | ⚠️ partial (recall 0.075) |
-| **API** | OpenAPI 3.0.x and Swagger 2.0 import, operation dispatch and dry-run enumeration | ✅ shipped |
-| **Access control** | Cross-identity IDOR response comparison | ⚠️ candidate-only; not independently verified |
-| **Recon** | CMS and technology fingerprinting · 18-platform admin probe | ✅ shipped |
-| **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket | ✅ shipped |
-| **Additional checks** | Host-header bypass checks · heuristic scan mode | ✅ shipped |
-| **Orchestration** | Agent: fingerprint → WAF → KB → modules → findings | ✅ shipped |
-| **Reporting** | Text · JSON · JSONL · SARIF 2.1.0 · HTML · PDF | ✅ shipped |
-| **Opt-in attack** | UNION extractor · Nuclei runner (both gated) | ✅ shipped |
-| **Gaps** | JWT · prototype pollution | ❌ not implemented |
+| Differential HTTP scanning | Implemented | Baselines and verification |
+| OpenAPI 3.0.x | Implemented | Operation-level scanning |
+| Swagger 2.0 | Implemented | Supported import |
+| SQL injection | Implemented | Detection classes and limits |
+| XSS | Implemented | Supported detection paths |
+| XPath injection | Implemented | Avoid broad coverage claims |
+| Command injection | Implemented | Available detection |
+| Path traversal | Partial | Prominently disclose weak recall |
+| SSRF | Partial | OOB and metadata-marker scope |
+| GraphQL | Separate integration | Not automatic in every scan |
+| WebSocket | Separate integration | Explicit invocation required |
+| IDOR | Discovery candidates | Two identities, manual assessment |
+| Host-header bypass | Discovery candidates | Separate from verified findings |
+| Heuristic discovery | Discovery path | --heuristic and candidate status |
+| Attack subcommands | Explicit opt-in | Separate from standard DAST |
+| JWT / prototype pollution | Not yet supported | Out of implied coverage |
 
 ## Architecture
 
+<p align="center">
+  <img src="docs/branding/janissary-architecture-diagram.png" alt="JANISSARY Engine Core - Expanded Structural Map" width="100%">
+</p>
+
 JANISSARY separates discovery from verification. Discovery identifies behaviours worth investigating; the verification boundary determines whether a candidate qualifies as a verified finding. Some observations are retained as unproven candidates without passing through that boundary.
-
-Where a workflow routes through the `VerificationEngine`, the configured confirmer order is: Corroborator -> WebSocket -> GraphQL -> Heuristic -> IDOR -> AnalyzerImplicit. Specific unproven-classifying confirmers run before the unconditional fallback. The order matters: a later confirmer cannot override an earlier one's classification.
-
-OpenAPI import is an input and dispatch path. The importer supports OpenAPI 3.0.x and Swagger 2.0, enumerates operations, and resolves local and external `$ref` chains in path-item and parameter entries. It does not resolve every possible reference location. Normal execution dispatches imported operations to the HTTP scanner; `--dry-run` only enumerates targets. OpenAPI scans do not automatically run the separate GraphQL, WebSocket, host-bypass, heuristic or IDOR phases.
-
-```mermaid
-flowchart TD
-    CLI["CLI orchestration"]
-    CLI --> URL["Direct URL scan"]
-    CLI --> SPEC["OpenAPI importer"]
-    SPEC --> REF["Supported local / external $ref resolution"]
-    REF --> OPS["Operation targets"]
-    URL --> HTTP["HTTP scanner"]
-    OPS --> HTTP
-    CLI --> RECON["Recon and WAF pacing"]
-    RECON -.-> HTTP
-    HTTP --> DIFF["Differential detection"]
-    HTTP --> ORACLE["Specialised signals: blind SQLi, traversal collapse, LFI, SSRF"]
-    CLI --> GQL["GraphQL"]
-    CLI --> WS["WebSocket"]
-    CLI --> HB["Host bypass"]
-    CLI --> HEUR["Heuristics"]
-    CLI --> IDOR["Cross-identity IDOR"]
-    DIFF --> CAND["Candidates"]
-    ORACLE --> CAND
-    GQL --> CAND
-    WS --> CAND
-    HEUR --> CAND
-    IDOR --> DIRECT
-    CAND --> VE["VerificationEngine"]
-    VE --> CONF["Ordered confirmer chain"]
-    CONF --> V["Verified findings"]
-    CONF --> U["Unproven candidates"]
-    HB --> DIRECT["Direct unproven retention"]
-    DIRECT --> U
-    V --> OUT["Output writers"]
-    U --> OUT
-    OUT --> FORMATS["Text / JSON / JSONL / SARIF / HTML / PDF"]
-```
-
-The `VerificationEngine` is the production boundary for candidates routed through it. Its confirmer chain can accept a candidate as verified, retain it as unproven, or reject it. A `FailedVerification` is an engine result, not a third finding status. Host-bypass observations can be retained directly as unproven candidates.
-
-`verified` means a configured confirmer accepted the candidate under JANISSARY's rules; it is not a guarantee of independent exploitability. IDOR comparisons are candidate-only: two successful responses with identical bodies or body lengths within 5% do not prove that the resource should have been inaccessible.
-
-Specialised detection paths include blind SQLi, traversal response collapse, LFI content injection and SSRF response behaviour. HTML structural comparison uses selectolax and a 64-bit SimHash over tag shingles, with mmh3 when available and a blake2b fallback. These mechanisms do not imply uniform coverage across vulnerability classes.
 
 ## See it work
 
@@ -185,47 +144,37 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 
 ---
 
-## Benchmark
+## Benchmark results and methodology
 
-> [!IMPORTANT]
-> **Measurement status (Amendment 29).** The current DAST-applicable headline is **F1 0.922** (TP 988 / FP 0 / FN 168), from a single complete **v7.11.1 baseline-only** run at harness commit `ea7b3e5` (post-M80). It clears the registered `--min-f1 0.92` gate by 0.002. An FN-recovery rescan at `JANISSARY_TIMEOUT=180` added 0 findings; the residual 168 FN comprise 123 path-traversal cases and 45 cases across weakrand (16), securecookie (8), trustbound (16), and cmdi (5). The recovery rescan covered 146 DAST false negatives; 22 cases were mode-skipped before scanning, so zero new findings does not mean all 168 residual cases were rescanned (see [`docs/pathtraver.md`](docs/pathtraver.md)). The supported-classes supplemental at v7.11.1 is **F1 0.978**. The historical **v7.3.0 recovered headline was F1 0.921** (TP 987) and required a second recovery pass to reach the same level the current version achieves at baseline. Real-world false-positive rate, locked held-out precision, and independent external reproduction remain unclaimed. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+### Primary benchmark — DAST-applicable corpus
 
-| Metric | Value | Notes |
-|---|---|---|
-| **F1 (v7.11.1 baseline-only, single run)** | **0.922** | Clears registered gate 0.92 by 0.002 |
-| **Precision** | **1.000 (0 FP)** | OWASP DAST-applicable corpus, all committed runs to date |
-| **Recall (v7.11.1)** | **0.855** | TP 988 / FN 168 (DAST-applicable) |
-| **TP / FP / FN / TN (v7.11.1)** | 988 / 0 / 168 / 1102 | DAST-applicable, baseline-only |
-| F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings across 146 of 168 rescanned DAST FNs (22 mode-skipped before scan) at v7.11.1 |
-| F1 (supported-classes, excl. path-traversal) | 0.978 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
-| **Historical v7.3.0 recovered F1** | **0.921** | TP 987; required FN-recovery pass to achieve |
-| Historical 3-run unassisted F1 (v7.3.0) | 0.903 ± 0.009 | Last 3-run protocol measurement was v7.5.0 (0.906 ± 0.002) |
-| Categories at F1 = 1.000 | 20 | Of 33 DAST-applicable categories |
+**0.922** F1 score | **1.000** Precision | **0.855** Recall
 
-Reproduce:
+| Measure | Result |
+|---|---|
+| True positives | 988 |
+| False positives | 0 |
+| False negatives | 168 |
+| True negatives | 1,102 |
+| DAST-applicable cases | 2,258 |
 
-```bash
-# Score the committed v7.11.1 measurement without rerunning it:
-python benchmark/track_a/score_dast_aware.py \
-    benchmark/track_a/runs/20261112T180530Z-janissary-r1
+*Single baseline-only run. Benchmark precision is not a claim of zero false positives in real-world deployments.*
 
-# For a fresh run, copy the example configuration and edit it:
-cp benchmark/track_a/tools.env.example benchmark/track_a/tools.env
-# Set JANISSARY_TIMEOUT=60 and TARGET_VERSION=20cbf3d in tools.env.
+### Supplemental benchmark — supported classes
 
-# Run against the benchmark target; the runner prints the new run directory:
-python -m benchmark.track_a.runner \
-    --tool janissary --run-number 1 \
-    --target-base http://127.0.0.1:8080/benchmark \
-    --cases-csv benchmark/track_a/case_vectors.csv \
-    --tools-env benchmark/track_a/tools.env
+**0.978** F1 score | **1.000** Precision
 
-# Score the exact directory printed by the runner above:
-RUN_DIR="paste-the-exact-run-directory-printed-by-the-runner"
-python benchmark/track_a/score_dast_aware.py "$RUN_DIR"
-```
+Path traversal is excluded from this supplemental scope. This is not the all-DAST-applicable headline score.
 
-### What this measurement does and does not claim
+### Path traversal disclosure
+
+Path traversal detection is implemented, including a paired-probe existence oracle and verification through the normal finding boundary. However, measured recall on the current OWASP Benchmark path-traversal corpus is low (0.075). Path traversal remains included in the DAST-applicable headline score and is excluded from the supplemental supported-classes score, as defined by ADR-027. These scopes are reported separately to avoid obscuring the limitation.
+
+### Benchmark qualifications
+
+The headline result comes from a single baseline-only run. The `.922` result clears the registered `.92` gate by a narrow margin. The `.978` result uses a different scoring scope. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
+
+## What this measurement does and does not claim
 
 - ✅ **Measured on v7.11.1** (2026-11-13, commit `ea7b3e5`, post-M80): single complete baseline-only corpus run, 0 FP, F1 0.922, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261112T180530Z-janissary-r1/`.
 - ✅ **Historical recovered headline:** v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The v7.11.1 baseline matches this level with recovery adding 0 findings across 146 of the 168 residual DAST false negatives; 22 cases were mode-skipped before scanning and remain structurally unreachable at any timeout — the improvement from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
@@ -235,21 +184,28 @@ See [`LIMITATIONS.md`](LIMITATIONS.md) for what JANISSARY can and cannot prove. 
 
 ---
 
-## Install
+## Installation
 
+There are three supported installation methods. Choose the one that fits your use case. Do not execute them sequentially.
+
+### PyPI (recommended for ordinary use)
 ```bash
-# PyPI releases are at 7.10.2. The 7.11.x line (WebSocket, host-bypass,
-# heuristics, SARIF two-run, tri-session auth, IDOR, crAPI, SSRF metadata)
-# is on git main, not yet on PyPI.
 pip install janissary
-
-# For the 7.11.x line:
-git clone https://github.com/Hetaireia/janissary.git
-cd janissary
-pip install -e .
 ```
 
----
+### Git (development and unreleased functionality)
+```bash
+git clone https://github.com/Hetaireia/janissary.git
+cd janissary
+pip install -e ".[dev]"
+```
+
+The 7.11.x line (WebSocket, host-bypass, heuristics, SARIF two-run, tri-session auth, IDOR, crAPI, SSRF metadata) is on git main. PyPI and Docker versions may not contain all main-branch features.
+
+### Docker (isolated container deployment)
+```bash
+docker pull janissary/janissary:latest
+```
 
 ## Quickstart
 
@@ -360,22 +316,30 @@ Both JSON and JSONL preserve the verified/candidate distinction. The JSON envelo
 
 ---
 
-## Attack modules
+## Optional integrations and advanced workflows
 
-The `attack` subcommands are opt-in. They require `--attack-confirm` in addition to the Terms-of-Use gate. Neither alone is enough.
+JANISSARY supports several integrations and attack workflows that are explicitly invoked and not part of the standard DAST quickstart.
 
-- **`attack sqli-union`** — extracts DBMS version, current database, database list, and table list from a vulnerable parameter. Hard limits: 32 columns, 100 rows, 64 KB. Aborts on instability.
-- **`attack nuclei`** — shells out to the Nuclei binary, streams JSONL, parses findings. Requires an explicit template list; refuses to run Nuclei's default set.
+### GraphQL
+Requires explicit invocation. Tests real-time API introspection and injection flaws.
 
-## Agent
+### WebSocket
+Requires explicit invocation and payload input. Tests real-time communication channels.
 
-The `agent` command ties the recon modules together: fingerprint, detect WAF, consult the platform knowledge base, run applicable modules, persist findings.
+### Host-header bypass
+Runs discovery-based checks for Host header injection and routing bypasses. Retains findings as unproven candidates.
 
+### IDOR
+Requires two identities (--idor). Emits unproven candidates based on cross-identity response comparisons. Does not establish whether a resource is legitimately public. Manual assessment is required.
+
+### Heuristic discovery
+Uses --heuristic to enable broader discovery paths. Outputs unproven candidates.
+
+### Attack subcommands
 ```bash
-janissary agent https://target.example --attack-confirm
+janissary attack sqli-union -u "https://target.example/?id=1" --attack-confirm
+janissary attack nuclei -u "https://target.example" -t templates/ --attack-confirm
 ```
-
----
 
 ## What JANISSARY is not
 
@@ -388,18 +352,17 @@ Being explicit about scope is part of being honest about precision:
 
 ---
 
-## Known Limitations
+## Known limitations
 
 *Honesty over assumptions. These are actively tracked, known issues.*
 
-- **SPA Catch-All False Positives (Issue #1).** Applications returning HTTP 200 for arbitrary routes can trigger the admin-panel probe's initial status-code classifier. The probe runs a structural DOM differential against the root page (ADR-005 gated corroborator: `root_fingerprint` + hamming-distance threshold + `root_signature_match`) before emission — candidates failing the structural gate are discarded. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate but which are not actual admin panels. No React/Angular/Vue regression corpus exists yet (L01 remaining gap).
-- **Mid-scan auth expiry (ADR-010).** Two consecutive 401 responses *when auth is configured* abort the scan with `scan_incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth_required` output state — structured `ScanSummary.auth_state` is emitted (`unknown`/`authenticated`/`unauthenticated`/`expired`/`recovery_failed`) and rendered on abort; no `AuthStateManager` (health checks, reauth, OAuth2 refresh) exists yet, so an `expired` session cannot return to `authenticated`.
-- **Framework-specific SQLi (L03) is not implemented.** JANISSARY recognises database error patterns across multiple SQL dialects, but does not yet provide ORM profiles, dialect-keyed payload selection or framework-specific delivery-path analysis. The failure-classification design and run-level record schema are documented in [`docs/l03_sqli_classification.md`](docs/l03_sqli_classification.md) and [`docs/l03_sqli_record_schema.md`](docs/l03_sqli_record_schema.md). The SQLi-specific record producer and final measurement-protocol implementation remain future work.
-- **Path traversal — partial, recall 0.075** (per-subcategory F1 0.049—0.308). Scored in the DAST-applicable metric (0.922 headline); excluded from the supported-classes metric (0.978) per ADR-027 D8 amended (2026-11-05). Content-signature gates exist but are narrow. Documented in [`docs/pathtraver.md`](docs/pathtraver.md) as a property of the benchmark target.
-- **SSRF payload scope.** Nine payloads ship today: five OOB via collaborator (`ssrf_http`, `ssrf_https`, `ssrf_gopher`, `ssrf_dict`, `ssrf_dns_only`) and four cloud-metadata via response-body markers (`ssrf_metadata_aws`, `ssrf_metadata_aws_v6`, `ssrf_metadata_gcp`, `ssrf_metadata_azure`). The `file://` payload remains deferred; confidence-aware OOB attribution is not implemented (L05 remaining gap). See [`docs/ssrf.md`](docs/ssrf.md).
-- **IDOR candidate detection.** The `--idor` workflow requires two identities and emits unproven candidates based on cross-identity response comparisons. It does not establish whether a resource is legitimately public. Public-resource candidates are intentionally retained for analyst triage; no automatic suppression heuristic is applied (ADR-031). Manual assessment is required.
-
----
+1. **Path traversal**: weak measured recall (0.075). Detection is implemented, but measured recall on the current corpus is low. Included in DAST-applicable and excluded from supported-classes.
+2. **SPA catch-all behaviour**: possible false positives. The probe runs a structural DOM differential against the root page before emission. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate.
+3. **Authentication expiry**: two consecutive 401 responses (when auth is configured) abort the scan. No automatic token refresh or OAuth2 recovery exists yet.
+4. **Framework-specific SQL injection**: recognises database error patterns, but framework-specific profiles and delivery-path analysis remain future work.
+5. **SSRF**: current OOB and metadata-marker coverage. The file:// payload remains deferred; confidence-aware OOB attribution is not implemented.
+6. **IDOR**: candidate-only discovery, two-identity requirement and manual assessment. No automatic suppression heuristic is applied (ADR-031).
+7. **Completeness semantics**: `scan_complete=true` means no tracked incomplete condition was observed; it does not mean every possible attack vector was tested.
 
 ## Contributing
 

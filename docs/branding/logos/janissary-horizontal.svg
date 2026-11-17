@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="300" viewBox="0 0 1400 300">
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7D989"/><stop offset=".48" stop-color="#D4AF37"/><stop offset="1" stop-color="#A8791D"/></linearGradient>
+ <linearGradient id="platinum" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#BFC3C8"/></linearGradient>
+ 
+</defs><g transform="translate(20 70) scale(2.2)"><path d="M50 7 L78 25 L78 82 L50 98 L22 80 L22 63 L39 52 L39 68 L50 75 L61 68 L61 35 L50 28 L33 40 L33 24 Z" fill="url(#gold)" fill-rule="evenodd"/><path d="M50 7 L61 14 L61 68 L50 75 L50 98 L78 82 L78 25 Z" fill="#0B0B0F" opacity=".16"/></g>
+<text x="290" y="168" fill="url(#gold)" font-family="Montserrat, Arial, sans-serif" font-size="100" font-weight="700" letter-spacing="13">JANISSARY</text>
+<path d="M294 212 H430 M1060 212 H1190" stroke="#D4AF37" stroke-width="2"/>
+<text x="742" y="226" text-anchor="middle" fill="#EBEBEB" font-family="Inter, Arial, sans-serif" font-size="27" letter-spacing="12">SIGNAL OVER NOISE</text></svg>
