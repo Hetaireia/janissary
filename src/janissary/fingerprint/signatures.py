@@ -3,11 +3,14 @@
 All matchers return (value, confidence, evidence) or None.
 Conflicting strong signals of the same family resolve to "Ambiguous",
 never to first-match-wins. Weak signals never override strong ones.
+Front-proxy suppression: when Server advertises a generic HTTP server
+(nginx) and evidence of a downstream app or CDN exists, the Server
+describes the proxy, not the origin; returns None.
 """
 
 from __future__ import annotations
 
-# Confidence thresholds
+# Confidence threshold above which a label is considered "strong"
 STRONG = 0.80
 
 
@@ -20,16 +23,8 @@ def _hdr(headers: dict[str, str], name: str) -> str:
     return ""
 
 
-def _resolve(
-    strong: list[tuple[str, float]], weak: list[tuple[str, float]], evidence: list[str]
-):
-    """Resolve candidate list into (value, confidence, evidence).
-
-    - Two or more strong candidates with different values => Ambiguous.
-    - One strong candidate => that value at its confidence.
-    - Only weak candidates => highest weak candidate.
-    - No candidates => None.
-    """
+def _resolve(strong: list[tuple[str, float]], weak: list[tuple[str, float]], evidence: list[str]):
+    """Resolve candidate list into (value, confidence, evidence)."""
     strong_labels = {v for v, _ in strong}
     if len(strong_labels) > 1:
         return "Ambiguous", 0.50, evidence
@@ -42,31 +37,71 @@ def _resolve(
 
 
 def match_server(headers: dict[str, str]):
-    """Identify HTTP server software from the Server header."""
+    """Identify HTTP server software from Server header and WAF markers.
+
+    Front-proxy suppression: if the Server header advertises nginx and
+    there is evidence of a downstream app (X-Powered-By non-PHP or
+    X-Runtime) or a CDN hop (Via or X-Served-By), return None — the
+    Server is the front proxy, not the origin.
+
+    WAF headers (CF-RAY, X-Akamai-Transformed) also contribute to server
+    identity. Two conflicting WAF markers => Ambiguous.
+    """
     srv = _hdr(headers, "Server").strip()
-    if not srv:
+    evidence: list[str] = []
+    candidates: list[tuple[str, float]] = []
+
+    if srv:
+        evidence.append(f"Server: {srv}")
+        low = srv.lower()
+        server_table = [
+            ("cloudflare", ("cloudflare",), 0.95),
+            ("akamai", ("akamaighost", "akamai"), 0.95),
+            ("aws-alb", ("awselb",), 0.95),
+            ("iis", ("microsoft-iis",), 0.90),
+            ("nginx", ("nginx",), 0.90),
+            ("apache", ("apache",), 0.90),
+            ("caddy", ("caddy",), 0.90),
+            ("litespeed", ("litespeed",), 0.90),
+            ("openresty", ("openresty",), 0.90),
+            ("gunicorn", ("gunicorn",), 0.90),
+            ("uvicorn", ("uvicorn",), 0.90),
+            ("werkzeug", ("werkzeug",), 0.90),
+        ]
+        for label, needles, conf in server_table:
+            if any(n in low for n in needles):
+                candidates.append((label, conf))
+                break
+
+    cf_ray = _hdr(headers, "CF-RAY")
+    cf_status = _hdr(headers, "CF-Cache-Status")
+    if cf_ray or cf_status:
+        candidates.append(("cloudflare", 0.95))
+        if cf_ray:
+            evidence.append(f"CF-RAY: {cf_ray}")
+
+    ak = _hdr(headers, "X-Akamai-Transformed") or _hdr(headers, "Akamai-Grn")
+    if ak:
+        candidates.append(("akamai", 0.95))
+        evidence.append("Akamai header present")
+
+    if not candidates:
         return None
-    low = srv.lower()
-    strong_table = [
-        ("cloudflare", ("cloudflare",), 0.95),
-        ("akamai", ("akamaighost", "akamai"), 0.95),
-        ("aws-alb", ("awselb",), 0.95),
-        ("iis", ("microsoft-iis",), 0.90),
-        ("nginx", ("nginx",), 0.90),
-        ("apache", ("apache",), 0.90),
-        ("caddy", ("caddy",), 0.90),
-        ("litespeed", ("litespeed",), 0.90),
-        ("openresty", ("openresty",), 0.90),
-        ("gunicorn", ("gunicorn",), 0.90),
-        ("uvicorn", ("uvicorn",), 0.90),
-        ("werkzeug", ("werkzeug",), 0.90),
-    ]
-    strong: list[tuple[str, float]] = []
-    for label, needles, conf in strong_table:
-        if any(n in low for n in needles):
-            strong.append((label, conf))
-    evidence = [f"Server: {srv}"]
-    return _resolve(strong, [], evidence)
+
+    distinct = {c[0] for c in candidates}
+    if len(distinct) > 1:
+        return "Ambiguous", 0.50, evidence
+
+    label, conf = candidates[0]
+
+    if label == "nginx":
+        xpb = _hdr(headers, "X-Powered-By").lower()
+        has_downstream_app = bool(xpb and "php" not in xpb) or bool(_hdr(headers, "X-Runtime"))
+        has_cdn_hop = bool(_hdr(headers, "Via") or _hdr(headers, "X-Served-By"))
+        if has_downstream_app or has_cdn_hop:
+            return None
+
+    return label, conf, evidence
 
 
 def match_framework(headers: dict[str, str]):
@@ -99,16 +134,16 @@ def match_framework(headers: dict[str, str]):
     if cookie:
         if "connect.sid" in cookie:
             evidence.append("Set-Cookie: connect.sid")
-            weak.append(("express", 0.78))
+            weak.append(("express", 0.75))
         if "csrftoken" in cookie or "django" in cookie:
             evidence.append("Set-Cookie: csrftoken")
-            weak.append(("django", 0.78))
+            weak.append(("django", 0.75))
         if "_rails_session" in cookie or "_session_id" in cookie:
             evidence.append("Set-Cookie: rails session")
-            weak.append(("rails", 0.78))
+            weak.append(("rails", 0.75))
         if "php" in cookie:
             evidence.append("Set-Cookie: php session")
-            weak.append(("php", 0.72))
+            weak.append(("php", 0.70))
 
     return _resolve(strong, weak, evidence)
 

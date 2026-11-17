@@ -32,7 +32,7 @@ Four distinct meanings, not four colours. A row may change status tier without c
 | IDOR | 🟡 Discovery candidates | Candidate-only per ADR-031; two identities required; manual triage |
 | Host-header ACL bypass | 🟡 Discovery candidates | Bypasses VerificationEngine by design (ADR-030 Rule 1) |
 | Heuristic discovery | 🩵 Discovery path | `--heuristic` required; always candidate-only |
-| WAF fingerprinting | 🟢 Implemented — vendor table | Passive-passive layer lands at M109 (B-8); amend this row in that commit |
+| WAF fingerprinting | 🟢 Implemented | Active probe detections (10 vendor table) plus passive header-based classifier at M109 (B-8): Cloudflare, Akamai, Imperva detectable from response headers alone |
 | GraphQL | 🟣 Separate integration | Explicit invocation; discovery + fuzzing primitives |
 | WebSocket | 🟣 Separate integration | Explicit invocation; payload input required |
 | Attack subcommands | 🔵 Explicit opt-in | `--attack-confirm` required; separate from standard DAST |
