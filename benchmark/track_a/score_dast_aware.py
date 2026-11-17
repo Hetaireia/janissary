@@ -165,7 +165,7 @@ if __name__ == "__main__":
     ap.add_argument(
         "--cases-csv",
         default="benchmark/track_a/case_vectors.csv",
-        help="Case vectors CSV (default: full 2,258-case corpus)",
+        help="Case vectors CSV (default: full 2,740-case corpus; 2,258 DAST-applicable after exclusions)",
     )
     ap.add_argument(
         "--min-f1",
