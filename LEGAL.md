@@ -12,3 +12,6 @@ JANISSARY is a dual-use application security assessment tool designed for defens
 
 ## 4. Enterprise Commercial Terms
 Organizations deploying **JANISSARY Enterprise** modules or the **JANISSARY Control Plane** are governed by their executed Master Subscription Agreement (MSA).
+
+## 5. Commercial Indemnity
+Enterprise commercial agreements may include specific indemnity provisions as defined in the executed Master Subscription Agreement.
