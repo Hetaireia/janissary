@@ -15,3 +15,6 @@ Organizations deploying **JANISSARY Enterprise** modules or the **JANISSARY Cont
 
 ## 5. Commercial Indemnity
 Enterprise commercial agreements may include specific indemnity provisions as defined in the executed Master Subscription Agreement.
+
+## 6. Export Control
+JANISSARY is subject to export control regulations. Users are responsible for compliance with all applicable export control laws and regulations, including but not limited to the U.S. Export Administration Regulations (EAR) and International Traffic in Arms Regulations (ITAR).
