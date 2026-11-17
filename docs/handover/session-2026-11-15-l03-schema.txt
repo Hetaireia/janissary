@@ -1,0 +1,151 @@
+JANISSARY — Session Handover (2026-11-15)
+
+Supersedes: docs/handover/session-2026-11-13c.txt (committed at 6da563c)
+Session close: 2026-11-15
+Repo: C:\Users\M5 E60\janissary-project\janissary
+HEAD == local main == d175620
+origin/main == e16811c (one commit ahead locally; no push authorised)
+
+================================================================================
+1. Commits shipped this session
+================================================================================
+
+| SHA     | Message                                                    | Scope            | Status |
+|---------|------------------------------------------------------------|------------------|--------|
+| e16811c | test(harness): verify M83 paired-probe recorder evidence   | 2 files, +44/-5  | pushed |
+| 8b88958 | docs(l03): decide record shape, baselines, reproducibility | 2 files, +58/-20 | pushed |
+| d175620 | docs(l03): define run-level reproducibility evidence       | 1 file, +163/-17 | LOCAL  |
+
+e16811c — M83 paired-probe evidence tests. Strengthens tests/unit/test_harness_pathtraver_recorder.py (7 assertions: exists/noexist body mapping, body_original_length, evidence_hash presence and distinctness) and tests/integration/test_harness_e2e.py (replaces found_raw boolean with JSONL parsing, paired-record filter, six per-probe field checks, two body-content assertions, hash-distinctness). No production code touched.
+
+8b88958 — L03 record shape, baselines, reproducibility decisions. docs/l03_sqli_classification.md (§11 superseded, points at schema) and docs/l03_sqli_record_schema.md (payload_name, dialect, baseline_id, category value sqli-00, per-attempt/reproducibility separation, §7.1-7.4 DECIDED, §8 criteria 9-14).
+
+d175620 — L03 run-level reproducibility evidence. One file only, docs/l03_sqli_record_schema.md, the six changes described in section 2.
+
+================================================================================
+2. The six schema-amendment changes (committed as d175620)
+================================================================================
+
+All in docs/l03_sqli_record_schema.md.
+
+Change 1 — §4 intro prose fix
+  "cross-attempt reproducibility" becomes "cross-run reproducibility".
+
+Change 2 — §4 reserved-fields note (OP.9)
+  Inserts a reserved-fields paragraph before "### 4.1 observations[] and role" stating that delivery.delivered, delivery.request_method, delivery.request_path, delivery.payload_observed, and delivery.delivery_status have no SQLi producer and are marked NOT CURRENTLY POPULATED BY THE SQLi IMPLEMENTATION. Only delivery.payload_verbatim has a producer, and only in the pathtraver harness (harness/pathtraver.py:239), not on the SQLi path. The fields must not participate in classification or reproducibility until a producer exists.
+
+Change 3 — §4.2 prose fix
+  "cross-attempt reproducibility ... attempts" becomes "cross-run reproducibility ... runs", plus:
+  "Attempts are reconciled within a run before runs are compared (§4.4); 'attempt' and 'run' are not interchangeable counting units."
+
+Change 4 — §4.4 full section replacement
+  Old section (baselines.jsonl and reproducibility summary, ~20 lines) replaced with an expanded §4.4 carrying:
+  - baselines.jsonl keyed by baseline_id = sha256(run_id|target|param)[0:16]; run and parameter part of identity so a baseline from one run is never silently reused for another. Blind oracle carries baseline_id: null.
+  - Run identity and independence contract: distinct run_id, matching target and config_hash, baseline collection where applicable (quote oracle only; blind has no baseline), run completion recorded. A qualifying run counts regardless of whether every evidence boolean was collected.
+  - Replay detection: replaying under a retained run_id produces no new qualifying run; existing runs_observed does not increment. A copied run directory assigned a fresh run_id is indistinguishable from a genuinely new run by the schema's mechanisms — independence is an assertion of the schema's rules, not a cryptographic proof of execution history.
+  - config_hash: SHA-256 over canonicalised configuration dimensions (payload set, MIN_TIMING_DELTA / MIN_TIMING_Z / MIN_SLEEP_FLOOR / BAND_SLACK, oracle enablement flags, authentication config). Manifest carries config_hash, config_hash_algorithm, config_hash_inputs.
+  - reproducibility_summary.jsonl: one record per composite identity (target, category, dialect, oracle, param, payload_pair), scoped to exactly one config_hash. summary_id = sha256(target|category|dialect|oracle|param|payload_pair|config_hash)[0:16]. run_id is NOT part of the key; the summary groups evidence across runs.
+  - runs_observed = len(qualifying_runs), never derived from evidence-field population.
+  - Per-evidence field carries: five-state state (confirmed-true, confirmed-false, disagreed, disagreed-within-run, unobserved), conditions array (not-probed, partial-observation, within-run-disagreement, cross-run-disagreement), partial flag, run_values as string values (never booleans), disagreement_runs, unobserved_runs, and four attempt counters (attempts_total, attempts_observed, attempts_true, attempts_false, attempts_unobserved).
+  - Four-counter identities: attempts_total = attempts_observed + attempts_unobserved; attempts_observed = attempts_true + attempts_false.
+  - Two kinds of unobserved distinguished: not-probed (attempts_total 0, attempts_unobserved 0) and probed-not-collected (attempts_total N > 0, attempts_unobserved N). Both produce run value "unobserved" and set partial: true; only the second sets the partial-observation condition.
+  - No aggregate confirmed field. Per-field state is authoritative. summary_conditions is a reporting-level array (insufficient-runs, not-probed, partial-observation, within-run-disagreement, cross-run-disagreement) permitting coexisting conditions.
+  - Authority and reading: consumer reads state, conditions, and summary_conditions together; "confirmed-false" with "insufficient-runs" is a negative observation from too few runs, not a settled result.
+
+Change 5 — §7 heading rename plus three OPEN items
+  "## 7. Open items" becomes "## 7. Decisions and open items".
+  7.5 (case_selection.json placement, OPEN), 7.6 (channel-combination scope, OPEN), 7.7 (classification field meaning in per-attempt records, OPEN) added as new items after 7.4.
+
+Change 6 — §8 criterion 8 rename plus criteria 15-20
+  "8. Open items named before implementation — §7" becomes "8. Decisions and open items recorded — §7".
+  Criteria 15-20 added: run_id on per-attempt records not in summary key; independence contract with qualifying_runs as source of truth; five-state evidence with conditions array and four-counter identities; no aggregate confirmed, summary_conditions permits coexisting conditions; config_hash on manifest with algorithm and inputs; delivery.* marked reserved/not populated.
+
+Confirmed decisions behind the six changes:
+
+§7.1 — One JSONL record per attempt; attempt field 1-indexed; retries retained, not collapsed. Reproducibility aggregation moves to a separate summary file. DECIDED 2026-11-15.
+
+§7.2 — Shared baselines.jsonl, keyed by baseline_id; records carry top-level baseline_id reference. The baseline hash is integrity checking, not replacement for the referenced evidence. DECIDED 2026-11-15.
+
+§7.3 — Shared extracted comparison helper; oracle and recorder call the same function. The implementation ticket includes the oracle refactor. DECIDED 2026-11-15.
+
+§7.4 — Full benchmark sub-category (sqli-00, sqli-01, ...), matching M83's pathtraver-00 convention. DECIDED 2026-11-15.
+
+OP.1 — N = 3 (conservative operational choice, not a mathematical minimum). Under the all-agree rule, N >= 2 can detect disagreement. N = 3 is a conservative choice that tightens against intermittent instability at small additional cost; N > 3 can detect intermittent instability more reliably. The choice is a policy decision, not a mathematical derivation. No contradicting constant in src/ (grep for runs_required/MIN_SAMPLES/MIN_RUNS/num_runs returned only schema text).
+
+OP.2 — Neutralisation not currently adjudicable. WAF detection runs before payload scanning in scanner.py and informs pacing and final summary only; its profile is not consumed by the SQLi evidence-processing path. No SQLi producer exists for delivery.delivered, delivery.request_method, delivery.request_path, delivery.payload_observed, or delivery.delivery_status (the only producer of delivery.payload_verbatim is in the pathtraver harness, not on the SQLi path). Neutralised is reserved, not inferred. Absence of a finding must not be interpreted as neutralisation.
+
+OP.9 — delivery block marked NOT CURRENTLY POPULATED, retained as reserved design intent.
+
+================================================================================
+3. Open items (blockers for measurement protocol, not for schema)
+================================================================================
+
+OP.3 — case_selection.json placement (schema §7.5, OPEN)
+  The measurement protocol requires a per-run enumerated case list (case_selection.json, mirroring m83_scope.md §8 step 2). Whether this is a protocol-level run artifact or a schema-level artifact is undecided.
+
+OP.5 — channel-combination scope (schema §7.6, OPEN)
+  Scope over which evidence from different channels may be combined into one classification verdict — which attempts/observations share a classification unit, and whether one channel's "disagreed" blocks another channel's "confirmed-true" — is undecided. Protocol-level (Phase D).
+
+OP.7 — classification field meaning in per-attempt records (schema §7.7, OPEN)
+  Whether a per-attempt record's classification field is an attempt-local observation or a resolved classification, and whether the authoritative adjudication is written to a separate Phase D artifact, is undecided. Until resolved, the field is attempt-local only and must not be read as final.
+
+================================================================================
+4. Untracked file (deliberately excluded)
+================================================================================
+
+tests/integration/test_openapi_http.py
+
+Untracked since before this session. Deliberately excluded from both L03 commits. Purpose and disposition not reviewed. Must remain untracked until a separate decision. Not part of any approved scope.
+
+================================================================================
+5. Operational lessons
+================================================================================
+
+Lesson 1 — Markdown triple-backtick sequences truncate the paste
+  A here-string containing three consecutive backtick characters anywhere in its body can be truncated mid-paste by the terminal at that point, regardless of overall length. Observed twice this session: a ~2600-byte block with single backticks succeeded; a ~230-byte block containing a fenced code marker failed at the fence with Ctrl+C, leaving a partial continuation state.
+  Remedy: avoid triple-backtick in source entirely (use 4-space indented blocks for multi-line code; single-backtick inline for short expressions), or construct the fence programmatically via $fence = ([string][char]0x60) * 3 and Add-Content -Value $fence. Every future multi-line Markdown write through this terminal should assume triple-backtick truncation.
+
+Lesson 2 — wsl bash -c silent-return
+  A wsl bash -c "cd ... && cmd1 && cmd2" chain with more than one output-producing command can return to prompt with zero output, no error, no visible exit code. Observed five times this session (pytest, git log, wc -l && sed, schema diff, WAF grep piped to head).
+  Remedies:
+  - One output-producing command per invocation.
+  - Or redirect inside the WSL call: > /tmp/out.log 2>&1; cat /tmp/out.log — the ; separator is safe where && is not, and cat runs regardless of exit.
+  - Environment-activation prefix (cd ... && source ... &&) is safe; it contains no output-producing commands.
+  - grep piped to head through WSL has a specific variant: grep reports "ResourceUnavailable: Program 'grep.exe' failed to run: The pipe is being closed" after head closes the pipe. The output above the error is valid; the error is truncation, not failure.
+
+Lesson 3 — Trust verification markers over line-count estimates
+  Six arithmetic estimates this session were wrong (test counts, line counts, diff sizes). In every case marker-based verification passed. Line counts and diff-size predictions are estimates; marker checks and read-back comparison are the gate. When a block reports "all N markers pass" and "readback equals memory: True", the write is safe regardless of whether the line count matches the predicted value.
+  Corollary: any handover number is only as good as its last verification. This session found four stale numeric or citation claims across inherited documents (1342 test count, 0.978 vs 0.977 F1, L01 evidence citation, tools/ascension.py existence). The register's citation convention (commit 9be8c5d) exists to prevent this class of drift; the handover corpus has no equivalent.
+
+================================================================================
+6. Git state at close
+================================================================================
+
+Local HEAD:   d175620366e6da689f40f30231ba6de7ad834054
+origin/main:  e16811c42879380137cdd6125ce2d61e95872908
+Relationship: local ahead by 1; not pushed
+
+Working tree: clean except ?? tests/integration/test_openapi_http.py
+
+Push of d175620 requires separate authorization. Commit-only was the scope of the d175620 authorization; push was explicitly withheld.
+
+================================================================================
+7. Entry points for next session
+================================================================================
+
+1. Push d175620 — separate authorization required.
+2. Resolve OP.3, OP.5, OP.7 — decisions before the measurement protocol can be written.
+3. Draft docs/l03_sqli_measurement_protocol.md — next in the taxonomy -> schema -> measurement -> implementation sequence.
+4. Review tests/integration/test_openapi_http.py disposition — separate decision.
+5. This handover supersedes session-2026-11-13c.txt.
+
+================================================================================
+8. What NOT to do
+================================================================================
+
+- Do not push without explicit authorization.
+- Do not commit tests/integration/test_openapi_http.py without a disposition decision.
+- Do not paste triple-backtick sequences into the PowerShell terminal (use $fence or 4-space indented blocks).
+- Do not trust line-count estimates over marker verification.
+- Do not run wsl bash -c chains with more than one output-producing command.
+- Do not treat d175620 as representing anything beyond the six changes listed in section 2.
