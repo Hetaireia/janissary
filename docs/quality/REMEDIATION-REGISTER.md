@@ -22,7 +22,7 @@ Statuses are evidence-derived from code, tests, benchmark artefacts, and commit 
 ### JAN-L01 — SPA Catch-All False Positives
 - **Status:** Mitigated
 - **Priority:** P0
-- **Evidence:** Structural DOM gate implemented as `fingerprint`->`root_signature`->`hamming` distance in `src/janissary/engine/baseline_struct.py:95` (`_root_signature_from`), `baseline_struct.py:27-28` (`dom_fingerprint`, `hamming`), consumed by `src/janissary/detection/collapse_oracle.py:18`. README notation `root@U@signature@U@match` describes this pipeline; it is not a code literal. Issue #1 open.
+- **Evidence:** Structural DOM gate implemented as `fingerprint`->`root_signature`->`hamming` distance in `src/janissary/engine/baseline_struct.py:95` (`_root_signature_from`), `baseline_struct.py:27-28` (`dom_fingerprint`, `hamming`), consumed by `src/janissary/detection/collapse_oracle.py:18`. README notation `root_signature_match` describes this pipeline; it is not a code literal. Issue #1 open.
 - **Remaining Gap:** Residual: SPA routes with near-identical DOM to root still pass. No regression corpus.
 - **Next Action:** Build multi-stage route pipeline (root + nonexistent negative control). Add React/Angular/Vue regression fixtures.
 - **Closure Criterion:** Regression corpus passes with zero verified admin-panel FPs.

@@ -25,7 +25,13 @@
 
 ## Why JANISSARY
 
-Most DAST tools are either expensive enterprise platforms or raw scripts that produce unusable noise. JANISSARY is different in three specific ways.
+JANISSARY is an open-source DAST tool for discovering and investigating web application vulnerabilities, including API attack surfaces. It combines operation-level OpenAPI scanning, differential HTTP detection, specialised detection paths and machine-readable reporting for CI/CD workflows.
+
+### API discovery and CI/CD reporting
+
+Import OpenAPI 3.0.x or Swagger 2.0 definitions to enumerate operations and dispatch them to the HTTP scanner. Use dry-run mode to inspect imported targets without sending scan requests. Export findings as JSON, JSONL or SARIF 2.1.0 for downstream processing, or generate HTML and PDF reports.
+
+The scan-level `completeness.scan_complete` field helps automation distinguish a completed scan from one that aborted, became incomplete, lost authentication, or left identified parameters without baselines. It reports only conditions the scanner tracks; it is not proof that every endpoint or attack surface was assessed.
 
 ### Differential detection, measured
 
@@ -37,105 +43,91 @@ Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity
 
 ### Multi-protocol coverage
 
-HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run.
+HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run. OpenAPI operation dispatch is a separate HTTP scan path; it does not automatically invoke the other protocol or extension scans.
 
-—
+---
 
 ## At a glance
 
 | Item | Details |
 |---|---|
 | **Version** | Source metadata 7.11.1 · latest GitHub release v7.11.0 · PyPI 7.10.2 |
-| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
-| **Detection classes** | SQLi, XSS, SSRF, cmdi; traversal partial (recall 0.075 — see Known Limitations) |
+| **API** | OpenAPI 3.0.x / Swagger 2.0 import · operation dispatch · dry-run enumeration |
+| **Detection classes** | SQLi, XSS, SSRF, command injection, XPathi; traversal partial (recall 0.075) |
+| **Access control** | Cross-identity IDOR comparison (candidate-only; not independently verified) |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
-| **Output** | text · JSON · JSONL · SARIF 2.1.0 |
+| **Output** | Text · JSON · JSONL · SARIF 2.1.0 · HTML · PDF |
+| **CI/CD signal** | `completeness.scan_complete` plus tracked completion reasons |
+| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
 | **Install** | `pip install janissary` (7.10.2) or clone for the 7.11.x line |
-
-—
 
 ## What it does
 
 | Area | Capability | Status |
 |---|---|---|
-| **Injection** | SQL injection (error, union, blind) | ✅ shipped |
-| | Reflected XSS | ✅ shipped |
-| | Command injection | ✅ shipped |
-| **Out-of-band** | SSRF via collaborator (Burp Pro / interactsh / interact.sh) | ✅ shipped · [docs](docs/ssrf.md) |
-| | Cloud metadata SSRF (AWS / GCP / Azure) via body markers | ✅ shipped |
+| **Injection** | SQL injection (error, UNION, blind) · reflected XSS · command injection | ✅ shipped |
+| | XPathi error and result-row detection paths | ⚠️ implemented; benchmark coverage not established |
+| **Out-of-band** | SSRF via collaborator (Burp Pro / interactsh / interact.sh) · [docs](docs/ssrf.md) | ✅ shipped |
+| | Cloud metadata SSRF (AWS / GCP / Azure) via response markers | ✅ shipped |
 | **Path traversal** | Content-signature differential | ⚠️ partial (recall 0.075) |
-| **Recon** | CMS and tech fingerprint · 18-platform admin probe | ✅ shipped |
+| **API** | OpenAPI 3.0.x and Swagger 2.0 import, operation dispatch and dry-run enumeration | ✅ shipped |
+| **Access control** | Cross-identity IDOR response comparison | ⚠️ candidate-only; not independently verified |
+| **Recon** | CMS and technology fingerprinting · 18-platform admin probe | ✅ shipped |
 | **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket | ✅ shipped |
+| **Additional checks** | Host-header bypass checks · heuristic scan mode | ✅ shipped |
 | **Orchestration** | Agent: fingerprint → WAF → KB → modules → findings | ✅ shipped |
-| **Machine-readable** | text · JSON · JSONL · SARIF 2.1.0 | ✅ shipped |
+| **Reporting** | Text · JSON · JSONL · SARIF 2.1.0 · HTML · PDF | ✅ shipped |
 | **Opt-in attack** | UNION extractor · Nuclei runner (both gated) | ✅ shipped |
 | **Gaps** | JWT · prototype pollution | ❌ not implemented |
 
 ## Architecture
 
-JANISSARY uses a **dual-engine architecture**: the Discovery Engine identifies candidate behaviour, while the Verification Engine determines whether candidates routed through it qualify as verified findings. Discovery Engine is an architectural grouping of discovery integrations, not a single codebase class.
+JANISSARY separates discovery from verification. Discovery identifies behaviours worth investigating; the verification boundary determines whether a candidate qualifies as a verified finding. Some observations are retained as unproven candidates without passing through that boundary.
 
-Discovery modules identify candidate behaviour. Where a workflow routes
-candidates through the `VerificationEngine`, they pass through an ordered
-confirmer chain. The engine is the sole production boundary for verified
-findings. Unproven candidates may also be retained directly by discovery
-integrations without entering that verification path.
+Where a workflow routes through the `VerificationEngine`, the configured confirmer order is: Corroborator -> WebSocket -> GraphQL -> Heuristic -> IDOR -> AnalyzerImplicit. Specific unproven-classifying confirmers run before the unconditional fallback. The order matters: a later confirmer cannot override an earlier one's classification.
+
+OpenAPI import is an input and dispatch path. The importer supports OpenAPI 3.0.x and Swagger 2.0, enumerates operations, and resolves local and external `$ref` chains in path-item and parameter entries. It does not resolve every possible reference location. Normal execution dispatches imported operations to the HTTP scanner; `--dry-run` only enumerates targets. OpenAPI scans do not automatically run the separate GraphQL, WebSocket, host-bypass, heuristic or IDOR phases.
 
 ```mermaid
 flowchart TD
-    CLI["CLI and scan orchestration"]
-
-    subgraph DISCOVERY["ENGINE 1 — DISCOVERY"]
-    CLI --> RECON["Recon: fingerprinting, WAF detection and pacing"]
-    CLI --> HTTP["HTTP differential scanning"]
-    RECON -. "target context and pacing" .-> HTTP
-    CLI --> GQL["GraphQL discovery"]
-    CLI --> WS["WebSocket discovery"]
-    CLI --> HB["Host-header bypass discovery"]
-    CLI --> HEUR["Heuristic discovery"]
-    CLI --> IDOR["IDOR cross-identity probing"]
-    end
-
-    HTTP --> CAND["CandidateFinding"]
+    CLI["CLI orchestration"]
+    CLI --> URL["Direct URL scan"]
+    CLI --> SPEC["OpenAPI importer"]
+    SPEC --> REF["Supported local / external $ref resolution"]
+    REF --> OPS["Operation targets"]
+    URL --> HTTP["HTTP scanner"]
+    OPS --> HTTP
+    CLI --> RECON["Recon and WAF pacing"]
+    RECON -.-> HTTP
+    HTTP --> DIFF["Differential detection"]
+    HTTP --> ORACLE["Specialised signals: blind SQLi, traversal collapse, LFI, SSRF"]
+    CLI --> GQL["GraphQL"]
+    CLI --> WS["WebSocket"]
+    CLI --> HB["Host bypass"]
+    CLI --> HEUR["Heuristics"]
+    CLI --> IDOR["Cross-identity IDOR"]
+    DIFF --> CAND["Candidates"]
+    ORACLE --> CAND
     GQL --> CAND
     WS --> CAND
     HEUR --> CAND
-    IDOR --> CAND
-
-    subgraph VERIFICATION["ENGINE 2 — VERIFICATION"]
+    IDOR --> DIRECT
     CAND --> VE["VerificationEngine"]
     VE --> CONF["Ordered confirmer chain"]
-
-    CONF --> VERIFIED["VerifiedFinding: verified"]
-    CONF --> UNPROVEN["VerifiedFinding: unproven"]
-    VE --> FAILED["FailedVerification: rejected result"]
-    end
-
-    VERIFIED --> FINDINGS["ScanSummary.findings"]
-    UNPROVEN --> CANDIDATES["ScanSummary.candidates"]
-    HB --> DIRECT["Discovery-retained unproven candidate"]
-    DIRECT --> CANDIDATES
-
-    FINDINGS --> OUTPUT["CLI and reporting outputs"]
-    CANDIDATES --> OUTPUT
+    CONF --> V["Verified findings"]
+    CONF --> U["Unproven candidates"]
+    HB --> DIRECT["Direct unproven retention"]
+    DIRECT --> U
+    V --> OUT["Output writers"]
+    U --> OUT
+    OUT --> FORMATS["Text / JSON / JSONL / SARIF / HTML / PDF"]
 ```
 
-A `verified` result means the configured confirmer accepted the candidate under
-JANISSARY's verification rules; it should not be read as a guarantee of
-independent exploitability. An `unproven` candidate is retained for review but
-is not promoted to a verified finding.
+The `VerificationEngine` is the production boundary for candidates routed through it. Its confirmer chain can accept a candidate as verified, retain it as unproven, or reject it. A `FailedVerification` is an engine result, not a third finding status. Host-bypass observations can be retained directly as unproven candidates.
 
-`FailedVerification` is a separate engine result, not a third finding status.
-It is not retained in a dedicated `ScanSummary` collection.
+`verified` means a configured confirmer accepted the candidate under JANISSARY's rules; it is not a guarantee of independent exploitability. IDOR comparisons are candidate-only: two successful responses with identical bodies or body lengths within 5% do not prove that the resource should have been inaccessible.
 
-The confirmer order matters. Specific confirmers classify GraphQL, WebSocket,
-heuristic, IDOR and corroborator-only observations as unproven before the
-fallback `AnalyzerImplicitConfirmer` is reached. Host-header bypass discovery
-is retained as an unproven candidate and does not enter that verification path.
-
-The CLI combines the applicable scan workflows and exposes findings and
-candidates through its reporting formats.
----
+Specialised detection paths include blind SQLi, traversal response collapse, LFI content injection and SSRF response behaviour. HTML structural comparison uses selectolax and a 64-bit SimHash over tag shingles, with mmh3 when available and a blake2b fallback. These mechanisms do not imply uniform coverage across vulnerability classes.
 
 ## See it work
 
@@ -204,7 +196,7 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 | **Precision** | **1.000 (0 FP)** | OWASP DAST-applicable corpus, all committed runs to date |
 | **Recall (v7.11.1)** | **0.855** | TP 988 / FN 168 (DAST-applicable) |
 | **TP / FP / FN / TN (v7.11.1)** | 988 / 0 / 168 / 1102 | DAST-applicable, baseline-only |
-| F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings at v7.11.1 |
+| F1 (with FN-recovery protocol) | 0.922 | Recovery added 0 findings across 146 of 168 rescanned DAST FNs (22 mode-skipped before scan) at v7.11.1 |
 | F1 (supported-classes, excl. path-traversal) | 0.978 | v7.11.1; excludes pathtraver TP 10 / FN 123 (ADR-027 D8 amended) |
 | **Historical v7.3.0 recovered F1** | **0.921** | TP 987; required FN-recovery pass to achieve |
 | Historical 3-run unassisted F1 (v7.3.0) | 0.903 ± 0.009 | Last 3-run protocol measurement was v7.5.0 (0.906 ± 0.002) |
@@ -236,7 +228,7 @@ python benchmark/track_a/score_dast_aware.py "$RUN_DIR"
 ### What this measurement does and does not claim
 
 - ✅ **Measured on v7.11.1** (2026-11-13, commit `ea7b3e5`, post-M80): single complete baseline-only corpus run, 0 FP, F1 0.922, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261112T180530Z-janissary-r1/`.
-- ✅ **Historical recovered headline:** v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The v7.11.1 baseline matches this level with recovery adding 0 — the improvement from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
+- ✅ **Historical recovered headline:** v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The v7.11.1 baseline matches this level with recovery adding 0 findings across 146 of the 168 residual DAST false negatives; 22 cases were mode-skipped before scanning and remain structurally unreachable at any timeout — the improvement from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
 - ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent external reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md). The `0.922` headline is a single run, not a 3-run mean; `0.921` remains the historical recovered figure.
 
 See [`LIMITATIONS.md`](LIMITATIONS.md) for what JANISSARY can and cannot prove. See [`docs/decisions/`](docs/decisions/) for the architectural decision record.
@@ -344,7 +336,7 @@ janissary agent https://app.example.com --attack-confirm \
 
 `--redact-auth` swaps `Authorization` and `Cookie` header values with `[REDACTED]` in JSON/JSONL output only. Body content is untouched — a leaked secret inside a response body is often the actual bug. Use this before pasting scan output into a bug report.
 
-Scans with `--cookie` or `--bearer` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and `abort@U@reason` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
+Scans with `--cookie` or `--bearer` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and `abort_reason` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
 
 ### Machine-readable output
 
@@ -358,9 +350,11 @@ janissary scan -u "https://target.example/?q=1" -p q --json > scan.json
 janissary scan -u "https://target.example/?q=1" -p q --jsonl | jq -c .
 ```
 
-Every finding carries `raw@U@request` and `raw@U@response` as HTTP/1.1 text with CRLF line endings, ready to paste into Burp Repeater.
+Every finding carries `raw_request` and `raw_response` as HTTP/1.1 text with CRLF line endings, ready to paste into Burp Repeater.
 
 SARIF 2.1.0 export is available via `--export *.sarif` on `scan` and `agent`. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
+
+Both JSON and JSONL preserve the verified/candidate distinction. The JSON envelope carries separate top-level `findings` and `candidates` arrays with independent counts. JSONL tags each record with a `record_type` field of `"verified"` or `"candidate"`. HTML and PDF reports render the two streams separately. SARIF exports both as separate runs (verified and discovery). A candidate cannot silently become a verified finding at the emitter boundary.
 
 ---
 
@@ -396,11 +390,11 @@ Being explicit about scope is part of being honest about precision:
 
 *Honesty over assumptions. These are actively tracked, known issues.*
 
-- **SPA Catch-All False Positives (Issue #1).** Applications returning HTTP 200 for arbitrary routes can trigger the admin-panel probe's initial status-code classifier. The probe runs a structural DOM differential against the root page (ADR-005 gated corroborator: `root@U@fingerprint` + hamming-distance threshold + `root@U@signature@U@match`) before emission — candidates failing the structural gate are discarded. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate but which are not actual admin panels. No React/Angular/Vue regression corpus exists yet (L01 remaining gap).
-- **Mid-scan auth expiry (ADR-010).** Two consecutive 401 responses *when auth is configured* abort the scan with `scan@U@incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth@U@required` output state — structured `ScanSummary.auth_state` is emitted (`unknown`/`authenticated`/`unauthenticated`/`expired`/`recovery_failed`) and rendered on abort; no `AuthStateManager` (health checks, reauth, OAuth2 refresh) exists yet, so an `expired` session cannot return to `authenticated`.
+- **SPA Catch-All False Positives (Issue #1).** Applications returning HTTP 200 for arbitrary routes can trigger the admin-panel probe's initial status-code classifier. The probe runs a structural DOM differential against the root page (ADR-005 gated corroborator: `root_fingerprint` + hamming-distance threshold + `root_signature_match`) before emission — candidates failing the structural gate are discarded. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate but which are not actual admin panels. No React/Angular/Vue regression corpus exists yet (L01 remaining gap).
+- **Mid-scan auth expiry (ADR-010).** Two consecutive 401 responses *when auth is configured* abort the scan with `scan_incomplete=1` and an `auth expired: N consecutive HTTP 401 responses (param=..., last payload=...)` reason. Single 401s and 401s when no auth is configured do not abort. There is no separate `auth_required` output state — structured `ScanSummary.auth_state` is emitted (`unknown`/`authenticated`/`unauthenticated`/`expired`/`recovery_failed`) and rendered on abort; no `AuthStateManager` (health checks, reauth, OAuth2 refresh) exists yet, so an `expired` session cannot return to `authenticated`.
 - **Framework-specific SQLi (L03) is not implemented.** JANISSARY recognises database error patterns across multiple SQL dialects, but does not yet provide ORM profiles, dialect-keyed payload selection or framework-specific delivery-path analysis. The failure-classification design and run-level record schema are documented in [`docs/l03_sqli_classification.md`](docs/l03_sqli_classification.md) and [`docs/l03_sqli_record_schema.md`](docs/l03_sqli_record_schema.md). The SQLi-specific record producer and final measurement-protocol implementation remain future work.
 - **Path traversal — partial, recall 0.075** (per-subcategory F1 0.049—0.308). Scored in the DAST-applicable metric (0.922 headline); excluded from the supported-classes metric (0.978) per ADR-027 D8 amended (2026-11-05). Content-signature gates exist but are narrow. Documented in [`docs/pathtraver.md`](docs/pathtraver.md) as a property of the benchmark target.
-- **SSRF payload scope.** Nine payloads ship today: five OOB via collaborator (`ssrf@U@http`, `ssrf@U@https`, `ssrf@U@gopher`, `ssrf@U@dict`, `ssrf@U@dns@U@only`) and four cloud-metadata via response-body markers (`ssrf@U@metadata@U@aws`, `ssrf@U@metadata@U@aws@U@v6`, `ssrf@U@metadata@U@gcp`, `ssrf@U@metadata@U@azure`). The `file://` payload remains deferred; confidence-aware OOB attribution is not implemented (L05 remaining gap). See [`docs/ssrf.md`](docs/ssrf.md).
+- **SSRF payload scope.** Nine payloads ship today: five OOB via collaborator (`ssrf_http`, `ssrf_https`, `ssrf_gopher`, `ssrf_dict`, `ssrf_dns_only`) and four cloud-metadata via response-body markers (`ssrf_metadata_aws`, `ssrf_metadata_aws_v6`, `ssrf_metadata_gcp`, `ssrf_metadata_azure`). The `file://` payload remains deferred; confidence-aware OOB attribution is not implemented (L05 remaining gap). See [`docs/ssrf.md`](docs/ssrf.md).
 - **IDOR candidate detection.** The `--idor` workflow requires two identities and emits unproven candidates based on cross-identity response comparisons. It does not establish whether a resource is legitimately public. Public-resource candidates are intentionally retained for analyst triage; no automatic suppression heuristic is applied (ADR-031). Manual assessment is required.
 
 ---
@@ -451,7 +445,7 @@ JANISSARY was run against OWASP Juice Shop behind ModSecurity + OWASP CRS. The s
   WAF:
     detected=True vendor=None confidence=0.9
   Pacer:
-    final@U@delay=30.0s events=38
+    final_delay=30.0s events=38
   Findings:
     F-001  CRITICAL sqli:sql_injection  (param=q)
            - [sql_hash_comment] db_error: SQLITE error signature matched
