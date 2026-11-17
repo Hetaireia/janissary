@@ -360,6 +360,8 @@ Being explicit about scope is part of being honest about precision:
 
 *Honesty over assumptions. These are actively tracked, known issues.*
 
+For the authoritative, per-capability status matrix (including capabilities not listed below), see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
+
 1. **Path traversal**: weak measured recall (0.075). Detection is implemented, but measured recall on the current corpus is low. Included in DAST-applicable and excluded from supported-classes.
 2. **SPA catch-all behaviour**: possible false positives. The probe runs a structural DOM differential against the root page before emission. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate.
 3. **Authentication expiry**: two consecutive 401 responses (when auth is configured) abort the scan. No automatic token refresh or OAuth2 recovery exists yet.

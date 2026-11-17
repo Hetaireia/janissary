@@ -109,9 +109,9 @@ Each entry below records a **bounded finding**, not proof that no equivalent fun
 
 Source: local dashboard. Audit did not re-verify.
 
-## 6. Proposed milestones (M91–M99)
+## 6. Proposed milestones (M91–M99, M109)
 
-**All nine are proposed and unapproved.** No scope, acceptance criteria, or implementation is authorized. None is included in the M1–M90 baseline; their addition is a denominator change only.
+**All ten are proposed and unapproved.** No scope, acceptance criteria, or implementation is authorized. None is included in the M1–M90 baseline; their addition is a denominator change only.
 
 Each entry records existing infrastructure that a future scope would need to reckon with. **Existing infrastructure is not approval.** A milestone with substantial existing code still requires its own scope, acceptance criteria, test plan, and implementation approval before work begins.
 
@@ -126,6 +126,7 @@ Each entry records existing infrastructure that a future scope would need to rec
 | M97 | XSS Parser Differential & Context-Aware Payload Assessment | `src/janissary/detection/analyzer.py:570-632` — reflected XSS detection with `_is_inert_context` helper; `sarif_rules.py:141` reflected-XSS SARIF rules. Reflection detection with some context awareness; not a systematic parser differential. |
 | M98 | DOM-Based XSS Source-to-Sink Analysis | **No browser automation capability was identified by the bounded source inspection.** The sole `playwright` reference is `src/janissary/credentials/scanner.py:138`, which detects Playwright report files as credential-leak targets — a scanner credential-scanning concern, not a browser automation capability. Relationship to M97 is unverified pending M97 scope or design investigation. |
 | M99 | SAML Federation & Assertion Security Assessment | **No SAML implementation was identified in the bounded source inspection.** The search covered `saml`, `SAML`, `saml2`, and `SAMLResponse` in `src/`. XML parsing is available via `defusedxml` (existing dependency); XML *signature* validation is a distinct concern from XML parsing safety and is not established. |
+| M109 | B-8 Stack Fingerprinting | **Proposed by the 2026-11-18 implementation handover with a complete contract (§5).** No source exists yet. Scope: pure-function classifier over existing baselines (no new outbound requests, request accounting preserved). Produces a `StackProfile` with per-field confidence floats and evidence references for server, framework, language, WAF, CDN. Twelve captured response fixtures required before `signatures.py` is opened. Gates Ghost Bits mutation (A-2 from enterprise dossier) and all future WAF-specific bypass decisions. Positioned as the third action after P-1 and D-17, before Stage 1 (M83 validation). Does not touch VerificationEngine or emitter contracts. |
 
 ## 7. Dependency register
 
