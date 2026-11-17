@@ -659,13 +659,21 @@ class Scanner:
         self.inject_in = inject_in.lower()
         self._record_case_dir = record_case_dir
         self._recorder = None
+        self._probe_evidence_recorder = None
+        self._last_auth_retry_evidence = None
         if record_case_dir is not None:
             from janissary.harness.pathtraver import PathtraverRecorder
+            from janissary.harness.probe_evidence import ProbeEvidenceRecorder
 
             self._recorder = PathtraverRecorder(
                 case_id=record_case_dir.name,
                 raw_path=record_case_dir / "case_records_raw.jsonl",
                 failure_path=record_case_dir / "recorder_failures.jsonl",
+            )
+            self._probe_evidence_recorder = ProbeEvidenceRecorder(
+                case_id=record_case_dir.name,
+                raw_path=record_case_dir / "probe_evidence.jsonl",
+                failure_path=record_case_dir / "probe_evidence_failures.jsonl",
             )
         if self.inject_in not in {
             "auto",
@@ -1341,10 +1349,22 @@ class Scanner:
         try:
             retry = self._paced_request(self.target, param, value)
             summary.total_requests += 1
-        except requests.RequestException:
+        except requests.RequestException as exc:
+            self._last_auth_retry_evidence = {
+                "request_outcome": "exception",
+                "failure_reason": f"{type(exc).__name__}: {exc}"[:500],
+            }
             return r
         if retry is not None:
+            self._last_auth_retry_evidence = {
+                "request_outcome": "response",
+                "response_status": retry.status_code,
+            }
             return retry
+        self._last_auth_retry_evidence = {
+            "request_outcome": "none_response",
+            "failure_reason": "authentication retry returned None",
+        }
         return r
 
     def run_idor(
@@ -1462,6 +1482,139 @@ class Scanner:
                 oracle_result=oracle_result,
             )
 
+    def _record_xpath_probe_outcome(
+        self,
+        *,
+        param: str,
+        payload_name: str,
+        payload_value: str,
+        request_outcome: str,
+        failure_reason: str | None = None,
+    ) -> str | None:
+        """Record an XPathi prerequisite request without a response."""
+        recorder = self._probe_evidence_recorder
+        if recorder is None or payload_name not in {
+            "sql_single_quote",
+            "sql_or_1eq1",
+        }:
+            return None
+        with contextlib.suppress(Exception):
+            return recorder.record_probe_attempt(
+                param=param,
+                payload_name=payload_name,
+                payload_value=payload_value,
+                request_outcome=request_outcome,
+                failure_reason=failure_reason,
+            )
+        return None
+
+    def _record_xpath_probe_attempts(
+        self,
+        *,
+        param: str,
+        payload_name: str,
+        payload_value: str,
+        initial_response,
+        retry_evidence: dict | None,
+        snapshot_captured: bool,
+    ) -> str | None:
+        """Record initial and optional authentication-retry events."""
+        recorder = self._probe_evidence_recorder
+        if recorder is None or payload_name not in {
+            "sql_single_quote",
+            "sql_or_1eq1",
+        }:
+            return None
+
+        retry_succeeded = (
+            retry_evidence is not None
+            and retry_evidence["request_outcome"] == "response"
+        )
+        initial_used = snapshot_captured and not retry_succeeded
+        initial_event_id = None
+
+        with contextlib.suppress(Exception):
+            initial_event_id = recorder.record_probe_attempt(
+                param=param,
+                payload_name=payload_name,
+                payload_value=payload_value,
+                request_outcome="response",
+                response_status=initial_response.status_code,
+                snapshot_captured=initial_used,
+                used_for_snapshot=initial_used,
+            )
+
+        if retry_evidence is None:
+            return initial_event_id
+
+        retry_used = snapshot_captured and retry_succeeded
+        retry_event_id = None
+
+        with contextlib.suppress(Exception):
+            retry_event_id = recorder.record_probe_attempt(
+                param=param,
+                payload_name=payload_name,
+                payload_value=payload_value,
+                request_outcome=retry_evidence["request_outcome"],
+                response_status=retry_evidence.get("response_status"),
+                snapshot_captured=retry_used,
+                used_for_snapshot=retry_used,
+                failure_reason=retry_evidence.get("failure_reason"),
+                parent_event_id=initial_event_id,
+                attempt_role="auth_retry",
+            )
+
+        return retry_event_id if retry_succeeded else initial_event_id
+
+    def _record_xpath_oracle_evaluation(
+        self,
+        *,
+        param: str,
+        prerequisite_event_ids: dict[str, str | None],
+        oracle_evaluated: bool,
+        oracle_result: str,
+        indeterminate_reason: str | None = None,
+        finding_count: int = 0,
+    ) -> None:
+        """Persist XPathi oracle evidence without affecting scanner behaviour."""
+        recorder = self._probe_evidence_recorder
+        if recorder is None:
+            return
+        with contextlib.suppress(Exception):
+            recorder.record_oracle_evaluation(
+                oracle_id="xpath_error_oracle",
+                param=param,
+                prerequisite_event_ids=prerequisite_event_ids,
+                oracle_evaluated=oracle_evaluated,
+                oracle_result=oracle_result,
+                indeterminate_reason=indeterminate_reason,
+                finding_count=finding_count,
+            )
+
+    def _write_probe_evidence_status(self) -> None:
+        """Write probe_evidence_status.json. Never raises."""
+        if self._probe_evidence_recorder is None or self._record_case_dir is None:
+            return
+        try:
+            import json as _json
+            from datetime import datetime, timezone
+
+            from janissary import __version__ as _version
+
+            payload = {
+                "recording_enabled": True,
+                "recorder_constructed": True,
+                **self._probe_evidence_recorder.diagnostics_dict(),
+                "scanner_version": _version,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+            (self._record_case_dir / "probe_evidence_status.json").write_text(
+                _json.dumps(payload, sort_keys=True),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
     def _write_recording_status(self) -> None:
         """Write recording_status.json for this case. Never raises."""
         if self._recorder is None or self._record_case_dir is None:
@@ -1504,6 +1657,8 @@ class Scanner:
         if not ok:
             summary.aborted = True
             summary.abort_reason = reason
+            self._write_recording_status()
+            self._write_probe_evidence_status()
             return summary
 
         # WAF detection runs before any payload is sent.
@@ -1528,6 +1683,10 @@ class Scanner:
             sqli_quote_snap = None
             sqli_or_snap = None
             sqli_quote_resp = None
+            xpath_probe_event_ids = {
+                "sql_single_quote": None,
+                "sql_or_1eq1": None,
+            }
             weakrand_seen = False
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
@@ -1567,17 +1726,36 @@ class Scanner:
                 try:
                     r = self._paced_request(self.target, param, value)
                 except requests.RequestException as e:
+                    if name in {"sql_single_quote", "sql_or_1eq1"}:
+                        xpath_probe_event_ids[name] = self._record_xpath_probe_outcome(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            request_outcome="exception",
+                            failure_reason=f"{type(e).__name__}: {e}"[:500],
+                        )
                     if not quiet:
                         _say(f"  [{param}] {name} - error: {e}")
                     continue
                 summary.total_requests += 1
                 if r is None:
+                    if name in {"sql_single_quote", "sql_or_1eq1"}:
+                        xpath_probe_event_ids[name] = self._record_xpath_probe_outcome(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            request_outcome="none_response",
+                            failure_reason="request returned None",
+                        )
                     continue
 
                 # ADR-010 + ADR-023: detect mid-scan auth expiry. When tri-session
                 # rotation is active, rotate on 401 and retry once before counting
                 # the 401. Single-session behaviour is byte-for-byte ADR-010.
+                initial_response = r
+                self._last_auth_retry_evidence = None
                 r = self._try_rotate_on_401(r, param, value, summary)
+                retry_evidence = self._last_auth_retry_evidence
                 if r.status_code == 401:
                     self._consecutive_401s += 1
                 else:
@@ -1601,9 +1779,27 @@ class Scanner:
                             f"consecutive HTTP 401 responses "
                             f"(param={param}, last payload={name})"
                         )
+                    if name in {"sql_single_quote", "sql_or_1eq1"}:
+                        xpath_probe_event_ids[name] = self._record_xpath_probe_attempts(
+                            param=param,
+                            payload_name=name,
+                            payload_value=value,
+                            initial_response=initial_response,
+                            retry_evidence=retry_evidence,
+                            snapshot_captured=False,
+                        )
                     break
 
                 snapshot = ResponseSnapshot.from_response(r, normalizer=self.normalizer)
+                if name in {"sql_single_quote", "sql_or_1eq1"}:
+                    xpath_probe_event_ids[name] = self._record_xpath_probe_attempts(
+                        param=param,
+                        payload_name=name,
+                        payload_value=value,
+                        initial_response=initial_response,
+                        retry_evidence=retry_evidence,
+                        snapshot_captured=True,
+                    )
 
                 if self._collect_observations and len(self._observations) < 1000:
                     _obs_url = (
@@ -2054,6 +2250,13 @@ class Scanner:
                         )
 
             if summary.aborted:
+                self._record_xpath_oracle_evaluation(
+                    param=param,
+                    prerequisite_event_ids=xpath_probe_event_ids,
+                    oracle_evaluated=False,
+                    oracle_result="indeterminate",
+                    indeterminate_reason="scan aborted before XPathi oracle evaluation",
+                )
                 break
 
             # Paired-probe: sqli quote oracle.
@@ -2094,10 +2297,30 @@ class Scanner:
             # SQL error), so the sqli oracle stays silent and this one
             # fires. See Amendment 18.
             if sqli_quote_snap is not None and sqli_or_snap is not None:
-                xo = check_xpath_error_oracle(
-                    baseline=baseline,
-                    quote_snapshot=sqli_quote_snap,
-                    or_snapshot=sqli_or_snap,
+                try:
+                    xo = check_xpath_error_oracle(
+                        baseline=baseline,
+                        quote_snapshot=sqli_quote_snap,
+                        or_snapshot=sqli_or_snap,
+                    )
+                except Exception as exc:
+                    self._record_xpath_oracle_evaluation(
+                        param=param,
+                        prerequisite_event_ids=xpath_probe_event_ids,
+                        oracle_evaluated=False,
+                        oracle_result="indeterminate",
+                        indeterminate_reason=(
+                            f"oracle_exception:{type(exc).__name__}: {exc}"[:500]
+                        ),
+                    )
+                    raise
+
+                self._record_xpath_oracle_evaluation(
+                    param=param,
+                    prerequisite_event_ids=xpath_probe_event_ids,
+                    oracle_evaluated=True,
+                    oracle_result="finding" if xo else "no_finding",
+                    finding_count=len(xo),
                 )
                 for f in xo:
                     req_obj = getattr(sqli_quote_resp, "request", None)
@@ -2123,6 +2346,19 @@ class Scanner:
                         continue
                     finding = _to_scan_finding(result)
                     summary.record(finding)
+            else:
+                missing = []
+                if sqli_quote_snap is None:
+                    missing.append("sql_single_quote snapshot")
+                if sqli_or_snap is None:
+                    missing.append("sql_or_1eq1 snapshot")
+                self._record_xpath_oracle_evaluation(
+                    param=param,
+                    prerequisite_event_ids=xpath_probe_event_ids,
+                    oracle_evaluated=False,
+                    oracle_result="indeterminate",
+                    indeterminate_reason="missing " + " and ".join(missing),
+                )
 
             # Paired-probe: LDAP injection oracle.
             if ldap_wild_snap is not None:
@@ -2254,5 +2490,6 @@ class Scanner:
             summary.pacer = self._pacer.stats()
 
         self._write_recording_status()
+        self._write_probe_evidence_status()
 
         return summary
