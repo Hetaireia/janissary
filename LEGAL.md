@@ -18,3 +18,6 @@ Enterprise commercial agreements may include specific indemnity provisions as de
 
 ## 6. Export Control
 JANISSARY is subject to export control regulations. Users are responsible for compliance with all applicable export control laws and regulations, including but not limited to the U.S. Export Administration Regulations (EAR) and International Traffic in Arms Regulations (ITAR).
+
+## 7. Governing Law & Good-Faith
+These terms are governed by the laws of the State of Victoria, Australia. Users are expected to engage with JANISSARY in good faith and to report any security issues responsibly via SECURITY.md.
