@@ -370,6 +370,8 @@ For the authoritative, per-capability status matrix (including capabilities not 
 6. **IDOR**: candidate-only discovery, two-identity requirement and manual assessment. No automatic suppression heuristic is applied (ADR-031).
 7. **Completeness semantics**: `scan_complete=true` means no tracked incomplete condition was observed; it does not mean every possible attack vector was tested.
 
+8. **Stack fingerprinting**: passive only. The classifier reads baseline response headers and never issues new requests. It identifies server, framework, language, WAF, and CDN from observed headers; unrecognised stacks report `None`, never a guess.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).

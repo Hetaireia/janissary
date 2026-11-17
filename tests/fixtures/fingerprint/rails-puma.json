@@ -1,0 +1,1 @@
+{"name":"rails-puma","headers":{"Server":"nginx/1.20.1","X-Runtime":"0.012345","X-Request-Id":"abc123","Set-Cookie":"_rails_session=xyz; Path=/; HttpOnly","Content-Type":"text/html; charset=utf-8","Date":"Wed, 18 Nov 2026 00:00:00 GMT"}}

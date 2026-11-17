@@ -308,6 +308,11 @@ class Baseline:
     """
 
     snapshots: list[ResponseSnapshot] = field(default_factory=list)
+    # M109 (B-8): header dictionaries from the same responses that produced
+    # the snapshots above. Consumed by the stack fingerprint classifier;
+    # never used by the differential detection path. Parallel to snapshots,
+    # not merged into them, so ResponseSnapshot remains a stable type.
+    headers: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def mean_elapsed(self) -> float:
@@ -347,8 +352,14 @@ class Baseline:
     def has_oracle(self) -> bool:
         return any(s.length > 0 for s in self.snapshots)
 
-    def add(self, snapshot: ResponseSnapshot) -> None:
+    def add(
+        self,
+        snapshot: ResponseSnapshot,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.snapshots.append(snapshot)
+        if headers is not None:
+            self.headers.append(headers)
 
     def body_length_band(self) -> tuple[int, int]:
         if not self.snapshots:

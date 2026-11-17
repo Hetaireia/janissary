@@ -561,6 +561,11 @@ class ScanSummary:
     groups: list = field(default_factory=list)
     waf: dict | None = None
     pacer: dict | None = None
+    # M109 (B-8): passive stack fingerprint computed once from the first
+    # baseline headers. Attached to the scan summary; never serialised into
+    # findings or candidates. See docs/CAPABILITIES.md for the classifier
+    # contract (pure-function, no new outbound requests).
+    stack_profile: dict | None = None
 
     def record(self, finding) -> bool:
         """Append to findings and increment finding_count only on add.
@@ -971,7 +976,10 @@ class Scanner:
                 continue
             if r is None:
                 continue
-            baseline.add(ResponseSnapshot.from_response(r, normalizer=self.normalizer))
+            baseline.add(
+                ResponseSnapshot.from_response(r, normalizer=self.normalizer),
+                headers=dict(r.headers),
+            )
         return baseline
 
     def _ssrf_phase(
@@ -1300,7 +1308,9 @@ class Scanner:
         # Approximate request count -- GraphQLDiscoveryModule does not
         # instrument its own HTTP calls. These estimates keep
         # summary.total_requests from being misleadingly zero.
-        summary.approximate_requests += 4  # detect: typename/introspection/batch/suggestions
+        summary.approximate_requests += (
+            4  # detect: typename/introspection/batch/suggestions
+        )
 
         if not profile.reachable:
             summary.scan_incomplete = True
@@ -1683,6 +1693,9 @@ class Scanner:
 
         for param in self.params:
             baseline = self.collect_baseline(param)
+            if summary.stack_profile is None and baseline.headers:
+                from janissary.fingerprint import identify as _identify_stack
+                summary.stack_profile = _identify_stack([baseline]).to_dict()
             traversal_snap = None
             traversal_snap_payload = None
             sqli_quote_snap = None
