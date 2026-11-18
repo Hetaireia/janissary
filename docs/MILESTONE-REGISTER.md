@@ -163,6 +163,8 @@ Three proposed design investigations are recorded for future consideration. Thei
 
 Current M37 refers to *path traversal recall improvement*, M83 to *traversal observability harness*, M87 to *AuthStateManager*, M89 to *FP regression corpus*. The identifiers do not carry continuous meaning across documents.
 
+**Scope clarification (2026-11-18, D-1 resolution):** a repository-wide search across every committed .md and .txt found no document that uses M37, M83, M87, or M89 to mean anything different from this register. The definitions are consistent between this register and the current strategic roadmap (`docs/STRATEGIC-ROADMAP-2026-11-15.md`). The caveat above applies to historical and external documents that predate this register, not to the currently-tracked register and roadmap.
+
 **Rule:** any claimed continuity between a milestone ID in a historical document and a milestone ID in this register requires tracing the governing scope and implementation evidence. Shared ID is not shared meaning.
 
 ### 8.2 M82a/M82b supersedes Master Roadmap §2.3 and Part 5 Priority 1
