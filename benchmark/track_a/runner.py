@@ -636,6 +636,9 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
     attempts_path.write_text("", encoding="utf-8")
 
     failures = 0
+    aborted_safe = (
+        0  # rc=2 on vulnerable=false cases: expected target abort, not a failure
+    )
     for c in cases:
         disp = _dispatch(c)
         if disp is None:
@@ -737,7 +740,9 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
             for line in out_s.splitlines():
                 if line.strip():
                     fh.write(line + "\n")
-        if rc not in (0, 1):
+        if rc == 2 and str(c.get("vulnerable", "")).lower() != "true":
+            aborted_safe += 1
+        elif rc not in (0, 1):
             failures += 1
 
     try:
@@ -745,6 +750,11 @@ def run_janissary(run_dir: Path, cases: list[dict], base: str, env: dict) -> int
     except Exception as exc:
         print(f"[runner] enrichment failed: {exc}", file=sys.stderr)
 
+    if aborted_safe:
+        print(
+            f"[runner] {aborted_safe} safe-case aborts (rc=2; expected, not failures)",
+            file=sys.stderr,
+        )
     return 1 if failures else 0
 
 
