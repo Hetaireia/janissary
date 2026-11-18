@@ -52,7 +52,7 @@ contributors.
 Contributors who submit PRs sign the standard Apache-2.0 inbound
 license terms by the act of submitting (as specified in the
 Apache-2.0 license itself, section 5). No additional CLA is needed
-until ADR-025 (license decision execution) says otherwise.
+until a future license-decision ADR says otherwise (no such ADR exists as of 2026-11-18; ADR-025 is crAPI end-to-end validation, not the license decision).
 
 ### D2. Commercial layer is separate, proprietary, defined by interface
 
@@ -69,7 +69,7 @@ the workflow, not the detection logic.
 
 ### D3. Revisit triggers (all three must hold)
 
-The license question is revisited (via ADR-025) if and only if
+The license question is revisited (via a future license-decision ADR) if and only if
 ALL of the following are true:
 
 1. **100+ GitHub stars** on the public repository
@@ -86,7 +86,7 @@ documented in FUTURE-STATE-PLAN.md Part 4 (Failure Pattern 2).
 
 No Contributor License Agreement is introduced now. If the project
 reaches the D3 trigger threshold, a CLA may be introduced as part
-of ADR-025. Until then, standard Apache-2.0 inbound contribution
+of that future license-decision ADR. Until then, standard Apache-2.0 inbound contribution
 terms apply.
 
 Rationale: A CLA is infrastructure with real friction. It requires
