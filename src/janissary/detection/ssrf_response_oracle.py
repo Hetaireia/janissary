@@ -30,7 +30,15 @@ def check_ssrf_response_oracle(
     payload_name: str,
     fetch_markers: list[str],
 ) -> list[dict]:
-    """Return zero or one finding dict."""
+    """Return zero or one finding dict.
+
+    Fires on a strict AND: status 200-399, non-empty body, marker
+    present, marker absent from baseline, marker outside the
+    reflected payload. Because the firing condition is categorical,
+    severity is set to critical directly and confidence is unused
+    (confidence is heuristic-only metadata; see
+    verification/types.py CandidateFinding for the field contract).
+    """
     if not (200 <= response_status < 400):
         return []
 
