@@ -5,7 +5,7 @@ instance. Writes raw output per run into a timestamped directory.
 
 Usage:
     python -m benchmark.track_a.runner --tool janissary --run-number 1 \
-        --target-base http://127.0.0.1:8080 --cases-csv cases.csv
+        --target-base http://127.0.0.1:8080/benchmark --cases-csv benchmark/track_a/case_vectors.csv
 
 The cases CSV must have a header row with at least:
     testname,category,vulnerable
