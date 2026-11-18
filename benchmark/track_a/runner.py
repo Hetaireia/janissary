@@ -176,9 +176,10 @@ def _popen_with_retry(
         except PermissionError as exc:
             last_exc = exc
             if i < attempts - 1:
-                time.sleep(0.2 * (2 ** i))
+                time.sleep(0.2 * (2**i))
     assert last_exc is not None
     raise last_exc
+
 
 def _run_subprocess_tree(
     cmd: list[str], timeout: float

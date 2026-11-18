@@ -12,7 +12,9 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "fingerprint"
 
 
 def _identify(name: str):
-    headers = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))["headers"]
+    headers = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))[
+        "headers"
+    ]
     return identify([Baseline(headers=[headers])])
 
 
@@ -99,11 +101,15 @@ def test_confidence_requires_evidence():
         p = identify([Baseline(headers=[headers])])
         for f in (p.server, p.framework, p.language, p.waf, p.cdn):
             if f.confidence > 0.0:
-                assert f.evidence, f"{fixture.stem}: confidence {f.confidence} without evidence"
+                assert f.evidence, (
+                    f"{fixture.stem}: confidence {f.confidence} without evidence"
+                )
 
 
 def test_determinism():
-    headers = json.loads((FIXTURES / "apache-php.json").read_text(encoding="utf-8"))["headers"]
+    headers = json.loads((FIXTURES / "apache-php.json").read_text(encoding="utf-8"))[
+        "headers"
+    ]
     a = identify([Baseline(headers=[headers])]).to_dict()
     b = identify([Baseline(headers=[headers])]).to_dict()
     assert a == b
@@ -117,4 +123,3 @@ def test_empty_baselines():
 def test_baseline_without_headers():
     p = identify([Baseline()])
     assert p.server.value is None
-

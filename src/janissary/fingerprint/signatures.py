@@ -23,7 +23,9 @@ def _hdr(headers: dict[str, str], name: str) -> str:
     return ""
 
 
-def _resolve(strong: list[tuple[str, float]], weak: list[tuple[str, float]], evidence: list[str]):
+def _resolve(
+    strong: list[tuple[str, float]], weak: list[tuple[str, float]], evidence: list[str]
+):
     """Resolve candidate list into (value, confidence, evidence)."""
     strong_labels = {v for v, _ in strong}
     if len(strong_labels) > 1:
@@ -96,7 +98,9 @@ def match_server(headers: dict[str, str]):
 
     if label == "nginx":
         xpb = _hdr(headers, "X-Powered-By").lower()
-        has_downstream_app = bool(xpb and "php" not in xpb) or bool(_hdr(headers, "X-Runtime"))
+        has_downstream_app = bool(xpb and "php" not in xpb) or bool(
+            _hdr(headers, "X-Runtime")
+        )
         has_cdn_hop = bool(_hdr(headers, "Via") or _hdr(headers, "X-Served-By"))
         if has_downstream_app or has_cdn_hop:
             return None

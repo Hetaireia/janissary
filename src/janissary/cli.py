@@ -93,7 +93,6 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "baselines": summary.baselines,
         "waf": summary.waf,
         "pacer": summary.pacer,
-        "pacer": summary.pacer,
         "stack_profile": summary.stack_profile,
         "groups": [g.to_dict() for g in summary.groups],
         "findings": _normalize_stream(summary.findings, "F", "verified", redact=False),

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from janissary.detection.analyzer import Baseline
-
 from .profile import Field, StackProfile
 from .signatures import (
     match_cdn,

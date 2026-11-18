@@ -1695,6 +1695,7 @@ class Scanner:
             baseline = self.collect_baseline(param)
             if summary.stack_profile is None and baseline.headers:
                 from janissary.fingerprint import identify as _identify_stack
+
                 summary.stack_profile = _identify_stack([baseline]).to_dict()
             traversal_snap = None
             traversal_snap_payload = None

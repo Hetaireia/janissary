@@ -56,6 +56,7 @@ def test_corpus_is_present_and_complete() -> None:
 
 # --- server ---------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     ("fixture", "value"),
     [
@@ -84,6 +85,7 @@ def test_server_ambiguous_is_ambiguous_not_first_match() -> None:
 
 
 # --- framework ------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     ("fixture", "value"),
@@ -118,6 +120,7 @@ def test_framework_cookie_only_is_weak() -> None:
 
 # --- language -------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     ("fixture", "value"),
     [
@@ -135,6 +138,7 @@ def test_language(fixture: str, value: str | None) -> None:
 
 
 # --- waf ------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     ("fixture", "value"),
@@ -154,6 +158,7 @@ def test_waf(fixture: str, value: str | None) -> None:
 
 
 # --- cdn ------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     ("fixture", "value"),
@@ -178,6 +183,7 @@ def test_cdn_is_distinct_from_waf() -> None:
 
 
 # --- empty and multi-sample ----------------------------------------------
+
 
 def test_no_baselines_is_empty_profile() -> None:
     profile = identify([])
