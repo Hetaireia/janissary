@@ -1,0 +1,24 @@
+{
+  "recording_enabled": true,
+  "cases_total": 2740,
+  "primary_dispositions": {
+    "has_observations": 2621,
+    "zero_observations": 26,
+    "recording_failed": 0,
+    "recording_indeterminate": 0,
+    "recording_disabled": 0,
+    "missing": 93
+  },
+  "primary_dispositions_sum": 2740,
+  "missing_breakdown": {
+    "not_reached": 93,
+    "scan_aborted_at_case": 0,
+    "scan_errored_at_case": 0,
+    "execution_state_indeterminate": 0
+  },
+  "missing_breakdown_sum": 93,
+  "unmatched_observations": 0,
+  "enrichment_conflicts": 0,
+  "accounting_valid": true,
+  "accounting_failure_reasons": []
+}
