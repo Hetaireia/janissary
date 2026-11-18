@@ -2253,3 +2253,82 @@ either machine-format the exclusion file or add a parser.
 - Amendment 27's implied "current" 0.921 headline. The current
   DAST-applicable baseline headline is 0.922; 0.921 remains the
   correct historical recovered figure.
+
+
+### Amendment 30 -- 2026-11-18 -- First clean-exit Track A measurement; DAST-applicable F1 0.938
+
+First Track A run to reach a disposition on every one of 2,740 cases with exit code 0 and per-case recording verified. Supersedes Amendment 29 as the current DAST-applicable headline.
+
+Environment:
+  - Host: WSL Ubuntu, Python 3.14.4 (not Windows 11 + Python 3.14.7)
+  - Tool: janissary 7.11.1, editable install from /mnt/c/.../janissary
+  - Target image: janissary/owasp-benchmark:20cbf3d-ldapfix (f97becf3be5b)
+  - Harness commit: 8ecb302 (rc=2 safe-case abort classification)
+  - Scorer: benchmark/track_a/score_dast_aware.py at 4ed8e96
+
+Method:
+  1. Fresh container start, 300s warmup, verify :8080 and :10389 OPEN, ldapi-00 sample endpoint returns 200
+  2. Full corpus (2,740 cases), baseline-only, no FN recovery, no --retry-zero
+  3. One subprocess per case; each returns rc 0, 1, 2, or a crash code
+
+Result on benchmark/track_a/runs/20261118T113000Z-janissary-r1 (exit_code 0):
+
+  DAST-APPLICABLE   TP 1022  FP 0  FN 134  TN 1102  P 1.000  R 0.884  F1 0.938
+  FULL CORPUS       TP 1022  FP 0  FN 393  TN 1325  P 1.000  R 0.722  F1 0.839
+  SUPPORTED-CLASSES TP  978  FP 0  FN  45  TN  967  P 1.000  R 0.956  F1 0.978
+
+  Findings 2,111. out_of_scope 738. wrong_family 0. orphan 0. accounting_valid true.
+
+Disposition accounting (recording_summary.json):
+
+  has_observations        2621
+  zero_observations         26   (rc=2 on vulnerable=false; target 500 on CALL bar)
+  recording_failed           0
+  recording_indeterminate    0   (prior at 20261115T115138Z: 87)
+  recording_disabled         0
+  missing                   93   (all not_reached; deliberate dispatch exclusions)
+  scan_errored_at_case       0   (prior at 20261115T115138Z: 1)
+
+Subprocess rc distribution across 2,740 spawns:
+
+  rc=0               1233
+  rc=1               1388
+  rc=2                 26   (all vulnerable=false; target-side 500 on CALL bar)
+  0xC0000005            0   (prior at f7033b3: 6)
+  0xC000001D            0   (prior at f7033b3: 2)
+
+Attribution of the +34 TP delta over Amendment 29:
+
+  pathtraver-00   4 to 11   (+7)
+  pathtraver-01   1 to 18   (+17)
+  pathtraver-02   3 to 12   (+9)
+  pathtraver-03   2 to  3   (+1)
+
+  All other categories identical TP/FN to Amendment 29. FP=0 and P=1.000 unchanged. Source: commit f964339 (refine existence oracle baseline handling). The prior guard ran unconditionally on any baseline EXISTS-string match, silently dropping cases whose payload responses formed a clean EXISTS-vs-NOEXIST pair. f964339 fires the oracle whenever the payload pair is distinct, regardless of baseline noise; the poison guard now runs only when the pair is not already distinct.
+
+Environment root cause (why WSL, not Windows):
+
+  Windows 11 + Python 3.14.7 exhibits a 1-3% per-spawn crash rate on python.exe and conhost.exe, faulting in ntdll.dll with 0xC0000005 or 0xC000001D (Windows Application Event Log, 2026-11-18 07:34:18). Neither _popen_with_retry (PermissionError-only) nor JANISSARY_USE_MODULE=1 eliminates this. At f7033b3 the Windows run produced 8 crash codes and could not enable recording (capability probe crashed); that run exited 1 with 2108 findings and recording_enabled=false.
+
+  WSL Ubuntu Python 3.14.4 produces 0 crashes in 30/30 spawn smoke test and 0 crashes across the 2,740 case spawns in this run. Windows remains a valid development environment; WSL is required for clean-exit Track A measurement at the current HEAD.
+
+Container reconciliation:
+
+  tools.env sets TARGET_VERSION=20cbf3d (the OWASP Benchmark source version). The container actually used for this run is janissary/owasp-benchmark:20cbf3d-ldapfix, a derivative of 20cbf3d with HSQLDB schema init and LDAP server startup fixes applied to the entrypoint (see benchmark/track_a/docker/README.md). A comment was added to tools.env pointing at this README. Manifest.target_version remains 20cbf3d for cross-run comparability.
+
+Supersedes:
+  - Amendment 29's "first complete v7.11.1 corpus measurement." That run scored correctly from committed artifacts but the runner exited 1 and 87 cases were recording_indeterminate. Amendment 29 remains the historical 0.922 baseline; it is no longer the current headline.
+  - README's stated 0.922 F1 and 0.075 path-traversal recall. Both are replaced by 0.938 and 0.323 (44/133 TP) in this amendment.
+
+Does not claim:
+  - That 0.938 is a statistically distinguishable improvement over 0.922. The delta is entirely path traversal (a single detection-code change), not a statistical signal on other categories.
+  - That the 26 zero_observations are detector misses. They are target-side 500 responses from a benchmark-internal missing stored procedure (BAR), not scanner failures.
+  - That WSL eliminates all future Track A variance. It eliminates the Windows spawn-crash class specifically; it does not address target-side state mutation, WAF detection variance, or other environmental factors.
+  - That Amendment 29's 0.922 was wrong. It was correct for what it measured; this amendment measures a different HEAD (with f964339 traversal improvement) in a crash-free environment.
+
+Files referenced:
+  - benchmark/track_a/runs/20261118T113000Z-janissary-r1/ - baseline, committed (manifest, findings, case_attempts, case_records, recording_summary, recording_status, skipped, timeouts).
+  - benchmark/track_a/runs/20261112T180530Z-janissary-r1/ - Amendment 29 baseline, committed.
+  - benchmark/track_a/tools.env - updated with -ldapfix comment.
+  - benchmark/track_a/docker/README.md - entrypoint fixes and image derivation.
+  - benchmark/track_a/docker/entrypoint.sh - HSQLDB and LDAP init.
