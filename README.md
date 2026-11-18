@@ -11,7 +11,7 @@
   <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.10+-4B5057" alt="Python"></a>
   <a href="pyproject.toml"><img src="https://img.shields.io/badge/source-7.11.1-D4AF37" alt="Source version"></a>
   <a href="https://pypi.org/project/janissary/"><img src="https://img.shields.io/badge/pypi-7.10.2-4B5057" alt="PyPI"></a>
-  <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.922-D4AF37" alt="OWASP F1"></a>
+  <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37" alt="OWASP F1"></a>
 </p>
 
 ---
@@ -148,13 +148,13 @@ Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the s
 
 ### Primary benchmark — DAST-applicable corpus
 
-**0.922** F1 score | **1.000** Precision | **0.855** Recall
+**0.938** F1 score | **1.000** Precision | **0.884** Recall
 
 | Measure | Result |
 |---|---|
-| True positives | 988 |
+| True positives | 1,022 |
 | False positives | 0 |
-| False negatives | 168 |
+| False negatives | 134 |
 | True negatives | 1,102 |
 | DAST-applicable cases | 2,258 |
 
@@ -168,17 +168,17 @@ Path traversal is excluded from this supplemental scope. This is not the all-DAS
 
 ### Path traversal disclosure
 
-Path traversal detection is implemented, including a paired-probe existence oracle and verification through the normal finding boundary. However, measured recall on the current OWASP Benchmark path-traversal corpus is low (0.075). Path traversal remains included in the DAST-applicable headline score and is excluded from the supplemental supported-classes score, as defined by ADR-027. These scopes are reported separately to avoid obscuring the limitation.
+Path traversal detection is implemented, including a paired-probe existence oracle and verification through the normal finding boundary. However, measured recall on the current OWASP Benchmark path-traversal corpus is 0.323 (44 of 133 TP), up from 0.075 prior to the `f964339` oracle refinement. Path traversal remains included in the DAST-applicable headline score and is excluded from the supplemental supported-classes score, as defined by ADR-027. These scopes are reported separately to avoid obscuring the limitation.
 
 ### Benchmark qualifications
 
-The headline result comes from a single baseline-only run. The `.922` figure is a rescore of committed artifacts, not a clean-exit reproduction. The original runner exited with code 1 and its attempt log was lost; the scoring arithmetic is reproducible against the committed `findings.jsonl` and `manifest.json`, but the run was not a clean-exit scan. The `.922` result clears the registered `.92` gate by a narrow margin. The `.978` result uses a different scoring scope. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
+The headline result comes from a single clean-exit baseline-only run at `8ecb302` (2026-11-18, WSL Ubuntu). The runner exited with code 0 and every case reached a disposition: 2,621 has_observations, 26 zero_observations, 0 recording_failed, 0 recording_indeterminate, 93 missing (all not_reached). The `.938` result clears the registered `.92` gate with margin. The entire improvement over the Amendment 29 `.922` baseline is path traversal (10 -> 44 TP), driven by commit `f964339`; every other category is unchanged. The `.978` supported-classes result excludes path traversal and is unchanged. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
 
 ## What this measurement does and does not claim
 
-- ✅ **Measured on v7.11.1** (2026-11-13, commit `ea7b3e5`, post-M80): single complete baseline-only corpus run, 0 FP, F1 0.922, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261112T180530Z-janissary-r1/`.
-- ✅ **Historical recovered headline:** v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The v7.11.1 baseline matches this level with recovery adding 0 findings across 146 of the 168 residual DAST false negatives; 22 cases were mode-skipped before scanning and remain structurally unreachable at any timeout — the improvement from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
-- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent external reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md). The `0.922` headline is a single run, not a 3-run mean; `0.921` remains the historical recovered figure.
+- ✅ **Measured on v7.11.1** (2026-11-18, commit `8ecb302`, WSL Ubuntu): single clean-exit baseline-only corpus run, exit code 0, 0 FP, F1 0.938, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261118T113000Z-janissary-r1/`.
+- ✅ **Amendment 29 baseline (v7.11.1 at `ea7b3e5`, 2026-11-13):** single baseline-only corpus run, F1 0.922, TP 988. Historical recovered headline: v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The Amendment 29 baseline matched the v7.3.0 level with recovery adding 0 findings across 146 of the 168 residual DAST false negatives; 22 cases were mode-skipped before scanning and remain structurally unreachable at any timeout — the improvements from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
+- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent external reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md). The `0.938` headline is a single clean-exit run, not a 3-run mean; `0.921` remains the historical recovered figure.
 
 See [`LIMITATIONS.md`](LIMITATIONS.md) for what JANISSARY can and cannot prove. See [`docs/decisions/`](docs/decisions/) for the architectural decision record.
 
