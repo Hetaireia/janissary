@@ -1,7 +1,5 @@
 <p align="center"><img src="docs/branding/banners/Janissary%20Signal%20Over%20Noise%20Banner.png" alt="JANISSARY — SIGNAL OVER NOISE." width="100%"></p>
 
-# <p align="center">JANISSARY</p>
-
 <p align="center"><b>Differential DAST for teams who need results they can trust.</b></p>
 
 <p align="center"><sub>Precision-gated scanning. Every finding proves itself before it is reported.</sub></p>
