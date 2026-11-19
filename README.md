@@ -1,435 +1,227 @@
-<p align="center">
-  <img src="docs/branding/janissary-banner.png" alt="JANISSARY - Signal Over Noise." width="800">
-</p>
+<p align="center"><img src="docs/branding/banners/Janissary%20Signal%20Over%20Noise%20Banner.png" alt="JANISSARY — SIGNAL OVER NOISE." width="100%"></p>
+
+# <p align="center">JANISSARY</p>
+
+<p align="center"><b>Differential DAST for teams who need results they can trust.</b></p>
+
+<p align="center"><sub>Precision-gated scanning. Every finding proves itself before it is reported.</sub></p>
 
 <p align="center">
-  <img src="docs/branding/janissary-profile-avatar-512.png" alt="JANISSARY Emblem" width="96">
+<img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
+<img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
+<img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.1" src="https://img.shields.io/badge/version-7.11.1-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D4AF37" alt="License"></a>
-  <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.10+-4B5057" alt="Python"></a>
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/source-7.11.1-D4AF37" alt="Source version"></a>
-  <a href="https://pypi.org/project/janissary/"><img src="https://img.shields.io/badge/pypi-7.10.2-4B5057" alt="PyPI"></a>
-  <a href="BENCHMARK.md"><img src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37" alt="OWASP F1"></a>
-</p>
+<p align="center"><a href="#the-instrument">Instrument</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
 
 ---
 
 > [!CAUTION]
-> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By running any network command you accept the [Terms of Use](LEGAL.md). Review with `janissary terms show`.
+> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. No clickwrap gate: running a network command accepts the Terms of Use. Review with `janissary terms show`.
 
----
+<a id="the-instrument"></a>
+
+## The instrument
+
+Two engines, one contract. A discovery engine fires payloads; a confirmer engine re-tests every candidate against a baseline response and only the confirmer may emit a verified finding. Anything it cannot prove is reported separately as a candidate and never laundered into the findings stream.
+
+<p align="center"><img src="docs/branding/janissary-architecture-diagram.png" alt="Architecture diagram: discovery engine, candidate queue, confirmer chain, dual-stream output" width="100%"></p>
+
+The split is load-bearing. A finding that survives the confirmer has a reproduction, not an opinion, and the two-stream output keeps unproven leads visible without inflating what the tool claims.
+
+<a id="benchmark"></a>
+
+## Benchmark
+
+OWASP Benchmark, DAST-applicable subset, 2,258 cases. Clean-exit run at harness commit 8ecb302, 67 minutes, WSL Ubuntu under Python 3.14.4, 2,740 spawns, zero native crashes.
+
+<table align="center" width="100%">
+<tr>
+<td align="center" width="25%"><h2><b>0.938</b></h2><sub>F1 · DAST-APPLICABLE</sub></td>
+<td align="center" width="25%"><h2><b>1.000</b></h2><sub>PRECISION</sub></td>
+<td align="center" width="25%"><h2><b>0.884</b></h2><sub>RECALL</sub></td>
+<td align="center" width="25%"><h2><b>1,022 / 0</b></h2><sub>TP / FP</sub></td>
+</tr>
+</table>
+
+<p align="center"><sub><b>0.922</b> BASELINE · P 1.000 · R 0.855 · TP 988 · <code>ea7b3e5</code></sub></p>
+
+> **Attribution.** The +34 TPs over that baseline are entirely path traversal, all from commit `f964339`; every other category is unchanged. This is not a generalised capability jump.
+
+> **Single run.** These figures are one execution at 8ecb302, not a mean of repeats.
+
+> [!NOTE]
+> Precision 1.000 is scoped to this corpus and does not establish a real-world false-positive rate. The M89 negative corpus targets that.
+
+The +34 true positives over that baseline are entirely path traversal and all trace to one commit, f964339. Every other category is unchanged, and precision stays at 1.000 in both runs. Path traversal recall moves from 0.075 BASELINE to 0.323.
+
+Full corpus: TP 1,022, FP 0, FN 393, TN 1,325, P 1.000, R 0.722, F1 0.839. Supported-classes subset, which excludes path traversal: TP 978, FP 0, FN 45, TN 967, F1 0.978. Method, dispositions and provenance are in BENCHMARK.md, Amendment 30.
+
+<a id="why"></a>
 
 ## Why JANISSARY
 
-JANISSARY is an open-source DAST tool for discovering and investigating web application vulnerabilities, including API attack surfaces. It combines operation-level OpenAPI scanning, differential HTTP detection, specialised detection paths and machine-readable reporting for CI/CD workflows.
-
-### API discovery and CI/CD reporting
-
-Import OpenAPI 3.0.x or Swagger 2.0 definitions to enumerate operations and dispatch them to the HTTP scanner. Use dry-run mode to inspect imported targets without sending scan requests. Export findings as JSON, JSONL or SARIF 2.1.0 for downstream processing, or generate HTML and PDF reports.
-
-The scan-level `completeness.scan_complete` field helps automation distinguish a completed scan from one that aborted, became incomplete, lost authentication, or left identified parameters without baselines. It reports only conditions the scanner tracks; it is not proof that every endpoint or attack surface was assessed.
-
 ### Differential detection, measured
 
-Differential HTTP workflows compare candidate responses with baselines. Other discovery integrations may retain unproven candidates for review without promoting them to verified findings. On the OWASP Benchmark DAST-applicable corpus, the current **v7.11.1 result is F1 0.922** (precision 1.000, recall 0.855; TP 988 / FP 0 / FN 168 on 2,258 cases), **baseline-only**, single run. It clears the registered `--min-f1 0.92` gate. FN-recovery adds 0 findings at v7.11.1, so this baseline result matches the historical **v7.3.0 recovered headline F1 0.921** (TP 987) that required a second recovery pass. Precision 1.000 is scoped to the OWASP Benchmark corpus (0 FP across all runs to date); it does not establish a real-world false-positive rate, which remains the target of the M89 negative regression corpus. See [`BENCHMARK.md`](BENCHMARK.md) and Amendment 29.
+Every finding is gated by a baseline comparison. Nothing emits from a single response. The 0.938 figure is one change in one class, clean-exit, with the non-claims stated rather than buried.
 
 ### WAF-aware pacing
 
-Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence, and Fastly, then adapts request pacing on block signals and recovers on clean streaks. Getting blocked mid-scan wastes the scan.
+Detects Cloudflare, Akamai, Sucuri, Imperva, AWS WAF, F5, Barracuda, ModSecurity, Wordfence and Fastly, then adapts request pacing on block signals and recovers on clean streaks. Getting blocked mid-scan wastes the scan.
 
 ### Multi-protocol coverage
 
-HTTP, XML-RPC, GraphQL, and WebSocket, combined into a single agent run. OpenAPI operation dispatch is a separate HTTP scan path; it does not automatically invoke the other protocol or extension scans.
+HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
----
+<a id="capabilities"></a>
 
-## At a glance
+## Capabilities
 
-| Item | Details |
-|---|---|
-| **Version** | Source metadata 7.11.1 · latest GitHub release v7.11.0 · PyPI 7.10.2 |
-| **API** | OpenAPI 3.0.x / Swagger 2.0 import · operation dispatch · dry-run enumeration |
-| **Detection classes** | SQLi, XSS, SSRF, command injection, XPathi; traversal partial (recall 0.075) |
-| **Access control** | Cross-identity IDOR comparison (candidate-only; not independently verified) |
-| **Protocols** | HTTP, XML-RPC, GraphQL, WebSocket |
-| **Output** | Text · JSON · JSONL · SARIF 2.1.0 · HTML · PDF |
-| **CI/CD signal** | `completeness.scan_complete` plus tracked completion reasons |
-| **Benchmark (OWASP)** | **0.922** DAST-applicable (v7.11.1, baseline-only, single run) · gate 0.92 cleared · **0.978** supported-classes (v7.11.1, supplemental; excludes path traversal) · precision 1.000 (0 FP) · historical v7.3.0 recovered: 0.921 |
-| **Install** | `pip install janissary` (7.10.2) or clone for the 7.11.x line |
-
-## Detection and capability matrix
-
-| Capability | Public status | Documentation |
+| Area | Detail | Status |
 |---|---|---|
-| Differential HTTP scanning | Implemented | Baselines and verification |
-| OpenAPI 3.0.x | Implemented | Operation-level scanning |
-| Swagger 2.0 | Implemented | Supported import |
-| SQL injection | Implemented | Detection classes and limits |
-| XSS | Implemented | Supported detection paths |
-| XPath injection | Implemented | Avoid broad coverage claims |
-| Command injection | Implemented | Available detection |
-| Path traversal | Partial | Prominently disclose weak recall |
-| SSRF | Partial | OOB and metadata-marker scope |
-| GraphQL | Separate integration | Not automatic in every scan |
-| WebSocket | Separate integration | Explicit invocation required |
-| IDOR | Discovery candidates | Two identities, manual assessment |
-| Host-header bypass | Discovery candidates | Separate from verified findings |
-| Heuristic discovery | Discovery path | --heuristic and candidate status |
-| Attack subcommands | Explicit opt-in | Separate from standard DAST |
-| JWT / prototype pollution | Not yet supported | Out of implied coverage |
+| SQL injection | Error, union, blind | shipped |
+| Reflected XSS | Context-aware payloads | shipped |
+| Command injection | Shell and argument forms | shipped |
+| SSRF | Out-of-band via collaborator, cloud metadata markers | shipped |
+| Path traversal | Content-signature differential | partial, 0.323 recall |
+| Recon | CMS and technology fingerprint, 18-platform admin probe | shipped |
+| Protocols | HTTP, XML-RPC, GraphQL, WebSocket | shipped |
+| Orchestration | Agent: fingerprint, WAF, KB, modules, findings | shipped |
+| Output | text, JSON, JSONL, SARIF 2.1.0 | shipped |
 
-## Architecture
+<a id="install"></a>
 
-<p align="center">
-  <img src="docs/branding/janissary-architecture-diagram.png" alt="JANISSARY Engine Core - Expanded Structural Map" width="100%">
-</p>
+## Install
 
-JANISSARY separates discovery from verification. Discovery identifies behaviours worth investigating; the verification boundary determines whether a candidate qualifies as a verified finding. Some observations are retained as unproven candidates without passing through that boundary.
+PyPI releases are at 7.10.2. The 7.11.x line, which carries WebSocket, host-bypass heuristics, SARIF two-run, tri-session auth, IDOR, crAPI and SSRF metadata, is on git main and not yet published.
 
-## See it work
+<details>
+<summary>pip install</summary>
 
-![JANISSARY demo](docs/demo.gif)
-
-One real SQL injection, scanned with `janissary scan`:
-
-```text
-$ janissary scan -u "http://localhost:5001/sqli?q=test" -p q
-
-[*] Scanning http://localhost:5001/sqli?q=test
-[*] Parameters: q
-[*] Baseline samples: 10
-
-[*] Probing for WAF...
-    No WAF signatures observed
-  [q] baseline is static - timing gates disabled
-  [q] sql_single_quote -> CRITICAL: db_error | SQLITE error signature matched
-  [q] sql_union_null  -> HIGH: status_change | Baseline 200 -> Payload 500
-  ...
-
-============================================================
-SCAN SUMMARY
-============================================================
-  Target:          http://localhost:5001/sqli?q=test
-  Parameters:      q
-  Method:          GET
-  Total requests:  29
-  Findings:        11 in 2 groups
-
-  Findings:
-    F-001  CRITICAL sqli:sql_injection  (param=q)
-           - [sql_single_quote] db_error: SQLITE error signature matched
-           - [sql_single_quote] status_change: Baseline 200 -> Payload 500
-           - [sql_single_quote] length_anomaly: Response 3.6x baseline
-           - [sql_or_1eq1]      length_anomaly: Response 3.8x baseline
-           - [sql_union_null]   status_change: Baseline 200 -> Payload 500
-           - [sql_union_null]   length_anomaly: Response 10.1x baseline
-           - [sql_sleep_mysql]  status_change: Baseline 200 -> Payload 500
-           - [sql_sleep_mysql]  length_anomaly: Response 3.3x baseline
-           - [sql_sleep_pg]     status_change: Baseline 200 -> Payload 500
-           - [sql_sleep_pg]     length_anomaly: Response 5.8x baseline
-
-    F-002  LOW      sqli:reflection  (param=q)
-           - [sql_single_quote] payload_reflected: Payload reflected (raw)
-
-  Findings by severity:
-    CRITICAL   1
-    HIGH       4
-    MEDIUM     5
-    LOW        1
-```
-
-Eleven signals, **one bug**. Every piece of evidence for `F-001` points at the same SQL injection, so JANISSARY groups them. `F-002` is a different root cause (reflection) and stays separate. One finding to triage, with the receipts attached.
-
----
-
-## Benchmark results and methodology
-
-### Primary benchmark — DAST-applicable corpus
-
-**0.938** F1 score | **1.000** Precision | **0.884** Recall
-
-| Measure | Result |
-|---|---|
-| True positives | 1,022 |
-| False positives | 0 |
-| False negatives | 134 |
-| True negatives | 1,102 |
-| DAST-applicable cases | 2,258 |
-
-*Single baseline-only run. Benchmark precision is not a claim of zero false positives in real-world deployments.*
-
-### Supplemental benchmark — supported classes
-
-**0.978** F1 score | **1.000** Precision
-
-Path traversal is excluded from this supplemental scope. This is not the all-DAST-applicable headline score.
-
-### Path traversal disclosure
-
-Path traversal detection is implemented, including a paired-probe existence oracle and verification through the normal finding boundary. However, measured recall on the current OWASP Benchmark path-traversal corpus is 0.323 (44 of 133 TP), up from 0.075 prior to the `f964339` oracle refinement. Path traversal remains included in the DAST-applicable headline score and is excluded from the supplemental supported-classes score, as defined by ADR-027. These scopes are reported separately to avoid obscuring the limitation.
-
-### Benchmark qualifications
-
-The headline result comes from a single clean-exit baseline-only run at `8ecb302` (2026-11-18, WSL Ubuntu). The runner exited with code 0 and every case reached a disposition: 2,621 has_observations, 26 zero_observations, 0 recording_failed, 0 recording_indeterminate, 93 missing (all not_reached). The `.938` result clears the registered `.92` gate with margin. The entire improvement over the Amendment 29 `.922` baseline is path traversal (10 -> 44 TP), driven by commit `f964339`; every other category is unchanged. The `.978` supported-classes result excludes path traversal and is unchanged. Neither result establishes a real-world false-positive rate. No statistical superiority claim is made against the historical v7.3.0 result. Refer to [BENCHMARK.md](BENCHMARK.md) for detailed methodology.
-
-## What this measurement does and does not claim
-
-- ✅ **Measured on v7.11.1** (2026-11-18, commit `8ecb302`, WSL Ubuntu): single clean-exit baseline-only corpus run, exit code 0, 0 FP, F1 0.938, gate 0.92 cleared. Run artifacts committed under `benchmark/track_a/runs/20261118T113000Z-janissary-r1/`.
-- ✅ **Amendment 29 baseline (v7.11.1 at `ea7b3e5`, 2026-11-13):** single baseline-only corpus run, F1 0.922, TP 988. Historical recovered headline: v7.3.0, F1 0.921 (TP 987), the product of baseline + FN-recovery. The Amendment 29 baseline matched the v7.3.0 level with recovery adding 0 findings across 146 of the 168 residual DAST false negatives; 22 cases were mode-skipped before scanning and remain structurally unreachable at any timeout — the improvements from Amendments 12–19 removed the timeout-sensitive misses that required recovery at v7.3.0.
-- ⚠️ **Not claimed:** real-world false-positive rate, held-out precision, competitor comparison, independent external reproduction. Those remain Phase 3/4 items under [`docs/AMENDMENT-23.md`](docs/AMENDMENT-23.md). The `0.938` headline is a single clean-exit run, not a 3-run mean; `0.921` remains the historical recovered figure.
-
-See [`LIMITATIONS.md`](LIMITATIONS.md) for what JANISSARY can and cannot prove. See [`docs/decisions/`](docs/decisions/) for the architectural decision record.
-
----
-
-## Installation
-
-There are three supported installation methods. Choose the one that fits your use case. Do not execute them sequentially.
-
-### PyPI (recommended for ordinary use)
 ```bash
 pip install janissary
+
+# 7.11.x line
+git clone https://github.com/Hetaireia/janissary.git
+cd janissary
+pip install -e .
 ```
 
-### Git (development and unreleased functionality)
+</details>
+
+<details>
+<summary>Docker</summary>
+
+```bash
+docker run --rm oraclemode337/janissary:latest scan -u https://target.example/sqli?q=test -p q
+```
+
+</details>
+
+<details>
+<summary>source</summary>
+
 ```bash
 git clone https://github.com/Hetaireia/janissary.git
 cd janissary
-pip install -e ".[dev]"
+pip install -e '.[dev]'
+pytest -q
 ```
 
-The 7.11.x line (WebSocket, host-bypass, heuristics, SARIF two-run, tri-session auth, IDOR, crAPI, SSRF metadata) is on git main. PyPI and Docker versions may not contain all main-branch features.
+</details>
 
-### Docker (isolated container deployment)
-```bash
-docker pull janissary/janissary:latest
-```
+<a id="quickstart"></a>
 
 ## Quickstart
 
-Accept the Terms of Use (required once before any network command):
+Authorised use is covered by a non-blocking safe-harbour notice; there is no clickwrap gate. Review the terms with janissary terms show.
 
-```bash
-janissary terms accept
-```
-
-Scan a single endpoint:
+<details>
+<summary>Scan a single endpoint</summary>
 
 ```bash
 janissary scan -u "https://target.example/sqli?q=test" -p q
 ```
 
-Scan a Git repository for leaked credentials:
+</details>
+
+<details>
+<summary>Scan a Git repository for leaked credentials</summary>
 
 ```bash
 janissary creds ./my-repo --scan-git
 ```
 
-Fingerprint a target:
+</details>
+
+<details>
+<summary>Fingerprint a target</summary>
 
 ```bash
 janissary fingerprint https://target.example
 ```
 
-Probe for admin panels:
+</details>
+
+<details>
+<summary>Probe for admin panels</summary>
 
 ```bash
 janissary admin https://target.example
 ```
 
----
+</details>
+
+<a id="commands"></a>
 
 ## Commands
 
-| Command | What it does |
+| Command | Purpose |
 |---|---|
-| `scan` | HTTP scanning: SQLi, XSS, SSRF, traversal, cmdi |
-| `creds` | Credential discovery in tree or Git history |
-| `fingerprint` | CMS and technology identification |
-| `graphql` | GraphQL detection and field enumeration |
-| `ws` | WebSocket recon |
-| `admin` | Admin panel discovery, 18 platforms |
-| `agent` | Orchestrates recon, persists findings |
-| `terms` | Show, check, or accept Terms of Use |
-| `attack sqli-union` | UNION extractor (gated) |
-| `attack nuclei` | Nuclei runner (gated) |
+| scan | HTTP scanning: SQLi, XSS, SSRF, traversal, cmdi |
+| creds | Credential discovery in a tree or Git history |
+| fingerprint | CMS and technology identification |
+| graphql | GraphQL detection and field enumeration |
+| ws | WebSocket recon |
+| admin | Admin panel probe |
+| agent | Orchestrates recon, persists findings |
+| attack sqli-union | UNION extractor, gated |
 
-Run `janissary --help` for full flags.
+<a id="scope"></a>
 
----
+## Scope, auth and output
 
-## Scope, authentication, and machine-readable output
+Scope enforcement, auth headers and the JSON, JSONL and SARIF 2.1.0 writers are documented in docs/. Scope is enforced at the requester, so an out-of-scope redirect fails closed rather than following.
 
-### Scope enforcement
+<a id="licence"></a>
 
-Hunters run against bug-bounty programs whose scope is contractual. `--scope-include` and `--scope-exclude` refuse to touch anything outside the declared boundary — before any network I/O, with exit code 64 and empty stdout.
+## Licence
 
-```bash
-# Only scan example.com and its subdomains, never admin.example.com
-janissary scan -u "https://api.example.com/v1/items?id=1" -p id \
-  --scope-include "*.example.com" \
-  --scope-exclude "admin.example.com"
+JANISSARY is open-core. The core is Apache-2.0 because a scanner you cannot read is a scanner you cannot trust, and the free core is the front door rather than a demo.
 
-# Internal network, CIDR-based
-janissary scan -u "http://10.1.2.3/" -p q --scope-include "10.0.0.0/8"
-```
+| Licence | Class | Contents |
+|---|---|---|
+| **Apache-2.0** | Apache License 2.0 | Detection engine, confirmer chain, differential workflow, IDOR |
+| **BSL 1.1** | Business Source License 1.1 | Source-visible glue modules; converts to Apache-2.0 after four years |
+| **Commercial** | Proprietary | Control plane: SSO and RBAC, fleet scheduling, ticketing, SLAs |
 
-Deny always beats allow. Pattern syntax: `example.com`, `*.example.com`, `10.0.0.0/8`, `10.0.0.5`, `/api/`, `https://api.example.com/v1/`, or `*` for any. If no `--scope-include` is given, everything passes the include check; excludes still apply.
+Confirmer thresholds, WAF backoff curves and the M89 negative corpus are not published.
 
-### Authentication
+Governing law is Victoria, Australia. IDOR stays in the Apache-2.0 core, not behind a paid tier. Contribution terms and the outbound licence grant are in CONTRIBUTING.md.
 
-Static cookie and bearer-token headers apply to every request in the scan: WAF probes, preflight, baselines, and payloads.
-
-```bash
-janissary scan -u "https://app.example.com/profile?id=1" -p id \
-  --cookie "session=abc123; csrf=xyz"
-
-janissary agent https://app.example.com --attack-confirm \
-  --bearer "eyJhbGciOi..."
-```
-
-`--redact-auth` swaps `Authorization` and `Cookie` header values with `[REDACTED]` in JSON/JSONL output only. Body content is untouched — a leaked secret inside a response body is often the actual bug. Use this before pasting scan output into a bug report.
-
-Scans with `--cookie` or `--bearer` abort with exit code 2 when two consecutive HTTP 401 responses arrive mid-scan. Findings collected before the abort are preserved, and `abort_reason` names the threshold, param, and last payload attempted, so an expired session is reported cleanly rather than producing false negatives.
-
-### Machine-readable output
-
-`--json` emits one envelope document to stdout. `--jsonl` emits one finding per line. Both reserve stdout for the machine payload; every human status line (progress, WAF feedback, backoff) goes to stderr. `--quiet` silences stderr only — it never affects stdout.
-
-```bash
-# One document, all findings
-janissary scan -u "https://target.example/?q=1" -p q --json > scan.json
-
-# Streaming, filter with jq
-janissary scan -u "https://target.example/?q=1" -p q --jsonl | jq -c .
-```
-
-Every finding carries `raw_request` and `raw_response` as HTTP/1.1 text with CRLF line endings, ready to paste into Burp Repeater.
-
-SARIF 2.1.0 export is available via `--export *.sarif` on `scan` and `agent`. Output is catalog-driven with CWE taxonomy and cross-run partialFingerprints, suitable for CI/CD and GitHub code scanning.
-
-Both JSON and JSONL preserve the verified/candidate distinction. The JSON envelope carries separate top-level `findings` and `candidates` arrays with independent counts. JSONL tags each record with a `record_type` field of `"verified"` or `"candidate"`. HTML and PDF reports render the two streams separately. SARIF exports both as separate runs (verified and discovery). A candidate cannot silently become a verified finding at the emitter boundary.
-
-`total_requests` counts **every outbound HTTP attempt** made by JANISSARY, including retries and failed attempts. The counter increments before each `_paced_request()` call so that a request which raises `RequestException` is still counted. This is the measured stream.
-
-`approximate_requests` is a **formula-based estimate** for modules that delegate HTTP work to sub-systems without direct instrumentation: XPathi (len(payloads)+2), IDOR (max(len(candidates)*2, 10)), host-bypass (=3), WebSocket detect (+4), and WebSocket probes (+6). These are intent estimates, not measurements.
-
-The two fields are deliberately separate. Consumers requiring an upper-bound request cost should sum them; consumers requiring a byte-accurate count must instrument the HTTP layer directly. `total_requests` alone is a floor.
-
----
-
-## Optional integrations and advanced workflows
-
-JANISSARY supports several integrations and attack workflows that are explicitly invoked and not part of the standard DAST quickstart.
-
-### GraphQL
-Requires explicit invocation. Tests real-time API introspection and injection flaws.
-
-### WebSocket
-Requires explicit invocation and payload input. Tests real-time communication channels.
-
-### Host-header bypass
-Runs discovery-based checks for Host header injection and routing bypasses. Retains findings as unproven candidates.
-
-### IDOR
-Requires two identities (--idor). Emits unproven candidates based on cross-identity response comparisons. Does not establish whether a resource is legitimately public. Manual assessment is required.
-
-### Heuristic discovery
-Uses --heuristic to enable broader discovery paths. Outputs unproven candidates.
-
-### Attack subcommands
-```bash
-janissary attack sqli-union -u "https://target.example/?id=1" --attack-confirm
-janissary attack nuclei -u "https://target.example" -t templates/ --attack-confirm
-```
-
-## What JANISSARY is not
-
-Being explicit about scope is part of being honest about precision:
-
-- **Not a crawler.** You point it at a URL and parameters. It scans those. A crawler is conditional on ADR-021 triggers (named enterprise demand or 3+ user asks) and is not present in the current release.
-- **Not an enterprise platform.** No SSO, no RBAC, no scheduled scans, no support SLA.
-- **Not a full OWASP Top 10 scanner yet.** SQLi, XSS, SSRF, and partial traversal ship today. JWT and prototype pollution are not implemented and have no committed delivery date — see Known Limitations for the honest current state of each gap.
-- **Not a replacement for Burp.** Complementary. Findings carry raw HTTP/1.1 so you can paste them into Repeater and finish the job.
-
----
+<a id="limitations"></a>
 
 ## Known limitations
 
-*Honesty over assumptions. These are actively tracked, known issues.*
+Path traversal recall is 0.323, up from 0.075 BASELINE. The remaining false negatives are target-capped on this corpus: the response layout does not leak the file-existence oracle for most cases, so they are structurally undetectable rather than unimplemented.
 
-For the authoritative, per-capability status matrix (including capabilities not listed below), see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
+Precision 1.000 is scoped to this corpus. It does not establish a real-world false-positive rate, which is the target of the M89 negative regression corpus.
 
-1. **Path traversal**: weak measured recall (0.075). Detection is implemented, but measured recall on the current corpus is low. Included in DAST-applicable and excluded from supported-classes.
-2. **SPA catch-all behaviour**: possible false positives. The probe runs a structural DOM differential against the root page before emission. Residual FP surface: SPA routes whose DOM matches the root page closely enough to pass the structural gate.
-3. **Authentication expiry**: two consecutive 401 responses (when auth is configured) abort the scan. No automatic token refresh or OAuth2 recovery exists yet.
-4. **Framework-specific SQL injection**: recognises database error patterns, but framework-specific profiles and delivery-path analysis remain future work.
-5. **SSRF**: current OOB and metadata-marker coverage. The file:// payload remains deferred; confidence-aware OOB attribution is not implemented.
-6. **IDOR**: candidate-only discovery, two-identity requirement and manual assessment. No automatic suppression heuristic is applied (ADR-031).
-7. **Completeness semantics**: `scan_complete=true` means no tracked incomplete condition was observed; it does not mean every possible attack vector was tested.
-
-8. **Stack fingerprinting**: passive only. The classifier reads baseline response headers and never issues new requests. It identifies server, framework, language, WAF, and CDN from observed headers; unrecognised stacks report `None`, never a guess.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-> [!CAUTION]
-> **Reporting a vulnerability.** Do not open a public issue. Use the private disclosure channel in [`SECURITY.md`](SECURITY.md).
-
-## Security
-
-See [`SECURITY.md`](SECURITY.md).
+The 0.938 headline is one run, not a three-run mean. Attribution is a single commit in a single class.
 
 ---
 
-## Roadmap
+<p align="center"><sub><a href="BENCHMARK.md">method, amendments, provenance</a> · <a href="docs/">documentation</a> · <a href="SECURITY.md">disclosure</a> · <a href="CONTRIBUTING.md">contribution terms</a> · <a href="https://dev.to/janissary">writing</a></sub></p>
 
-The architectural decisions governing current and planned work are in [`docs/decisions/`](docs/decisions/) (ADR-016 through ADR-021 for the Phase 0 Foundation, and prior ADRs for the verification engine itself).
-
-Shipped discovery capabilities and deferred direction:
-
-- **Heuristic discovery (Track B):** shipped as `--heuristic`. Heuristic matches pass through the `VerificationEngine` and are retained as unproven candidates where the configured confirmer classifies them that way. Discovery does not independently establish a verified vulnerability. See ADR-016, ADR-017 and ADR-019.
-- **Crawler:** deferred with explicit triggers (named enterprise demand or 3+ user asks). When built, ships open-source. See ADR-021.
-
-Detailed phased planning and milestone tracking are maintained privately and are not part of this repository.
-
----
-
-## License
-
-Apache 2.0 for the source code. See [`LICENSE`](LICENSE).
-
-Use is additionally governed by the [Terms of Use](LEGAL.md), which supplement and do not replace the Apache 2.0 licence.
-
----
-
-## Live WAF evidence
-
-JANISSARY was run against OWASP Juice Shop behind ModSecurity + OWASP CRS. The scanner detected the WAF, received block signals, and paced requests without aborting the scan.
-
-```text
-[*] Probing for WAF...
-    WAF detected: unknown (confidence 0.90)
-[*] Initial inter-request delay: 2.80s
-...
-  WAF:
-    detected=True vendor=None confidence=0.9
-  Pacer:
-    final_delay=30.0s events=38
-  Findings:
-    F-001  CRITICAL sqli:sql_injection  (param=q)
-           - [sql_hash_comment] db_error: SQLITE error signature matched
-```
-
-Configuration: `docker-compose.waf.yml` (ModSecurity CRS reverse proxy in front of Juice Shop). This closes the gap between "architecturally paces" and "provably paces."
-
-## Docker
-
-```bash
-docker run --rm oraclemode337/janissary:7.10.2 scan -u "https://target.example" -p q
-```
-
-The image exposes the same entrypoint as the PyPI package. Use `host.docker.internal` to reach services on the host from inside the container.
+<p align="center"><sub><b>SIGNAL OVER NOISE.</b> · Hetaireia · Victoria, Australia · Apache-2.0 core</sub></p>
