@@ -11,16 +11,16 @@
 <img alt="Version 7.11.1" src="https://img.shields.io/badge/version-7.11.1-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
-<p align="center"><a href="#the-instrument">Instrument</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
+<p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
 
 ---
 
 > [!CAUTION]
 > **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. No clickwrap gate: running a network command accepts the Terms of Use. Review with `janissary terms show`.
 
-<a id="the-instrument"></a>
+<a id="architecture"></a>
 
-## The instrument
+## Architecture
 
 Two engines, one contract. A discovery engine fires payloads; a confirmer engine re-tests every candidate against a baseline response and only the confirmer may emit a verified finding. Anything it cannot prove is reported separately as a candidate and never laundered into the findings stream.
 
