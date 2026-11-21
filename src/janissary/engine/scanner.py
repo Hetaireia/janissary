@@ -66,7 +66,11 @@ from janissary.verification import (
     VerifiedFinding,
     WebSocketReconConfirmer,
 )
-from janissary.verification.confirmers import HeuristicConfirmer, IdorConfirmer
+from janissary.verification.confirmers import (
+    DnsOnlyOobConfirmer,
+    HeuristicConfirmer,
+    IdorConfirmer,
+)
 from janissary.verification.grading import grade_for
 
 # -------------------------------------------------------------------
@@ -401,6 +405,7 @@ _ENGINE = VerificationEngine(
         GraphQLReconConfirmer(),
         HeuristicConfirmer(),
         IdorConfirmer(),
+        DnsOnlyOobConfirmer(),
         AnalyzerImplicitConfirmer(),
     ]
 )
@@ -1046,6 +1051,13 @@ class Scanner:
         if not issued:
             return
 
+        # ADR-034 D1: strongest observation wins per uniq. A uniq stays
+        # pending across every delay until an HTTP/S hit arrives or the
+        # delays are exhausted, so delivery order cannot decide the class.
+        sent: dict[str, tuple[str, str, object]] = {
+            uniq: (payload_name, url, r) for uniq, payload_name, url, r in issued
+        }
+        best: dict[str, tuple[str, object]] = {}
         pending = list(issued)
         for delay in self._ssrf_poll_delays:
             time.sleep(delay)
@@ -1054,69 +1066,86 @@ class Scanner:
                 try:
                     hits = self.collaborator.poll(uniq)
                 except CollaboratorError:
-                    continue
-                if not hits:
                     still_pending.append((uniq, payload_name, url, r))
                     continue
                 for hit in hits:
                     proto = (hit.protocol or "").lower()
                     if proto in ("http", "https"):
-                        sev = "critical"
-                        ftype = "collaborator_hit"
-                        detail = (
-                            f"OOB hit: {proto} from "
-                            f"{hit.source_ip or '?'} at "
-                            f"{hit.timestamp or '?'} via {payload_name} "
-                            f"on param {param}"
-                        )
-                    elif proto == "dns":
-                        sev = "info"
-                        ftype = "dns_only_resolution"
-                        detail = (
-                            f"OOB DNS-only hit (no HTTP fetch): "
-                            f"{hit.source_ip or '?'} via {payload_name} "
-                            f"on param {param}"
-                        )
-                    else:
-                        continue
-
-                    # ADR-033: HTTP(S) OOB = P1; DNS-only = P4 (ceiling without in-band marker).
-                    grade = "P1" if ftype == "collaborator_hit" else "P4"
-
-                    req_obj = getattr(r, "request", None) if r is not None else None
-                    candidate = CandidateFinding(
-                        param=param,
-                        payload_name=payload_name,
-                        payload_value=url,
-                        category="ssrf",
-                        severity=sev,
-                        finding_type=ftype,
-                        detail=detail,
-                        evidence_grade=grade,
-                        response_status=(r.status_code if r is not None else None),
-                        response_length=(len(r.text or "") if r is not None else 0),
-                        response_content_type=(
-                            (r.headers or {}).get("content-type", "")
-                            if r is not None
-                            else ""
-                        ),
-                        url=(getattr(req_obj, "url", None) or self.target),
-                        method=self.method,
-                        raw_request=(
-                            serialize_request(req_obj) if req_obj is not None else None
-                        ),
-                        raw_response=(serialize_response(r) if r is not None else None),
-                    )
-                    result = _ENGINE.verify(candidate)
-                    if not isinstance(result, VerifiedFinding):
-                        continue
-                    finding = _to_scan_finding(result)
-                    summary.record(finding)
-                    if not quiet:
-                        _say(f"  [{param}] SSRF {sev.upper()}: {ftype} | {detail[:80]}")
+                        best[uniq] = ("http", hit)
+                    elif proto == "dns" and uniq not in best:
+                        best[uniq] = ("dns", hit)
+                if best.get(uniq, ("", None))[0] != "http":
+                    still_pending.append((uniq, payload_name, url, r))
             pending = still_pending
             if not pending:
                 break
+
+        # ADR-034 D2/D3: an HTTP fetch outranks DNS on the same param, so a
+        # DNS record alongside a fetch is not emitted. DNS-only emits one
+        # finding per param.
+        http_uniqs = [u for u, (kind, _h) in best.items() if kind == "http"]
+        selected = (
+            http_uniqs or [u for u, (kind, _h) in best.items() if kind == "dns"][:1]
+        )
+
+        for uniq in selected:
+            kind, hit = best[uniq]
+            payload_name, url, r = sent[uniq]
+            if kind == "http":
+                sev = "critical"
+                ftype = "collaborator_hit"
+                detail = (
+                    f"OOB hit: {hit.protocol or '?'} from "
+                    f"{hit.source_ip or '?'} at "
+                    f"{hit.timestamp or '?'} via {payload_name} "
+                    f"on param {param}"
+                )
+            else:
+                sev = "info"
+                ftype = "dns_only_resolution"
+                detail = (
+                    f"OOB DNS-only hit (no HTTP fetch): "
+                    f"{hit.source_ip or '?'} via {payload_name} "
+                    f"on param {param}"
+                )
+
+            # ADR-033: HTTP/S OOB = P1; DNS-only = P4 (ceiling without in-band marker).
+            grade = "P1" if kind == "http" else "P4"
+
+            req_obj = getattr(r, "request", None) if r is not None else None
+            candidate = CandidateFinding(
+                param=param,
+                payload_name=payload_name,
+                payload_value=url,
+                category="ssrf",
+                severity=sev,
+                finding_type=ftype,
+                detail=detail,
+                evidence_grade=grade,
+                response_status=(r.status_code if r is not None else None),
+                response_length=(len(r.text or "") if r is not None else 0),
+                response_content_type=(
+                    (r.headers or {}).get("content-type", "") if r is not None else ""
+                ),
+                url=(getattr(req_obj, "url", None) or self.target),
+                method=self.method,
+                raw_request=(
+                    serialize_request(req_obj) if req_obj is not None else None
+                ),
+                raw_response=(serialize_response(r) if r is not None else None),
+            )
+            result = _ENGINE.verify(candidate)
+            if not isinstance(result, VerifiedFinding):
+                continue
+            finding = _to_scan_finding(result)
+            # ADR-034 D5: route on status like the scan() loop at 1206-1209;
+            # a DNS record is unproven and belongs in the candidate stream.
+            if finding.verification_status == "unproven":
+                summary.candidates.append(finding)
+            else:
+                summary.record(finding)
+            if not quiet:
+                _say(f"  [{param}] SSRF {sev.upper()}: {ftype} | {detail[:80]}")
 
     def scan_ws(self, payloads: list[str] | None = None) -> ScanSummary:
         """Run WebSocket discovery against ``self.target``.

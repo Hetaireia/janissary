@@ -91,6 +91,35 @@ class WebSocketReconConfirmer:
         return None
 
 
+class DnsOnlyOobConfirmer:
+    """Marks a DNS-only OOB hit unproven (ADR-034 D4).
+
+    A resolver answering for the collaborator host proves that the target
+    resolved the payload host, not that it fetched it. ssrf_http and
+    ssrf_https fetch; ssrf_dns_only targets port 9 and therefore resolves
+    only. ADR-033 graded that P4, but the unconditional
+    AnalyzerImplicitConfirmer still promoted it to verified, so the P4
+    ceiling had no meaning in the finding stream.
+
+    Reason=oob_dns_only_no_http is stable and machine-readable. HTTP and
+    HTTPS hits match nothing here and fall through for analyzer
+    confirmation unchanged.
+    """
+
+    name = "dns_only_oob"
+
+    _TYPE = "dns_only_resolution"
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        if candidate.finding_type == self._TYPE:
+            return Confirmation(
+                confirmed=True,
+                reason="oob_dns_only_no_http",
+                unproven=True,
+            )
+        return None
+
+
 class AnalyzerImplicitConfirmer:
     """Implicit confirmation from the analyzer pipeline.
 

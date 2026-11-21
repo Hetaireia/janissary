@@ -8,6 +8,7 @@ from .confirmers import (
     Confirmation,
     Confirmer,
     CorroboratorConfirmer,
+    DnsOnlyOobConfirmer,
     GraphQLReconConfirmer,
     WebSocketReconConfirmer,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "Confirmation",
     "Confirmer",
     "CorroboratorConfirmer",
+    "DnsOnlyOobConfirmer",
     "FailedVerification",
     "GraphQLReconConfirmer",
     "VerificationEngine",

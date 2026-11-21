@@ -129,8 +129,8 @@ def test_scanner_ssrf_hit_http_emits_finding():
     assert "1.2.3.4" in ssrf[0].detail
 
 
-def test_scanner_ssrf_dns_only_emits_info():
-    """DNS-only hit -> info finding, not critical."""
+def test_scanner_ssrf_dns_only_emits_candidate():
+    """ADR-034 D3/D5: DNS-only -> candidates, unproven, P4."""
     from janissary.engine.scanner import ScanSummary
     from janissary.integrations.collaborator import SsrfHit
 
@@ -152,11 +152,101 @@ def test_scanner_ssrf_dns_only_emits_info():
     summary = ScanSummary(target="http://target.example/", params=["q"], method="GET")
     scanner._ssrf_phase("q", summary, quiet=True)
 
+    assert [f for f in summary.findings if f.category == "ssrf"] == []
+    ssrf_cand = [f for f in summary.candidates if f.category == "ssrf"]
+    assert len(ssrf_cand) == 1
+    assert ssrf_cand[0].severity == "info"
+    assert ssrf_cand[0].finding_type == "dns_only_resolution"
+    assert ssrf_cand[0].evidence_grade == "P4"
+    assert ssrf_cand[0].verification_status == "unproven"
+    assert "oob_dns_only_no_http" in (ssrf_cand[0].verification_reason or "")
+    assert "5.6.7.8" in ssrf_cand[0].detail
+
+
+def test_scanner_ssrf_http_suppresses_dns_on_same_param():
+    """ADR-034 D2: HTTP fetch present -> DNS-only suppressed entirely."""
+    from janissary.engine.scanner import ScanSummary
+    from janissary.integrations.collaborator import SsrfHit
+
+    session = MagicMock()
+    session.get.return_value = _ok_response()
+
+    collab = MagicMock()
+    collab.new_unique_id.side_effect = [f"jns-m{i}" for i in range(5)]
+    collab.payload_for.side_effect = lambda p, u: f"http://{u}.collab.example.com/"
+    http_hit = SsrfHit(
+        protocol="http",
+        payload_name="ssrf_http",
+        subdomain="jns-m0",
+        source_ip="1.2.3.4",
+        timestamp="2026-10-28T00:00:00Z",
+    )
+    dns_hit = SsrfHit(
+        protocol="dns",
+        payload_name="ssrf_dns_only",
+        subdomain="jns-m1",
+        source_ip="5.6.7.8",
+    )
+    collab.poll.side_effect = lambda u: {"jns-m0": [http_hit], "jns-m1": [dns_hit]}.get(
+        u, []
+    )
+
+    scanner = _scanner_with_collab(collab, session)
+    summary = ScanSummary(target="http://target.example/", params=["q"], method="GET")
+    scanner._ssrf_phase("q", summary, quiet=True)
+
     ssrf = [f for f in summary.findings if f.category == "ssrf"]
     assert len(ssrf) == 1
-    assert ssrf[0].severity == "info"
-    assert ssrf[0].finding_type == "dns_only_resolution"
-    assert ssrf[0].evidence_grade == "P4"
+    assert ssrf[0].finding_type == "collaborator_hit"
+    assert ssrf[0].evidence_grade == "P1"
+    assert [f for f in summary.candidates if f.category == "ssrf"] == []
+
+
+def test_scanner_ssrf_http_after_dns_upgrades_to_collaborator_hit():
+    """ADR-034 D1: delayed HTTP hit on same uniq overrides earlier DNS."""
+    from janissary.engine.scanner import ScanSummary
+    from janissary.integrations.collaborator import SsrfHit
+
+    session = MagicMock()
+    session.get.return_value = _ok_response()
+
+    collab = MagicMock()
+    collab.new_unique_id.side_effect = [f"jns-l{i}" for i in range(5)]
+    collab.payload_for.side_effect = lambda p, u: f"http://{u}.collab.example.com/"
+    dns_hit = SsrfHit(
+        protocol="dns",
+        payload_name="ssrf_dns_only",
+        subdomain="jns-l0",
+        source_ip="5.6.7.8",
+    )
+    http_hit = SsrfHit(
+        protocol="http",
+        payload_name="ssrf_http",
+        subdomain="jns-l0",
+        source_ip="1.2.3.4",
+        timestamp="2026-10-28T00:00:00Z",
+    )
+    poll_calls = []
+
+    def _poll(u):
+        if u != "jns-l0":
+            return []
+        if len(poll_calls) == 0:
+            poll_calls.append(1)
+            return [dns_hit]
+        return [http_hit]
+
+    collab.poll.side_effect = _poll
+
+    scanner = _scanner_with_collab(collab, session)
+    summary = ScanSummary(target="http://target.example/", params=["q"], method="GET")
+    scanner._ssrf_phase("q", summary, quiet=True)
+
+    ssrf = [f for f in summary.findings if f.category == "ssrf"]
+    assert len(ssrf) == 1
+    assert ssrf[0].finding_type == "collaborator_hit"
+    assert ssrf[0].evidence_grade == "P1"
+    assert [f for f in summary.candidates if f.category == "ssrf"] == []
 
 
 def test_scanner_ssrf_collaborator_unreachable_skips_phase():
