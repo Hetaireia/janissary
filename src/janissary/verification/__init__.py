@@ -10,6 +10,7 @@ from .confirmers import (
     CorroboratorConfirmer,
     DnsOnlyOobConfirmer,
     GraphQLReconConfirmer,
+    OracleConfirmer,
     WebSocketReconConfirmer,
 )
 from .engine import VerificationEngine, VerificationResult
@@ -30,6 +31,7 @@ __all__ = [
     "DnsOnlyOobConfirmer",
     "FailedVerification",
     "GraphQLReconConfirmer",
+    "OracleConfirmer",
     "VerificationEngine",
     "VerificationResult",
     "VerificationStatus",
