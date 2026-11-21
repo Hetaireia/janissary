@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-PyPI and git main are at **7.11.1** (2026-11-21; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination). The Docker image lags at 7.10.2 pending republish; for the current release use `pip install janissary` or install from git.
+PyPI, git main, and the Docker image are at **7.11.1** (2026-11-21; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
 
 <details>
 <summary>pip install</summary>
