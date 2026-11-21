@@ -519,6 +519,8 @@ Tier 2 - high value
 - CI/CD native action. Publish action.yml, document the recipe.
   Effort: low. Impact: medium.
 
+- Branded docs site. Jekyll/Hugo/mdBook with SCSS variables for the brand palette (--brand-gold: #D4AF37, --brand-obsidian: #0B0B0F, --brand-plate: #EBEBEB). GitHub README keeps plain headings because GitHub strips style attributes; coloured headings there break copy-paste, search, and screen readers. Prerequisites: README stable for one release cycle; traffic justifies ~2-4 hours of setup. Deferred from 2026-11-19/20 session by explicit decision.
+
 Tier 3 - differentiators, not blockers
 
 - Intercepting proxy mode. Large; changes the tool's character.
