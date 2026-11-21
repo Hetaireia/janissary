@@ -151,3 +151,8 @@ Accepted. This ADR.
 - `LICENSE` -- current Apache-2.0 license text
 - Apache-2.0 section 5 -- inbound contribution terms
 
+
+
+## Addendum (2026-11-21)
+
+As of this date, JANISSARY has a single author (using the aliases Oracle Mode and Damn-Infidel, owned by AutoConcierge Network) and zero external contributors. D3 is hereby superseded. The 100-star, 5-contributor, and named-enterprise triggers are removed. The project owner may reconsider commercial strategy at any time, provided the Apache-2.0 grant on the existing Community Engine remains irrevocable.

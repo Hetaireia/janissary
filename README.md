@@ -201,7 +201,6 @@ JANISSARY is open-core. The core is Apache-2.0 because a scanner you cannot read
 | Licence | Class | Contents |
 |---|---|---|
 | **Apache-2.0** | Apache License 2.0 | Detection engine, confirmer chain, differential workflow, IDOR |
-| **BSL 1.1** | Business Source License 1.1 | Source-visible glue modules; converts to Apache-2.0 after four years |
 | **Commercial** | Proprietary | Control plane: SSO and RBAC, fleet scheduling, ticketing, SLAs |
 
 The M89 negative corpus is not published. WAF backoff curves and pacing logic are available in the open-source repository.

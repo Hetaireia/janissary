@@ -30,7 +30,7 @@ mypy src
 
 - **Python 3.10+**. Use modern syntax (`X | None`, `match` statements).
 - **Line length: 88** (Black default).
-- **Type hints on all public functions.** `mypy --strict` must pass.
+- **Type hints on all public functions.** `mypy (strict mode is aspirational)` must pass.
 - **No `shell=True` in subprocess calls.** Ever.
 - **No new dependencies without a discussion in an issue first.**
 
@@ -88,7 +88,7 @@ PRs are reviewed within 72 hours. We aim to merge within 7 days.
 
 ## Governance
 
-JANISSARY is maintained by a small core team. Decisions about the
+JANISSARY is maintained by a project maintainer. Decisions about the
 detection engine and the payload library are made by consensus of
 the core team. Community contributions are welcomed and credited in
 the release notes.
@@ -97,3 +97,7 @@ the release notes.
 
 This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md).
 By participating, you agree to uphold it.
+
+
+## Licensing
+Contributions are accepted under the Apache License 2.0 (see LICENSE). By submitting a pull request, you agree to license your contribution under these terms. No Contributor License Agreement (CLA) or copyright assignment is required.

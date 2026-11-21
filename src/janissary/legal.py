@@ -1,8 +1,6 @@
 """Terms of use and first-run acceptance gate.
 
-JANISSARY is a dual-use security tool. This module implements the
-clickwrap acceptance step that makes the supplemental Terms of Use in
-LEGAL.md contractually binding on the standard user path.
+JANISSARY is a dual-use security tool. This module defines the Terms of Use printed as a warning.
 
 It does not modify the Apache-2.0 code licence. It adds a separate
 acceptance record that the CLI checks before any network command runs.
@@ -15,10 +13,7 @@ cannot silently diverge.
 
 from __future__ import annotations
 
-import contextlib
 import json
-import os
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,27 +23,6 @@ ACCEPTANCE_ENV = "JANISSARY_ACCEPT_TERMS"
 
 MARKER_DIRNAME = ".janissary"
 MARKER_FILENAME = "terms-accepted.json"
-
-# Commands that touch a remote target and therefore require acceptance.
-GATED_COMMANDS = frozenset({"scan", "fingerprint", "graphql", "ws", "admin", "attack"})
-
-ACCEPT_PROMPT = "Type I AGREE to continue: "
-ACCEPT_TOKEN = "I AGREE"
-
-NON_TTY_MESSAGE = (
-    "JANISSARY requires acceptance of its Terms of Use before any\n"
-    "network command can run, and stdin is not a terminal.\n"
-    "\n"
-    "To accept non-interactively, run one of:\n"
-    "\n"
-    "    janissary terms accept\n"
-    "\n"
-    "or set the environment variable:\n"
-    "\n"
-    "    JANISSARY_ACCEPT_TERMS=1\n"
-    "\n"
-    "Full terms: see LEGAL.md in the project root.\n"
-)
 
 
 TERMS_TEXT = """\
@@ -149,59 +123,3 @@ def record_acceptance(path: Path | None = None) -> Path:
     }
     p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return p
-
-
-def require_acceptance(
-    command: str,
-    path: Path | None = None,
-) -> None:
-    """Gate the given command behind Terms-of-Use acceptance.
-
-    - Non-gated commands return immediately.
-    - Setting JANISSARY_ACCEPT_TERMS=1 records acceptance and proceeds.
-    - A current marker file proceeds silently.
-    - Otherwise, prompt on a TTY; on a non-TTY, exit with code 64.
-    """
-    if command not in GATED_COMMANDS:
-        return
-
-    # Environment-variable acceptance. Best-effort record; the
-    # invocation proceeds even if the record cannot be written.
-    if os.environ.get(ACCEPTANCE_ENV) == "1":
-        with contextlib.suppress(Exception):
-            record_acceptance(path)
-        return
-
-    if is_accepted(path):
-        return
-
-    if not sys.stdin.isatty():
-        print(NON_TTY_MESSAGE, file=sys.stderr)
-        raise SystemExit(64)
-
-    # Interactive prompt.
-    print()
-    print(TERMS_TEXT)
-    print()
-    print("Full terms: LEGAL.md in the project root.")
-    print("To skip this prompt in future: janissary terms accept")
-    print()
-    sys.stdout.write(ACCEPT_PROMPT)
-    sys.stdout.flush()
-
-    try:
-        response = sys.stdin.readline()
-    except KeyboardInterrupt:
-        print("\nAcceptance not given.", file=sys.stderr)
-        raise SystemExit(64) from None
-
-    if response.strip() != ACCEPT_TOKEN:
-        print()
-        print("Acceptance not given. JANISSARY will not run.", file=sys.stderr)
-        raise SystemExit(64)
-
-    recorded = record_acceptance(path)
-    print()
-    print(f"Terms version {TERMS_VERSION} accepted.")
-    print(f"Recorded at {recorded}")
-    print()

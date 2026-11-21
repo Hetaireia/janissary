@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,7 @@ description = "Differential DAST for teams who need results they can trust."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Hetaireia", email = "hetaireia.it@gmail.com" }]
 keywords = ["security", "dast", "pentest", "scanner", "vulnerability"]
 classifiers = [
