@@ -2332,3 +2332,8 @@ Files referenced:
   - benchmark/track_a/tools.env - updated with -ldapfix comment.
   - benchmark/track_a/docker/README.md - entrypoint fixes and image derivation.
   - benchmark/track_a/docker/entrypoint.sh - HSQLDB and LDAP init.
+
+
+## Repeatability (Stage 1)
+
+The OWASP Benchmark DAST-applicable F1 of **0.938** (TP=1,022, FP=0, FN=134) was validated across three consecutive runs (1, 2, 3) on the pinned 20cbf3d target. The resulting standard deviation across TP, FP, and FN is zero. The harness and detection engine are deterministic.
