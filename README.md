@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-PyPI releases are at 7.10.2. The 7.11.x line, which carries WebSocket, host-bypass heuristics, SARIF two-run, tri-session auth, IDOR, crAPI and SSRF metadata, is on git main and not yet published.
+PyPI and git main are at **7.11.1** (2026-11-21; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination). The Docker image lags at 7.10.2 pending republish; for the current release use `pip install janissary` or install from git.
 
 <details>
 <summary>pip install</summary>
@@ -112,7 +112,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:latest scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.10.2 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
