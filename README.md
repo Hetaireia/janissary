@@ -16,7 +16,7 @@
 ---
 
 > [!CAUTION]
-> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. No clickwrap gate: running a network command accepts the Terms of Use. Review with `janissary terms show`.
+> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By using this tool, you accept the Terms of Use in LEGAL.md.
 
 <a id="architecture"></a>
 
@@ -133,7 +133,7 @@ pytest -q
 
 ## Quickstart
 
-Authorised use is covered by a non-blocking safe-harbour notice; there is no clickwrap gate. Review the terms with janissary terms show.
+Authorised use is covered by a non-blocking safe-harbour notice in LEGAL.md.
 
 <details>
 <summary>Scan a single endpoint</summary>
@@ -204,7 +204,7 @@ JANISSARY is open-core. The core is Apache-2.0 because a scanner you cannot read
 | **BSL 1.1** | Business Source License 1.1 | Source-visible glue modules; converts to Apache-2.0 after four years |
 | **Commercial** | Proprietary | Control plane: SSO and RBAC, fleet scheduling, ticketing, SLAs |
 
-Confirmer thresholds, WAF backoff curves and the M89 negative corpus are not published.
+The M89 negative corpus is not published. WAF backoff curves and pacing logic are available in the open-source repository.
 
 Governing law is Victoria, Australia. IDOR stays in the Apache-2.0 core, not behind a paid tier. Contribution terms and the outbound licence grant are in CONTRIBUTING.md.
 

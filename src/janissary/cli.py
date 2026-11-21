@@ -727,7 +727,6 @@ def _validate_record_case_dir(path_str: str) -> str | None:
                 f"--record-case-dir contains prior recordings ({name}); "
                 f"use a fresh empty directory: {path_str}"
             )
-    import contextlib
     import os
     import tempfile
 
@@ -1264,43 +1263,6 @@ def cmd_admin(args: argparse.Namespace) -> int:
         print(f"[*] Results exported to {args.export}")
 
     return 0 if not profile.hits else 1
-
-
-def cmd_terms(args: argparse.Namespace) -> int:
-    from janissary.legal import (
-        TERMS_TEXT,
-        TERMS_VERSION,
-        is_accepted,
-        marker_path,
-        record_acceptance,
-    )
-
-    action = getattr(args, "action", "show") or "show"
-
-    if action == "show":
-        print(TERMS_TEXT)
-        return 0
-
-    if action == "status":
-        p = marker_path()
-        if is_accepted():
-            print(f"Terms version {TERMS_VERSION}: ACCEPTED")
-            print(f"Marker: {p}")
-            with contextlib.suppress(OSError):
-                print(p.read_text(encoding="utf-8"))
-            return 0
-        print(f"Terms version {TERMS_VERSION}: NOT ACCEPTED")
-        print(f"Marker: {p}")
-        return 1
-
-    if action == "accept":
-        p = record_acceptance()
-        print(f"Terms version {TERMS_VERSION} accepted.")
-        print(f"Recorded at {p}")
-        return 0
-
-    print(f"[!] unknown terms action: {action}", file=sys.stderr)
-    return 64
 
 
 def cmd_attack_sqli_union(args: argparse.Namespace) -> int:
@@ -2014,9 +1976,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 64
-        from janissary.legal import require_acceptance
 
-        require_acceptance("scan")
         f = findings[0]
         print(format_explanation(f))
         print()
@@ -2408,19 +2368,6 @@ def build_parser() -> argparse.ArgumentParser:
     adm.add_argument("--quiet", action="store_true")
     adm.set_defaults(func=cmd_admin)
 
-    # -- terms ----------------------------------------------------
-    terms = sub.add_parser(
-        "terms", help="show or record acceptance of the Terms of Use"
-    )
-    terms.add_argument(
-        "action",
-        nargs="?",
-        default="show",
-        choices=["show", "status", "accept"],
-        help="show the full text (default), report status, or accept",
-    )
-    terms.set_defaults(func=cmd_terms)
-
     # -- agent ----------------------------------------------------
     agent = sub.add_parser(
         "agent",
@@ -2542,9 +2489,6 @@ def main(argv: list[str] | None = None) -> int:
 
     # Terms-of-Use gate. Non-gated commands (help, version, creds,
     # terms) return from require_acceptance immediately.
-    from janissary.legal import require_acceptance
-
-    require_acceptance(args.command)
 
     return args.func(args)
 

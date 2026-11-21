@@ -1,0 +1,6 @@
+JANISSARY
+Copyright 2026 AutoConcierge Network
+
+This product includes software developed at:
+- The OWASP Benchmark Project (GPLv2) - Benchmark case labels derived mechanically from expected-results.
+- Gitleaks (MIT) - Credential detection rule concepts and ID naming conventions.
