@@ -112,7 +112,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.10.2 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.1 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
