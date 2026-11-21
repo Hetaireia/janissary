@@ -1728,6 +1728,7 @@ def _from_scan_summary(
             "security-severity": f"{security_severity(f.severity):.1f}",
             "verification_status": f.verification_status,
             "verification_reason": f.verification_reason,
+            "evidence_grade": f.evidence_grade,
         }
         if signals:
             props["signals"] = signals

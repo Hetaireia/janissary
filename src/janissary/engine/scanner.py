@@ -309,6 +309,9 @@ class ScanFinding:
     confidence: float = 0.0
     evidence_excerpt: str = ""
 
+    # ADR-033: evidence strength P1..P4; empty until graded at promotion.
+    evidence_grade: str = ""
+
     # M82a: aggregation metadata. Populated by the M82b aggregation
     # layer; defaults preserve Track A single-observation behaviour.
     # NOTE: all six are internal-only. Not serialised to
@@ -358,6 +361,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
         verification_reason=verified.verification_reason,
         confidence=verified.confidence,
         evidence_excerpt=verified.evidence_excerpt,
+        evidence_grade=verified.evidence_grade,
         signature_id=verified.signature_id,
         observation_count=verified.observation_count,
         first_observation_id=verified.first_observation_id,
@@ -1075,6 +1079,9 @@ class Scanner:
                     else:
                         continue
 
+                    # ADR-033: HTTP(S) OOB = P1; DNS-only = P4 (ceiling without in-band marker).
+                    grade = "P1" if ftype == "collaborator_hit" else "P4"
+
                     req_obj = getattr(r, "request", None) if r is not None else None
                     candidate = CandidateFinding(
                         param=param,
@@ -1084,6 +1091,7 @@ class Scanner:
                         severity=sev,
                         finding_type=ftype,
                         detail=detail,
+                        evidence_grade=grade,
                         response_status=(r.status_code if r is not None else None),
                         response_length=(len(r.text or "") if r is not None else 0),
                         response_content_type=(

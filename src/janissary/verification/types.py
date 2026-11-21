@@ -61,6 +61,9 @@ class CandidateFinding:
     confidence: float = 0.0
     evidence_excerpt: str = ""
 
+    # ADR-033: evidence strength P1..P4; empty until graded at promotion.
+    evidence_grade: str = ""
+
     # M82a: aggregation metadata. Populated by the M82b aggregation
     # layer; defaults preserve Track A single-observation behaviour.
     # NOTE: all six are internal-only. Not serialised to
@@ -118,6 +121,9 @@ class VerifiedFinding:
     # see CandidateFinding for the reporting-contract note.
     confidence: float = 0.0
     evidence_excerpt: str = ""
+
+    # ADR-033: evidence strength P1..P4; empty until graded at promotion.
+    evidence_grade: str = ""
 
     # M82a: aggregation metadata. Populated by the M82b aggregation
     # layer; defaults preserve Track A single-observation behaviour.

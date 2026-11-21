@@ -175,6 +175,7 @@ def _normalize_finding(finding: Any) -> dict:
         "fingerprint": _coerce_str(m.get("fingerprint")),
         "title": _coerce_str(m.get("title")),
         "severity": _coerce_str(m.get("severity")),
+        "evidence_grade": _coerce_str(m.get("evidence_grade")),
         "confidence": _coerce_str(m.get("confidence")),
         "url": _coerce_str(m.get("url")),
         "method": _coerce_str(m.get("method")),

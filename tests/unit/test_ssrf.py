@@ -125,6 +125,7 @@ def test_scanner_ssrf_hit_http_emits_finding():
     assert len(ssrf) == 1
     assert ssrf[0].severity == "critical"
     assert ssrf[0].finding_type == "collaborator_hit"
+    assert ssrf[0].evidence_grade == "P1"
     assert "1.2.3.4" in ssrf[0].detail
 
 
@@ -155,6 +156,7 @@ def test_scanner_ssrf_dns_only_emits_info():
     assert len(ssrf) == 1
     assert ssrf[0].severity == "info"
     assert ssrf[0].finding_type == "dns_only_resolution"
+    assert ssrf[0].evidence_grade == "P4"
 
 
 def test_scanner_ssrf_collaborator_unreachable_skips_phase():
