@@ -67,6 +67,7 @@ from janissary.verification import (
     WebSocketReconConfirmer,
 )
 from janissary.verification.confirmers import HeuristicConfirmer, IdorConfirmer
+from janissary.verification.grading import grade_for
 
 # -------------------------------------------------------------------
 # PAYLOAD LIBRARY
@@ -1232,6 +1233,7 @@ class Scanner:
             url=getattr(c, "url", ""),
             method=getattr(c, "method", "GET"),
             verification_status="unproven",
+            evidence_grade=grade_for(c.finding_type, False),
             verification_reason=getattr(c, "discovery_reason", None)
             or "discovery candidate; not verified by engine",
         )

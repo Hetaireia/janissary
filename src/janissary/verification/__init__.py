@@ -12,6 +12,7 @@ from .confirmers import (
     WebSocketReconConfirmer,
 )
 from .engine import VerificationEngine, VerificationResult
+from .grading import grade_for
 from .types import (
     CandidateFinding,
     FailedVerification,
@@ -32,4 +33,5 @@ __all__ = [
     "VerificationStatus",
     "VerifiedFinding",
     "WebSocketReconConfirmer",
+    "grade_for",
 ]

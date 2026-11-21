@@ -222,3 +222,36 @@ def test_rejected_still_produces_failed_verification():
     engine = VerificationEngine(confirmers=[_RejectingConfirmer()])
     result = engine.verify(_sample_candidate())
     assert isinstance(result, FailedVerification)
+
+
+def test_grade_table_sets_known_types():
+    from janissary.verification.grading import grade_for
+
+    assert grade_for("collaborator_hit", True) == "P1"
+    assert grade_for("dns_only_resolution", True) == "P4"
+
+
+def test_grade_falls_back_by_mechanism():
+    from janissary.verification.grading import grade_for
+
+    assert grade_for("sql_union_rows", True) == "P3"
+    assert grade_for("sql_union_rows", False) == "P4"
+    assert grade_for("", True) == "P3"
+
+
+def test_promote_fills_grade_on_confirmed_candidate():
+    engine = VerificationEngine(confirmers=[_ConfirmingConfirmer()])
+    result = engine.verify(_sample_candidate())
+    assert result.evidence_grade == "P3"
+
+
+def test_promote_ceiling_grade_when_unproven():
+    engine = VerificationEngine()
+    result = engine.verify(_sample_candidate())
+    assert result.evidence_grade == "P4"
+
+
+def test_promote_keeps_explicit_grade():
+    engine = VerificationEngine(confirmers=[_ConfirmingConfirmer()])
+    result = engine.verify(_sample_candidate(evidence_grade="P1"))
+    assert result.evidence_grade == "P1"

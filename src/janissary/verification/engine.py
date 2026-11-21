@@ -23,6 +23,7 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from .confirmers import Confirmer
+from .grading import grade_for
 from .types import (
     CandidateFinding,
     FailedVerification,
@@ -69,6 +70,10 @@ def _promote(
     """Build a VerifiedFinding from a CandidateFinding's evidence fields."""
     source = asdict(candidate)
     evidence = {name: source[name] for name in _EVIDENCE_FIELDS}
+    if not evidence["evidence_grade"]:
+        evidence["evidence_grade"] = grade_for(
+            candidate.finding_type, status == "verified"
+        )
     return VerifiedFinding(
         **evidence,
         verification_status=status,
