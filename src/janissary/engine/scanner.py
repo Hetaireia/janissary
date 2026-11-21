@@ -62,6 +62,7 @@ from janissary.verification import (
     CandidateFinding,
     CorroboratorConfirmer,
     GraphQLReconConfirmer,
+    OracleConfirmer,
     VerificationEngine,
     VerifiedFinding,
     WebSocketReconConfirmer,
@@ -406,6 +407,7 @@ _ENGINE = VerificationEngine(
         HeuristicConfirmer(),
         IdorConfirmer(),
         DnsOnlyOobConfirmer(),
+        OracleConfirmer(),
         AnalyzerImplicitConfirmer(),
     ]
 )

@@ -255,3 +255,25 @@ class IdorConfirmer:
                 unproven=True,
             )
         return None
+
+
+class OracleConfirmer:
+    """Mark inline oracle findings as verified by the oracle.
+
+    Single-response oracles (securecookie, weakrand) perform their own
+    baseline comparison inside the scanner loop and issue no additional
+    requests. They must not fall through to AnalyzerImplicitConfirmer,
+    which would misattribute the verification to the analyzer pipeline.
+    """
+
+    name = "oracle"
+
+    _ORACLE_TYPES = frozenset({"securecookie_flag_oracle", "weakrand_rng_oracle"})
+
+    def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
+        if candidate.finding_type in self._ORACLE_TYPES:
+            return Confirmation(
+                confirmed=True,
+                reason=f"oracle:{candidate.finding_type}",
+            )
+        return None
