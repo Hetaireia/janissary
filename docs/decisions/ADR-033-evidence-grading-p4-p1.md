@@ -1,6 +1,6 @@
 # ADR-033 — Evidence grading schema (P4 to P1)
 
-**Status:** Proposed
+**Status:** Accepted (implemented dcb1786, default table 699b98f)
 **Date:** 2026-11-19
 **Defects:** D-5 (no evidence-grading schema: DNS-only and in-band treated as if they were the same promotion class)
 **Related:** D-6 (DNS-vs-HTTP discrimination), D-7 (request-accounting contract, already dual-field in code), D-8 (parse-proven bypass), ADR-012 (SSRF collaborator), ADR-032 (FP floor pattern)
@@ -61,3 +61,9 @@ Full per-finding_type rows beyond SSRF OOB are filled when each class is touched
 - src/janissary/sarif_rules.py SSRF rules
 - tests/unit/test_ssrf.py test_scanner_ssrf_hit_http_emits_finding, test_scanner_ssrf_dns_only_emits_info
 - ADR-012, ADR-016, ADR-032
+
+## Implementation
+
+- dcb1786: field on CandidateFinding, VerifiedFinding, ScanFinding; `_EVIDENCE_FIELDS` carry; SSRF OOB P1/P4 wiring; JSON/JSONL and SARIF `result.properties`; test asserts.
+- 699b98f: `janissary/verification/grading.py` single table (`collaborator_hit` P1, `dns_only_resolution` P4), mechanism fallback P3 confirmed / P4 otherwise, filled at `_promote` and `_candidate_to_scan_finding`, 5 table tests.
+- Unit suite 1411 passed, 1 skipped. M89 delta 0 still outstanding.
