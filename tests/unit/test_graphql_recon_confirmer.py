@@ -106,6 +106,7 @@ def test_engine_confirmer_order_is_load_bearing():
         "heuristic",
         "idor",
         "dns_only_oob",
+        "oracle",
         "analyzer_implicit",
     ], (
         f"confirmer order changed; got {names}. GraphQLReconConfirmer "
