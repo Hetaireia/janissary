@@ -180,3 +180,10 @@ janissary_brand_pack/
 
 # Local-only milestone collation (contains enterprise intentions; do not push)
 docs/MILESTONE-REGISTER-COLLATED.md
+
+# Session scratch and evidence - never tracked
+recon/
+juice-shop-*.json
+portswigger-*.json
+appcharge-*.json
+
