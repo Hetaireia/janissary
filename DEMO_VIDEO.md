@@ -14,10 +14,10 @@ Demo video script + production notes for the JANISSARY launch.
 |---|---|---|---|
 | 1 | 0:00-0:06 | Black. White text: \Most DAST tools give you a wall of false positives.\ | (silence) |
 | 2 | 0:06-0:14 | Terminal. Cursor. Text fades in: \JANISSARY.\ | \JANISSARY is different.\ |
-| 3 | 0:14-0:24 | Terminal types: \janissary terms accept\ -> output | \It asks you to confirm you are authorised, then keeps a record.\ |
+| 3 | 0:14-0:24 | Terminal types: `pip install janissary` -> output | `Install it in one line from PyPI.` |
 | 4 | 0:24-0:44 | \janissary agent https://target.example --attack-confirm\ running live | \One command. It fingerprints the target, detects the WAF, picks the modules that apply, and runs them.\ |
-| 5 | 0:44-0:60 | Findings output scrolls. Text callout: \303 tests. Zero false positives by design.\ | \Every finding is gated by a baseline comparison. No single response is ever enough.\ |
-| 6 | 0:60-0:70 | GitHub repo view. Star count. \github.com/Damn-Infidel/janissary\ | \Open source. Apache 2.0. Built for pentesters who need results they can trust.\ |
+| 5 | 0:44-0:60 | Findings output scrolls. Text callout: \1,500+ tests. 1.000 precision on the OWASP Benchmark DAST-applicable subset.\ | \Every finding is gated by a baseline comparison. No single response is ever enough.\ |
+| 6 | 0:60-0:70 | GitHub repo view. Star count. \github.com/Hetaireia/janissary\ | \Open source. Apache 2.0. Built for pentesters who need results they can trust.\ |
 | 7 | 0:70-0:75 | Black. Text: \JANISSARY\ | (silence) |
 
 ---

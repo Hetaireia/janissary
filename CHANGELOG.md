@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [7.11.2] - 2026-11-22
+### Changed
+- Removed the Terms-of-Use acceptance gate and the `terms` subcommand; authorised-use guidance remains in LEGAL.md and the README.
+- Removed the user-indemnity text that shipped inside the CLI, and the now-dead `legal.py` module and its `conftest.py` fixture.
+### Added
+- NOTICE file; LICENSE and NOTICE now ship in the wheel and sdist.
 ## [7.11.0] - 2026-11-06
 
 241 commits since v7.10.2.

@@ -139,7 +139,7 @@ Suite: 235 tests passing. Ruff clean.
 
 ---
 
-## Legal framework — Terms of Use + acceptance gate (DONE)
+## Legal framework — Terms of Use + acceptance gate (SUPERSEDED IN 7.11.2)
 
 - `LEGAL.md` — supplementary Terms of Use. Clauses: authorised use,
   indemnity, limitation of liability, export control, good-faith
@@ -153,6 +153,7 @@ Suite: 235 tests passing. Ruff clean.
   {show,status,accept}` subcommand.
 - `README.md` — Authorised-Use block at the top.
 - `tests/unit/test_legal.py` — 19 tests.
+  Superseded in 7.11.2: the acceptance gate, `src/janissary/legal.py`, the `terms` subcommand and `tests/unit/test_legal.py` were removed. `LEGAL.md` remains as guidance. See CHANGELOG.md.
 
 ---
 

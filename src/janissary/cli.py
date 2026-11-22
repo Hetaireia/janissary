@@ -2487,9 +2487,6 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    # Terms-of-Use gate. Non-gated commands (help, version, creds,
-    # terms) return from require_acceptance immediately.
-
     return args.func(args)
 
 

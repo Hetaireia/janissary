@@ -82,8 +82,6 @@ try {
         Write-Host "[*] Juice Shop already running" -ForegroundColor Green
     }
 
-    $env:JANISSARY_ACCEPT_TERMS = "1"
-
     Write-DemoHeader "SCAN 1 - SQL injection on Juice Shop RETAIL search"
     Write-Host "Command: janissary scan -u 'http://127.0.0.1:3000/rest/products/search?q=test' -p q" -ForegroundColor DarkGray
     Write-Host ""
@@ -108,6 +106,5 @@ try {
     Write-Host "Positive + negative results both demonstrated." -ForegroundColor Green
     Write-Host "Recording reference: docs/DEMO.md" -ForegroundColor Green
 } finally {
-    Remove-Item Env:\JANISSARY_ACCEPT_TERMS -ErrorAction SilentlyContinue
     Pop-Location
 }

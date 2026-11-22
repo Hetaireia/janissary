@@ -39,11 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    env:
-      # Terms-of-Use gate: `scan` is in GATED_COMMANDS; non-TTY runs exit 64
-      # unless acceptance is recorded. This is the documented env-var path.
-      JANISSARY_ACCEPT_TERMS: "1"
-
     steps:
       - name: Check out
         uses: actions/checkout@v4

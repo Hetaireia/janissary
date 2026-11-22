@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-PyPI, git main, and the Docker image are at **7.11.2** (2026-11-21; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
+PyPI, git main, and the Docker image are at **7.11.2** (2026-11-22; removes the Terms-of-Use acceptance gate; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
 
 <details>
 <summary>pip install</summary>
