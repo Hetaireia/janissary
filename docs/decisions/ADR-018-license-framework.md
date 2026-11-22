@@ -156,3 +156,10 @@ Accepted. This ADR.
 ## Addendum (2026-11-21)
 
 As of this date, JANISSARY has a single author (using the aliases Oracle Mode and Damn-Infidel, owned by AutoConcierge Network) and zero external contributors. D3 is hereby superseded. The 100-star, 5-contributor, and named-enterprise triggers are removed. The project owner may reconsider commercial strategy at any time, provided the Apache-2.0 grant on the existing Community Engine remains irrevocable.
+
+### Addendum (2026-11-22): copyright notice naming
+
+Until the project's owning company is incorporated and the code is assigned to it, "Hetaireia" in NOTICE, package metadata and other notices denotes the project's sole author, who holds the copyright personally. It does not refer to an incorporated entity. After incorporation and assignment, notices in subsequent releases will name the registered company. Apache-2.0 grants made in earlier releases are unaffected.
+### Addendum (2026-11-22): copyright notice naming
+
+Until the project's owning company is incorporated and the code is assigned to it, "Hetaireia" in NOTICE, package metadata and other notices denotes the project's sole author, who holds the copyright personally. It does not refer to an incorporated entity. After incorporation and assignment, notices in subsequent releases will name the registered company. Apache-2.0 grants made in earlier releases are unaffected.

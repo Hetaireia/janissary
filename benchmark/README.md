@@ -26,3 +26,4 @@ Every run is reproducible from:
 3. The harness version = the git commit that produced the run
 
 Each `runs/<timestamp>/manifest.json` records all three.
+Benchmark case labels in track_a/cases.csv and case_vectors.csv are derived mechanically from the OWASP Benchmark Project's expected-results file. OWASP Benchmark is licensed GPLv2. No Benchmark source code is included in this repository.
