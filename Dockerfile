@@ -3,7 +3,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY pyproject.toml README.md LICENSE NOTICE ./
+COPY pyproject.toml README.md LICENSE NOTICE LEGAL.md ./
 COPY src/ ./src/
 
 RUN --mount=type=cache,target=/root/.cache/pip \

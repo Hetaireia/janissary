@@ -16,7 +16,7 @@
 ---
 
 > [!CAUTION]
-> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. By using this tool, you accept the Terms of Use in LEGAL.md.
+> **Authorised use only.** JANISSARY is a dual-use security testing tool. Use it **only** against systems you own, or systems you have prior written permission to test. Warranty position, liability and the good-faith safe harbour: [LEGAL.md](https://github.com/Hetaireia/janissary/blob/main/LEGAL.md).
 
 <a id="architecture"></a>
 
@@ -133,7 +133,7 @@ pytest -q
 
 ## Quickstart
 
-Authorised use, the good-faith safe harbour and the warranty position are set out in [LEGAL.md](LEGAL.md). Nothing to accept and no gate — it sits alongside Apache-2.0 rather than adding a step.
+Authorised use, the good-faith safe harbour and the warranty position are set out in [LEGAL.md](https://github.com/Hetaireia/janissary/blob/main/LEGAL.md). Nothing to accept and no gate — it sits alongside Apache-2.0 rather than adding a step.
 
 <details>
 <summary>Scan a single endpoint</summary>

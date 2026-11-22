@@ -33,7 +33,7 @@ This directory contains the public documentation for JANISSARY. Start with the R
 | Diagnose a scan that is not working | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
 | Read the architectural decision records | [decisions/](decisions/) |
 | Report a vulnerability | [SECURITY.md](../SECURITY.md) |
-| Understand the Terms of Use gate | [LEGAL.md](../LEGAL.md) |
+| Understand the authorised-use position and warranty | [LEGAL.md](../LEGAL.md) |
 | Contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 
 ---

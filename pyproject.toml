@@ -9,7 +9,7 @@ description = "Differential DAST for teams who need results they can trust."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-license-files = ["LICENSE", "NOTICE"]
+license-files = ["LICENSE", "NOTICE", "LEGAL.md"]
 authors = [{ name = "Hetaireia", email = "hetaireia.it@gmail.com" }]
 keywords = ["security", "dast", "pentest", "scanner", "vulnerability"]
 classifiers = [
