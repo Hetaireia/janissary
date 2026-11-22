@@ -1722,6 +1722,7 @@ def _from_scan_summary(
             "params": list(summary.params),
             "method": summary.method,
             "totalRequests": summary.total_requests,
+            "approximateRequests": summary.approximate_requests,
             "findingCount": len(findings),
         },
     }

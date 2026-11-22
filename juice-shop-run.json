@@ -1,0 +1,31 @@
+{
+  "run": {
+    "target": "http://localhost:3000",
+    "platforms": [
+      "wordpress"
+    ],
+    "waf": null,
+    "plan": [
+      "scan",
+      "xmlrpc",
+      "admin"
+    ],
+    "modules_run": [
+      "scan",
+      "xmlrpc",
+      "admin"
+    ],
+    "modules_skipped": [],
+    "new_findings": 0,
+    "total_findings": 0,
+    "aborted": false,
+    "abort_reason": ""
+  },
+  "summary": {
+    "total": 0,
+    "by_severity": {},
+    "by_category": {},
+    "targets": []
+  },
+  "findings": []
+}

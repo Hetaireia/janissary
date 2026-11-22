@@ -177,3 +177,19 @@ def test_sarif_taxonomies_present(tmp_path):
     assert taxonomies[0]["name"] == "CWE"
     ids = {entry["id"] for entry in taxonomies[0]["taxa"]}
     assert "cwe-89" in ids
+
+
+def test_sarif_invocation_carries_approximate_requests(tmp_path):
+    """D-25: SARIF invocation.properties must carry approximateRequests.
+
+    The JSON envelope (_summary_to_dict) exposes both total_requests and
+    approximate_requests. A SARIF consumer reading the same scan must see
+    the same pair, or the two reporting surfaces silently disagree.
+    """
+    summary = _summary()
+    summary.total_requests = 10
+    summary.approximate_requests = 15
+    doc = _read_sarif(tmp_path, summary)
+    props = doc["runs"][0]["invocations"][0]["properties"]
+    assert props["totalRequests"] == 10
+    assert props["approximateRequests"] == 15
