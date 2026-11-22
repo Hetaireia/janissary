@@ -3,6 +3,7 @@ Copyright 2026 Hetaireia
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-Acknowledgements
-- Credential-detection rule identifiers follow the naming conventions of
-  Gitleaks (MIT), https://github.com/gitleaks/gitleaks
+Third-party components
+- Credential detection derives from gitleaks (MIT, (c) 2019 Zachary Rice) and
+  keyhunter (MIT, (c) 2026 fadidevv). Full licence texts ship in
+  THIRD_PARTY_NOTICES.md.

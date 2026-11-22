@@ -8,6 +8,11 @@ Three engines run over every scanned text:
   Entropy fallback    TruffleHog-style Shannon entropy over base64 and hex
                       strings with no provider context at all.
 
+GITLEAKS_RULES derives from gitleaks (MIT, (c) 2019 Zachary Rice): several
+regexes, entropy floors and allowlists are transcribed from its default
+configuration. KEYHUNTER_PATTERNS follows the unique-segment technique from
+keyhunter (MIT, (c) 2026 fadidevv). See THIRD_PARTY_NOTICES.md.
+
 Each rule is a dict:
 
     id           stable machine identifier; appears in findings and exports
