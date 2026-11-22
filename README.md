@@ -133,7 +133,7 @@ pytest -q
 
 ## Quickstart
 
-Authorised use is covered by a non-blocking safe-harbour notice in LEGAL.md.
+Authorised use, the good-faith safe harbour and the warranty position are set out in [LEGAL.md](LEGAL.md). Nothing to accept and no gate — it sits alongside Apache-2.0 rather than adding a step.
 
 <details>
 <summary>Scan a single endpoint</summary>

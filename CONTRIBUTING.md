@@ -101,3 +101,13 @@ By participating, you agree to uphold it.
 
 ## Licensing
 Contributions are accepted under the Apache License 2.0 (see LICENSE). By submitting a pull request, you agree to license your contribution under these terms. No Contributor License Agreement (CLA) or copyright assignment is required.
+
+### Developer Certificate of Origin
+
+Every commit needs a sign-off line certifying you wrote it, or otherwise have the right to submit it under Apache-2.0, per the [Developer Certificate of Origin 1.1](https://developercertificate.org/). Add it with `git commit -s`, which appends:
+
+```text
+Signed-off-by: Your Name <you@example.com>
+```
+
+Use a real name and a reachable address. A maintainer will ask for the sign-off if it is missing.
