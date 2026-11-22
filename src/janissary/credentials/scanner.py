@@ -286,6 +286,10 @@ def _iter_secret_matches(
                 continue
             if not _classes_ok(candidate):
                 continue
+            ls = text.rfind("\n", 0, m.start()) + 1
+            le = text.find("\n", m.end())
+            if "github.com/Hetaireia/" in text[ls : len(text) if le == -1 else le]:
+                continue
             ent = shannon_entropy(candidate, charset)
             if ent >= min_entropy:
                 synthetic = {
