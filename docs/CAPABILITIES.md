@@ -1,6 +1,6 @@
 # JANISSARY Capability Matrix
 
-**Last updated:** 2026-11-18 session (`3dfcf98` base).
+**Last updated:** 2026-11-24.
 **Purpose:** Consolidated capability status for external readers, auditors, and procurement reviewers. The README capability matrix is a summary; this document is the authoritative reference.
 
 ## Status legend
@@ -22,7 +22,7 @@ Four distinct meanings, not four colours. A row may change status tier without c
 | Capability | Status | Notes |
 |---|---|---|
 | Differential HTTP scanning | 🟢 Implemented | Baseline + comparison; sole VerifiedFinding emitter |
-| OpenAPI 3.0.x / Swagger 2.0 importer | 🟢 Implemented | `$ref` resolution, operation-level dispatch |
+| OpenAPI 3.0.x / Swagger 2.0 importer | 🟢 Implemented | Local-file/URL import, `$ref` resolution, operation-level parameter dispatch, CLI enumeration and per-operation live scan loop. Request-body targets use `auto`; named body-parameter injection is not implemented. Runtime target failures are logged and skipped without marking the merged scan summary incomplete. |
 | SQL injection — blind and union differential | 🟢 Implemented | No error-based class; verification is differential (blind + union) |
 | XSS (reflected) | 🟢 Implemented | Context-aware reflection check; not a parser differential |
 | XPath injection | 🟢 Implemented | SQL-style oracle reuse; broad benchmark coverage not established |
@@ -32,7 +32,7 @@ Four distinct meanings, not four colours. A row may change status tier without c
 | IDOR | 🟡 Discovery candidates | Candidate-only per ADR-031; two identities required; manual triage |
 | Host-header ACL bypass | 🟡 Discovery candidates | Bypasses VerificationEngine by design (ADR-030 Rule 1) |
 | Heuristic discovery | 🩵 Discovery path | `--heuristic` required; always candidate-only |
-| WAF fingerprinting | 🟢 Implemented | Active probe detections (10 vendor table) plus passive header-based classifier at M109 (B-8): Cloudflare, Akamai, Imperva detectable from response headers alone |
+| WAF fingerprinting | 🟢 Implemented | Active probe detections (10-vendor table). Passive response-header classification (M109/B-8) remains proposed and unapproved; it is not represented as implemented. |
 | GraphQL | 🟣 Separate integration | Explicit invocation; discovery + fuzzing primitives |
 | WebSocket | 🟣 Separate integration | Explicit invocation; payload input required |
 | Attack subcommands | 🔵 Explicit opt-in | `--attack-confirm` required; separate from standard DAST |

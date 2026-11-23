@@ -3,6 +3,7 @@
 **Date:** 15 November 2026
 **Status:** Strategic planning document — implementation sequencing and acceptance framework
 **Repository baseline:** `1e66512`
+**Documentation reconciliation:** 24 November 2026.
 **Branch:** `main`
 **Purpose:** Establish an evidence-led, strategically ordered remediation programme for JANISSARY, prioritising measurement integrity, detection quality, authentication reliability, and verification confidence.
 
@@ -186,9 +187,14 @@ The runner's disposition logic distinguishes:
 
 This is meaningful implementation, but it does not automatically establish complete end-to-end acceptance.
 
-**Current strategic assessment:** M83 should be represented as `verified-partial` when the register evidence is reconciled. Its remaining gap is full end-to-end acceptance against the defined validation items, not the existence of an implementation.
+**Current strategic assessment:** M83 remains `verified-partial`, consistent with its registered status. Stage 1 validation was completed on 2026-11-18 and recorded in commit `40d1715` (Amendment 30). The clean-exit run executed 2,740 subprocesses, created 2,740 case directories with zero collisions, reported `accounting_valid: true`, and measured DAST-applicable F1 of 0.938. Dispositions were 2,621 `has_observations`, 26 `zero_observations`, 0 `recording_failed`, 0 `recording_indeterminate`, and 93 `not_reached`.
 
-The next stage must verify the real scanner invocation path, actual executable behaviour, schema consistency, repeatability, and the complete benchmark acceptance protocol.
+Two residual checks remain before the broader M83 acceptance claim can be closed:
+
+1. Run-to-run repeatability under identical conditions has not been performed.
+2. Gate E observation call-count inspection at `scanner.py:2125` remains outstanding.
+
+The Stage 1 result is meaningful validation evidence, but it does not promote M83 to complete. The next M83 work should address those two residuals and assess the remaining acceptance protocol against the evidence, without treating the successful run alone as proof of full milestone completion.
 
 ### 3.2 M37 — path-traversal detection
 
@@ -1067,18 +1073,11 @@ Do not define arbitrary target values without a measured baseline and an agreed 
 
 ### 9.1 Immediate next actions
 
-The first execution round should remain documentation-focused:
+The bounded documentation and evidence reconciliation for this execution round has been prepared across the four explicitly authorised documents. It records the current capability and OpenAPI implementation state, removes contradictory stale backlog descriptions, and reconciles the roadmap with the available M83 Stage 1 evidence and its two remaining residual checks.
 
-1. Complete the repository baseline and milestone reconciliation.
-2. Save this strategic roadmap in `docs/STRATEGIC-ROADMAP-2026-11-15.md`.
-3. Correct the stale M83 register description to reflect existing implementation and remaining validation work.
-4. Update M87's related-functionality evidence to include SessionRotator and its tests.
-5. Preserve the missing AuthStateManager gap.
-6. Verify milestone identities and approval boundaries.
-7. Run documentation checks.
-8. Review the complete diff.
-9. Stage only the explicitly authorised documentation files.
-10. Submit the staged diff for review before committing.
+The reconciliation preserves M83 as `verified-partial`, acknowledges the existing M87 `SessionRotator` and structured authentication-state infrastructure while retaining the outstanding full `AuthStateManager` gap, and preserves the existing milestone identities, approval boundaries, dependency classifications, and dashboard counts.
+
+No milestone register, workflow, dashboard, source-code, or unrelated documentation changes are part of this reconciliation. This documentation stage is complete only after the resulting diff and checks have been reviewed and the explicitly scoped local commit has passed its normal hooks. Subsequent implementation stages remain separately scoped and require separate authorisation.
 
 ### 9.2 Subsequent execution order
 

@@ -41,15 +41,6 @@ Verification: test against a Jinja2/Twig/Smarty-backed mock that evaluates the p
 Refs: analyzer.py (XSS oracle, for contrast), ResponseSnapshot, ADR-016 (verified/discovery vocabulary)
 
 
-
-Gap: XSS oracle fires on reflection. Payload dictionary lacks template syntax.
-
-Needs: add the four standard CSTI families to the XSS payload list in detection/analyzer.py: double-brace, hash-brace, dollar-brace, ERB angle form.
-
-Verification: against a page that evaluates the double-brace form to its numeric answer, oracle fires. Against verbatim reflection, silent.
-
-Refs: existing XSS oracle, detection/analyzer.py
-
 ### BL-3 — Path-traversal encoding audit — CLOSED 2026-11-10 (no additions)
 
 Audit complete. Six encoding families checked against scanner.py DEFAULT_PAYLOADS:
@@ -73,15 +64,6 @@ Roadmap rule applied: do not compete on payload count. Adding to tick a checklis
 
 Revisit trigger: a named user reports a real target where mixed-slash bypass succeeds. At that point, add mixed-slash with a regression check on pathtraver-01 before/after.
 
-
-
-Gap: unknown whether the payload dictionary covers overlong UTF-8, double-encoding, mixed slash.
-
-Needs: audit and add missing encodings from: standard, URL-encoded, double-encoded, overlong UTF-8, mixed-slash, backslash.
-
-Verification: dictionary contains all six forms.
-
-Refs: ADR-003, ADR-027
 
 ## Tier 1b — minted 2026-11-23 (register D-26..D-30; NOT live WORKFLOW queue)
 
@@ -143,10 +125,6 @@ Refs: D-30, D-8, P1.2 pacer, BL-6
 - **Browser CSPT / client path sink (enterprise):** open-core future engine; not Apache CLI default.
 - **CSRF → markdown/javascript: XSS → GraphQL side effects:** session/playbook; stop at verified XSS in core.
 
-## Tier 3 addendum — 2026-11-23 (never queued)
-- CSPT-as-CLI-class without browser: out of scope (encoding theory may inform BL-6/D-30 only).
-- Browser CSPT / client path sink: enterprise/open-core later.
-- CSRF to markdown javascript XSS to GraphQL: out of core DAST.
 
 ## Tier 2 — verify first
 
@@ -165,24 +143,25 @@ Comparison: Burp Suite Professional detects DOM-XSS via its embedded browser. ZA
 Revisit trigger: roadmap opens a Phase 2.x headless-browser workstream. At that point this becomes a scope entry, not a detection-class entry.
 
 
-
-Question: ADR-002 (DOM structural hashing) — does it catch DOM-XSS (payload in location.hash executing via innerHTML), or only reflected XSS?
-
-Verification: send a hash-based img onerror payload to a page with document.body.innerHTML = location.hash. Fires = covered. Silent = gap.
-
-If gap: new payload family in the DOM-XSS path.
-
 Refs: ADR-002
 
-### BL-5 — OpenAPI / Swagger import
+### BL-5 — OpenAPI / Swagger import — IMPLEMENTED WITH LIMITATIONS
 
-Gap: no integrations/openapi.py. Scanner takes a URL or explicit case list.
+Status: OpenAPI 3.0.x and Swagger 2.0 import, operation dispatch, CLI enumeration, and the per-operation live scan loop are implemented. See [ADR-030](decisions/ADR-030-openapi-import.md) for implementation history, tests, and limitations.
 
-Needs: parse OpenAPI 2.0/3.0, emit candidate URLs. CLI flag --openapi PATH. Postman collection import as secondary.
+Implemented behaviour:
 
-Verification: janissary scan --openapi petstore.json -u http://localhost:8080 fires scans against every operation in the spec.
+- Imports supported local-file and URL sources and resolves supported `$ref` references.
+- `--openapi` imports the specification; `--dry-run` enumerates the version, imported and skipped operations, and scan targets without constructing a Scanner or making target requests.
+- The live scan path builds scan targets and runs a Scanner for each target, then merges the resulting summaries.
+- Path, query, header, and cookie parameter locations are dispatched according to the importer implementation. Query parameters use `inject_in="query"`.
+- Request-body targets use `inject_in="auto"` with no named parameter list. The endpoint is scanned, but named request-body parameter injection is not implemented because request-body schema capture is not part of the imported operation model.
 
-Refs: ADR-021 (related scope), no current OpenAPI ADR. Largest item in this backlog (3-5 days).
+Known completeness limitation: target-construction and per-target scan exceptions are logged and skipped so the loop can continue. The merged summary does not currently record those skipped runtime failures as an incomplete or aborted scan. A run can therefore return success despite a target failing at runtime. Parser/importer notes and skipped-operation reporting do not close this separate runtime accounting gap.
+
+Validation evidence: 39 targeted OpenAPI tests passed in the reported Windows run. The real-HTTP integration test exercises one OpenAPI 3.0.3 GET operation with a query parameter against a local HTTP server; it is narrow integration evidence, not broad public-API or all-parameter-location coverage.
+
+Postman collection import remains separate and is not included in this implementation.
 
 ## Tier 3 — considered, not pursued
 
