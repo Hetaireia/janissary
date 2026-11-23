@@ -13,27 +13,27 @@
 
 | Site | Description | Classification |
 |---|---|---|
-| L1118 | SSRF OOB collaborator phase | Out of scope (ADR-034) |
-| L1902 | Traversal collapse oracle | Out of scope |
-| L1951 | LFI content oracle | Out of scope |
-| L1993 | SSRF response-body oracle | Out of scope |
-| L2037 | Blind SQLi paired true/false oracle | Out of scope |
-| L2072 | trustbound — `check_trustbound_oracle` | **Tier A** |
-| L2109 | securecookie — `check_securecookie_oracle` | **Tier A** |
-| L2146 | weakrand — `check_weakrand_oracle` | **Tier A** |
-| L2279 | Analyzer primary-detector emitter | Out of scope |
-| L2331 | sqli — `check_sqli_quote_oracle` | **Tier B** |
-| L2387 | xpathi — `check_xpath_error_oracle` | **Tier B** |
-| L2431 | ldapi — `check_ldap_injection_oracle` | **Tier C** |
-| L2507 | pathtraver existence (r2/noexist probe) | Out of scope |
+| L1170 | SSRF OOB collaborator phase | Out of scope (ADR-034) |
+| L1970 | Traversal collapse oracle | Out of scope |
+| L2019 | LFI content oracle | Out of scope |
+| L2061 | SSRF response-body oracle | Out of scope |
+| L2105 | Blind SQLi paired true/false oracle | Out of scope |
+| L2140 | trustbound — `check_trustbound_oracle` | **Tier A** |
+| L2177 | securecookie — `check_securecookie_oracle` | **Tier A** |
+| L2214 | weakrand — `check_weakrand_oracle` | **Tier A** |
+| L2347 | Analyzer primary-detector emitter | Out of scope |
+| L2399 | sqli — `check_sqli_quote_oracle` | **Tier B** |
+| L2455 | xpathi — `check_xpath_error_oracle` | **Tier B** |
+| L2499 | ldapi — `check_ldap_injection_oracle` | **Tier C** |
+| L2576 | pathtraver existence (r2/noexist probe) | Out of scope |
 
 ### Tier definitions
 
-**Tier A (L2072, L2109, L2146)** — single-response in-loop oracles. The oracle function receives the baseline and the current response, and returns hits in one call. Same detect signature across all three. This is the shape D-23 describes.
+**Tier A (L2140, L2177, L2214)** — single-response in-loop oracles. The oracle function receives the baseline and the current response, and returns hits in one call. Same detect signature across all three. This is the shape D-23 describes.
 
-**Tier B (L2331, L2387)** — paired multi-snapshot oracles. The oracle requires two observations (quote plus OR-bypass for SQLi; error plus reflection for XPath) before emitting. Not single-response in the tier-A sense.
+**Tier B (L2399, L2455)** — paired multi-snapshot oracles. The oracle requires two observations (quote plus OR-bypass for SQLi; error plus reflection for XPath) before emitting. Not single-response in the tier-A sense.
 
-**Tier C (L2431)** — deferred snapshot oracle. The wildcard snapshot is cleared after hit. Additionally, L2431 carries a duplicate `_say` emit block at 2453–2469 which is noted but not fixed by this ADR.
+**Tier C (L2499)** — deferred snapshot oracle. The wildcard snapshot is cleared after hit. Additionally, L2499 carries a duplicate `_say` emit block at 2532–2538 which is noted but not fixed by this ADR.
 
 ### Corrections to the original ADR-035 draft
 
@@ -43,22 +43,22 @@ Six corrections apply against the previous version:
 2. **Tier split** — the original treated all six as one shape. Tier A/B/C split reflects the observed structure.
 3. **Field count** — `CandidateFinding` takes ~15 kwargs, not "fourteen." No `evidence_grade` or `reflection_context` at these sites.
 4. **Routing** — none of the six sites routes `UnprovenVerification → candidates`. The original draft implied this; it is false.
-5. **L2431 double-`_say`** — noted, out of scope for this ADR.
-6. **L2279** — classified as analyzer primary-detector emitter, out of scope.
+5. **L2499 double-`_say`** — noted, out of scope for this ADR.
+6. **L2347** — classified as analyzer primary-detector emitter, out of scope.
 
 ## Decision
 
-1. **First implementation scope: Tier A only** (L2072, L2109, L2146).
+1. **First implementation scope: Tier A only** (L2140, L2177, L2214).
 2. Introduce one driver in `engine/scanner.py`: `_emit_oracle_findings(detect, param, payload_value, response, snapshot, context, quiet, seen_guard=None)`. The driver owns the construction-and-routing steps for tier A sites.
 3. Each tier A site becomes a single driver call, passing the `check_*_oracle` function and the four literals (`payload_name`, `category`, `finding_type`, `severity` default).
-4. Migration is per-site, tier A only. Reference migration: **securecookie at L2109**.
+4. Migration is per-site, tier A only. Reference migration: **securecookie at L2177**.
 5. **Tier B and Tier C are deferred** to a follow-up ADR or an explicit Accept of amended scope. This ADR does not commit to their migration.
-6. The L2431 double-`_say` bug at 2453–2469 is noted. Fixing it is out of scope. Recommend a new defect entry (D-31).
+6. The L2499 double-`_say` bug at 2532–2538 is noted. Fixing it is out of scope. Recommend a new defect entry (D-31).
 7. `CandidateFinding`, `_ENGINE`, `summary.record()`, `summary.candidates`, `_say()`, `_to_scan_finding()`, and both stream guards remain unchanged.
 
 ## Gate
 
-- Tier A sites (L2072, L2109, L2146) inspected in full and documented in the reference migration PR.
+- Tier A sites (L2140, L2177, L2214) inspected in full and documented in the reference migration PR.
 - `tests/unit/test_oracle_driver.py`: driver routes verified to `record()`, emits the quiet line only when not quiet, suppresses second hits when `seen_guard` is supplied.
 - Per-site parity test for each tier A migration: byte-identical `ScanFinding` for same fixture — same `finding_type`, `severity`, `detail`, `payload_name`, `raw_request`, `raw_response`.
 - M89 delta 0 after each tier A migration commit.
@@ -86,11 +86,11 @@ Six corrections apply against the previous version:
 
 ## Refs
 
-- `engine/scanner.py` L2072, L2109, L2146 (tier A)
-- `engine/scanner.py` L2331, L2387 (tier B — deferred)
-- `engine/scanner.py` L2431 (tier C — deferred; double-`_say` at 2453–2469)
-- `engine/scanner.py` L2507, L1118, L2279, L1902, L1951, L1993, L2037 (out of scope)
-- `engine/scanner.py` L409–L447, L516–L542 (stream guards)
+- `engine/scanner.py` L2140, L2177, L2214 (tier A)
+- `engine/scanner.py` L2399, L2455 (tier B — deferred)
+- `engine/scanner.py` L2499 (tier C — deferred; double-`_say` at 2532–2538)
+- `engine/scanner.py` L2576, L1170, L2347, L1970, L2019, L2061, L2105 (out of scope)
+- `engine/scanner.py` L453–L456, L536–L545 (stream guards)
 - `verification/confirmers.py` (`OracleConfirmer` from `f9fbc1d`)
 - `detection/analyzer.py` L1002 (`check_trustbound_oracle`), L1068 (`check_securecookie_oracle`), L947 (`check_weakrand_oracle`) — tier A
 - `detection/analyzer.py` L854 (`check_sqli_quote_oracle`), L891 (`check_xpath_error_oracle`) — tier B
