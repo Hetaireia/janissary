@@ -21,6 +21,7 @@
 - Release 7.11.2: terms gate removed; LEGAL.md non-blocking; THIRD_PARTY_NOTICES (gitleaks/keyhunter); PyPI 7.11.2 live; 7.3.0–7.11.1 yanked; release.yml Trusted Publishing present (52f4e31/880a23b). Image/allowlist narrow and ADR-035 A/B/C amend still open/paused.
 - D-23 / GH#4: ADR-035 Proposed (88c721b); full site inspection 2026-11-23 supports A/B/C split — amend+Accept paused; no driver code yet.
 - Register minted D-26..D-30 + BL-6..BL-10 (2026-11-23) into Post-launch Tier 1 / DETECTION-BACKLOG only — live queue unchanged (D-7 remains item 0).
+- D-7 request-count provenance split -- ADR-036 Phase 1 complete (99893ba, 2c3a2f9, 85bc073, 63221f0, 13f9fc1); Release 7.11.3 tagged 2026-11-23.
 
 ## QUEUE RULES:
 
@@ -42,7 +43,7 @@ Prior-3: pathtraver doc precision audit (NEXT item 1 closed). Verified docs/path
 Prior-4: scan --url ergonomics decision (NEXT item 1 closed). Evaluated three options; chose B: keep the existing runtime guard cluster ([!] + exit 64) rather than argparse required=True, because promoting --url would break `janissary scan --version` (short-circuited at cli.py:289 before the guard) and would be inconsistent with the sibling guards --sessions, --idor, --ws. Enriched the message with a concrete example: "[!] scan requires --url (e.g. -u http://localhost:8080)". Verified: hint prints, exit 64 preserved, scan --version still returns "janissary 7.11.1".
 Prior-5: --retry-zero (alias --second-pass) scripted into benchmark/track_a/runner.py, reproducing the Amendment 20 FN-retry protocol in a single invocation; unit-tested with a fake driver (fired-set extraction, zero-finding subset selection, findings merge, no-op path). End-to-end run against the Track A container still pending (Docker Desktop not running).
 Prior: Amendment 20. FN recovery run. 204 DAST-applicable FN re-scanned in isolation; 32 recovered; two identical runs agreed on 31/32 cases. DAST-applicable F1 0.903 -> 0.920. pathtraver recovered 0, confirming target-capped hypothesis. Batch-context effect quantified at ~16% of FN. See Amendment 20.
-Last updated: 2026-11-23 (D-26..D-30 minted post-launch; D-25/7.11.2 in RECENTLY SHIPPED; live queue unchanged)
+Last updated: 2026-11-23 (D-7 closed -- ADR-036 Phase 1 complete; Release 7.11.3; ADR-035 A/B/C amend still paused)
 Project root: C:\Users\M5 E60\janissary-project\janissary
 
 ---

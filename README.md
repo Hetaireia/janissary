@@ -8,7 +8,7 @@
 <img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
 <img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
 <img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
-<img alt="Version 7.11.2" src="https://img.shields.io/badge/version-7.11.2-4B5057?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.3" src="https://img.shields.io/badge/version-7.11.3-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
 <p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-PyPI, git main, and the Docker image are at **7.11.2** (2026-11-22; removes the Terms-of-Use acceptance gate; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
+PyPI, git main, and the Docker image are at **7.11.3** (2026-11-23; request counts now carry measured/estimated provenance in CLI, JSON and SARIF, ADR-036; includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination, D-25 approximateRequests in SARIF).
 
 <details>
 <summary>pip install</summary>
@@ -112,7 +112,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.2 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.3 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>

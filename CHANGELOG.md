@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.3] - 2026-11-23
 ### Fixed
 - SARIF output: invocation.properties now includes approximateRequests, matching the JSON output (D-25).
+- Request counts are provenance-split: `requests_measured` counts observed HTTP responses, `requests_estimated` counts formula- or config-derived requests, and `requests_estimated_breakdown` itemises the estimate by source. Two config-derived sites that were inflating the observed count (WAF probe profiles, baseline count) moved to the estimated field.
 
+### Changed
+- CLI summary, the JSON envelope and SARIF `invocation.properties` all carry the split (`measured: M, estimated: E`, and `requestsMeasured`/`requestsEstimated`/`requests_estimated_breakdown`). `total_requests` and `approximate_requests` remain as deprecated read-only aliases that sum and alias the two fields; they are removed in 7.12.0. See ADR-036.
 
 ## [7.11.2] - 2026-11-22
 ### Changed
