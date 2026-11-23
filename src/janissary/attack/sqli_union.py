@@ -173,7 +173,16 @@ class ExtractionResult:
     steps: list[ExtractionStep] = field(default_factory=list)
     aborted: bool = False
     abort_reason: str = ""
-    total_requests: int = 0
+    requests_measured: int = 0
+    requests_estimated: int = 0
+
+    @property
+    def total_requests(self) -> int:
+        """Deprecated (D-7, ADR-036): requests_measured + requests_estimated.
+
+        Use the explicit fields directly. Removed in 7.12.0.
+        """
+        return self.requests_measured + self.requests_estimated
 
     def to_dict(self) -> dict:
         return {
@@ -444,7 +453,7 @@ class UnionExtractor:
         except (RuntimeError, UnstableTargetError) as exc:
             result.aborted = True
             result.abort_reason = str(exc)
-            result.total_requests = self._requests
+            result.requests_measured = self._requests
             return result
 
         try:
@@ -453,7 +462,7 @@ class UnionExtractor:
             result.aborted = True
             result.abort_reason = str(exc)
 
-        result.total_requests = self._requests
+        result.requests_measured = self._requests
         return result
 
     def _extract_all(self, result: ExtractionResult) -> None:

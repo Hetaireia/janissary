@@ -98,12 +98,12 @@ Internal:
   Before (cli.py:144): 123 request(s); target responded normally.
   After (cli.py:144): 100 measured request(s) (23 estimated); target responded normally.
 
-  Before (cli.py:1346): [*] Total requests:    123
-  After (cli.py:1346): [*] Total requests:    123  (measured: 100, estimated: 23)
+  Before (cli.py:1358): [*] Total requests:    123
+  After (cli.py:1358): [*] Total requests:    123  (measured: 100, estimated: 23)
 
 - Merge sites at cli.py:259-260, 298-299, 323-324 rewritten to add requests_measured and requests_estimated, and to merge requests_estimated_breakdown by key.
 - JSON envelope at cli.py:83-84 extended to carry requests_measured, requests_estimated, requests_estimated_breakdown alongside the existing total_requests and approximate_requests.
-- SARIF at cli.py:1724-1725 extended to carry requestsMeasured and requestsEstimated alongside the existing totalRequests and approximateRequests.
+- SARIF at cli.py:1736-1737 extended to carry requestsMeasured and requestsEstimated alongside the existing totalRequests and approximateRequests.
 
 External:
 - total_requests and approximate_requests continue to appear at every consumer, sourced from the read-only properties. Downstream tooling is unaffected in Phase 1.

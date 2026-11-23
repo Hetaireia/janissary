@@ -82,6 +82,9 @@ def _summary_to_dict(summary: ScanSummary) -> dict:
         "method": summary.method,
         "total_requests": summary.total_requests,
         "approximate_requests": summary.approximate_requests,
+        "requests_measured": summary.requests_measured,
+        "requests_estimated": summary.requests_estimated,
+        "requests_estimated_breakdown": dict(summary.requests_estimated_breakdown),
         "finding_count": summary.finding_count,
         "candidate_count": len(summary.candidates),
         "group_count": len(summary.groups),
@@ -122,7 +125,9 @@ def _print_summary(summary: ScanSummary) -> None:
     print(f"  Target:          {summary.target}")
     print(f"  Parameters:      {', '.join(summary.params)}")
     print(f"  Method:          {summary.method}")
-    print(f"  Total requests:  {summary.total_requests}")
+    print(
+        f"  Total requests:  {summary.total_requests} (measured: {summary.requests_measured}, estimated: {summary.requests_estimated})"
+    )
     group_n = len(summary.groups)
     plural = "" if group_n == 1 else "s"
     print(f"  Findings:        {summary.finding_count} in {group_n} group{plural}")
@@ -141,7 +146,7 @@ def _print_summary(summary: ScanSummary) -> None:
         if n_candidates == 0:
             print(
                 f"  Negative result: no findings after "
-                f"{summary.total_requests} request(s); target responded normally."
+                f"{summary.total_requests} request(s) (measured: {summary.requests_measured}, estimated: {summary.requests_estimated}); target responded normally."
             )
         else:
             print(f"  No verified findings; {n_candidates} candidate(s) need triage.")
@@ -1355,7 +1360,9 @@ def cmd_attack_sqli_union(args: argparse.Namespace) -> int:
             print(f"[*] Tables ({len(result.tables)}):")
             for t in result.tables:
                 print(f"      {t}")
-        print(f"[*] Total requests:    {result.total_requests}")
+        print(
+            f"[*] Total requests:    {result.total_requests} (measured: {result.requests_measured}, estimated: {result.requests_estimated})"
+        )
         if result.aborted:
             print(f"[!] ABORTED: {result.abort_reason}")
         if result.steps and not args.quiet:
@@ -1735,6 +1742,8 @@ def _from_scan_summary(
             "method": summary.method,
             "totalRequests": summary.total_requests,
             "approximateRequests": summary.approximate_requests,
+            "requestsMeasured": summary.requests_measured,
+            "requestsEstimated": summary.requests_estimated,
             "findingCount": len(findings),
         },
     }
