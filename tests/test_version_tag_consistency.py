@@ -6,6 +6,7 @@
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -19,14 +20,34 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TAG_RE = re.compile(r"^v?(\d+(?:\.\d+)*)$")
 
 
+_ATTEMPTS = 3
+_BACKOFF_S = 0.25
+
+
 def _git(*args):
-    return subprocess.run(
-        ["git", *args],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+    """Run git, retrying a transient crash.
+
+    Windows git has exited 3221225477 (0xC0000005) mid-call, which reaches the
+    caller as an indistinguishable CalledProcessError. This guard is what stands
+    between a stale pyproject and a tag push, so absorb one-off crashes first;
+    a genuine failure still surfaces after the last attempt.
+
+    """
+    last = None
+    for attempt in range(1, _ATTEMPTS + 1):
+        try:
+            return subprocess.run(
+                ["git", *args],
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        except (subprocess.CalledProcessError, OSError) as exc:
+            last = exc
+            if attempt < _ATTEMPTS:
+                time.sleep(_BACKOFF_S * attempt)
+    raise last
 
 
 def _tags_available():
@@ -75,3 +96,32 @@ def test_pyproject_not_behind_newest_tag():
         f"pyproject version {pkg!r} is behind newest git tag {newest!r}. "
         "Bump pyproject.toml and janissary.__version__, or retag."
     )
+
+
+def test_git_retries_a_transient_crash(monkeypatch):
+    calls = []
+
+    def fake_run(*_a, **_kw):
+        calls.append(1)
+        if len(calls) < 3:
+            raise subprocess.CalledProcessError(3221225477, ["git", "tag"])
+        return subprocess.CompletedProcess(["git", "tag"], 0, "v1.0.0\n", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(time, "sleep", lambda _s: None)
+    assert _git("tag", "--list") == "v1.0.0"
+    assert len(calls) == 3
+
+
+def test_git_gives_up_after_three_attempts(monkeypatch):
+    calls = []
+
+    def fake_run(*_a, **_kw):
+        calls.append(1)
+        raise subprocess.CalledProcessError(1, ["git", "tag"])
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    monkeypatch.setattr(time, "sleep", lambda _s: None)
+    with pytest.raises(subprocess.CalledProcessError):
+        _git("tag", "--list")
+    assert len(calls) == 3
