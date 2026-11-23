@@ -3,6 +3,8 @@
 ## 1. Open-Source License
 The **JANISSARY Core CLI** source code is licensed under the **Apache License, Version 2.0** (see [LICENSE](LICENSE)). Nothing in this document restricts, narrows or modifies the rights granted to you under the Apache License 2.0. Where this document and the licence differ, the licence governs.
 
+**Withdrawal of earlier supplemental terms.** The supplemental Terms of Use acceptance step and the indemnity text that shipped with JANISSARY releases up to and including 7.11.1 are withdrawn and will not be enforced. JANISSARY is licensed solely under the Apache License, Version 2.0.
+
 ## 2. Intended Use — Authorised Security Testing
 JANISSARY is a dual-use application security assessment tool, built for defensive verification, authorised penetration testing, and vulnerability research. This section describes the use the software is built for and the responsibilities that come with it; it is not a licence condition.
 
@@ -18,6 +20,7 @@ In addition:
 * No warranty is given that a scan finds every vulnerability, or that a clean result means the target is secure.
 * A scan is live traffic against a live system. The author is not liable for any outage, data change, rate-limiting, blocking or other effect on a target, nor for any loss arising from the use of, or inability to use, the software.
 * To the maximum extent permitted by law, the author's total aggregate liability is limited to the amount you paid for the software, which for the Apache-2.0 CLI is nil. Liability for death or personal injury caused by negligence, and liability for fraud, are not excluded.
+* Nothing in this document excludes, restricts or modifies any right, remedy or consumer guarantee that cannot lawfully be excluded, including under the Australian Consumer Law.
 
 ## 4. Enterprise Commercial Terms
 If and when **JANISSARY Enterprise** modules or the **JANISSARY Control Plane** are made available, organisations deploying them will be governed by the Master Subscription Agreement (MSA) they execute. The Apache-2.0 core is unaffected by any MSA and needs none to be used.

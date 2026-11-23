@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- SARIF output: invocation.properties now includes approximateRequests, matching the JSON output (D-25).
+
 
 ## [7.11.2] - 2026-11-22
 ### Changed
@@ -14,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the user-indemnity text that shipped inside the CLI, and the now-dead `legal.py` module and its `conftest.py` fixture.
 ### Added
 - NOTICE file; LICENSE and NOTICE now ship in the wheel and sdist.
+- THIRD_PARTY_NOTICES.md with the MIT licence texts for the Gitleaks-derived and keyhunter-derived credential rules.
+- Developer Certificate of Origin (DCO 1.1) sign-off section in CONTRIBUTING.md.
+### Notice
+- The supplemental Terms of Use acceptance step and indemnity text that shipped with releases up to and including 7.11.1 are withdrawn and will not be enforced. JANISSARY is licensed solely under the Apache License 2.0. Releases 7.3.0, 7.4.0, 7.5.0, 7.10.2 and 7.11.1 have been yanked from PyPI.
+
 ## [7.11.0] - 2026-11-06
 
 241 commits since v7.10.2.
