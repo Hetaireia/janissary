@@ -1,0 +1,30 @@
+# Build context is trimmed to what the Dockerfile actually COPYs.
+# The Dockerfile copies pyproject.toml, README.md, LICENSE, NOTICE,
+# LEGAL.md, THIRD_PARTY_NOTICES.md and src/ - everything else is noise.
+.git
+.github
+.gitignore
+.gitattributes
+.githooks
+.mailmap
+.mypy_cache
+.pytest_cache
+.pytest_tmp
+.ruff_cache
+.venv
+artifacts
+audit_out
+benchmark
+build
+dist
+docs
+internal
+recon
+renders
+scripts
+tests
+tools
+*.bak
+*.tgz
+*.json
+*.sarif
