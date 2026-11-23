@@ -379,6 +379,104 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
     return finding
 
 
+# ADR-035: tier-A oracle argument shapes. The three tier-A oracles do not
+# share a signature -- check_weakrand_oracle takes (baseline, snapshot), the
+# other two take a third marker argument and disagree on whether the second
+# argument is the snapshot or the http response. The driver normalises that
+# difference in one place instead of at three call sites.
+_SHAPE_SNAPSHOT_MARKER = "snapshot+marker"
+_SHAPE_RESPONSE_MARKER = "response+marker"
+_SHAPE_SNAPSHOT_ONLY = "snapshot"
+
+
+@dataclass
+class _OracleSeenGuard:
+    """Once-per-parameter latch for a tier-A oracle (ADR-035).
+
+    scan() owns the instance and the driver reads and sets it. A plain bool
+    cannot carry the state back out of the driver, because the driver would
+    only be rebinding a copy.
+    """
+
+    fired: bool = False
+
+
+def _emit_oracle_findings(
+    detect,
+    *,
+    param,
+    payload_value,
+    response,
+    snapshot,
+    baseline,
+    shape,
+    payload_name,
+    category,
+    finding_type,
+    severity,
+    target,
+    method,
+    summary,
+    quiet,
+    seen_guard=None,
+):
+    """Construct, verify and route one tier-A oracle hit-set (ADR-035).
+
+    This owns the construction-and-routing steps the three tier-A sites used
+    to restate verbatim: build the CandidateFinding from the oracle raw dict,
+    hand it to the engine, drop anything that did not verify, record what
+    did, then emit the quiet line. The caller supplies the oracle, the site
+    four literals and the oracle argument shape.
+
+    seen_guard is an _OracleSeenGuard. When one is supplied the driver
+    returns before calling the oracle if it has already fired, and marks it
+    fired as soon as the oracle returns any hit -- fired means the oracle
+    returned hits, not that any hit verified, which is the meaning the
+    weakrand flag carried before migration.
+    """
+    if seen_guard is not None and seen_guard.fired:
+        return
+    if shape == _SHAPE_RESPONSE_MARKER:
+        raw = detect(baseline, response, payload_value)
+    elif shape == _SHAPE_SNAPSHOT_MARKER:
+        raw = detect(baseline, snapshot, payload_value)
+    else:
+        raw = detect(baseline, snapshot)
+    for f in raw:
+        req = getattr(response, "request", None)
+        candidate = CandidateFinding(
+            param=param,
+            payload_name=payload_name,
+            payload_value=payload_value,
+            category=category,
+            severity=f.get("severity", severity),
+            finding_type=f.get("type", finding_type),
+            detail=f.get("detail", ""),
+            response_status=response.status_code,
+            response_length=len(response.text or ""),
+            response_time=snapshot.elapsed,
+            response_content_type=snapshot.content_type,
+            url=getattr(req, "url", None) or target,
+            method=method,
+            raw_request=serialize_request(req),
+            raw_response=serialize_response(response),
+        )
+        result = _ENGINE.verify(candidate)
+        if not isinstance(result, VerifiedFinding):
+            continue
+        finding = _to_scan_finding(result)
+        summary.record(finding)
+        if not quiet:
+            _say(
+                f"  [{param}] {finding.payload_name} -> "
+                f"{finding.severity.upper()}: "
+                f"{finding.finding_type} "
+                f"| {finding.detail[:80]}"
+            )
+    if seen_guard is not None and raw:
+        seen_guard.fired = True
+
+
 def _ws_url_from_target(target: str) -> str:
     """Return a WebSocket URL derived from an HTTP(S) target.
 
