@@ -33,18 +33,20 @@ def _finding(param="p", category="sqli", finding_type="t", url="http://x/a"):
     return f
 
 
-def _summary(params, findings=(), total_requests=0, target="http://x/a", method="GET"):
+def _summary(
+    params, findings=(), requests_measured=0, target="http://x/a", method="GET"
+):
     s = ScanSummary(target=target, params=list(params), method=method)
     for f in findings:
         s.findings.append(f)
     s.finding_count = len(s.findings)
-    s.total_requests = total_requests
+    s.requests_measured = requests_measured
     return s
 
 
 def test_merge_two_summaries_findings_and_requests():
-    a = _summary(["petId"], [_finding(param="petId")], total_requests=10)
-    b = _summary(["limit"], [_finding(param="limit")], total_requests=5)
+    a = _summary(["petId"], [_finding(param="petId")], requests_measured=10)
+    b = _summary(["limit"], [_finding(param="limit")], requests_measured=5)
     merged = merge_scan_summaries([a, b])
     assert merged.total_requests == 15
     assert len(merged.findings) == 2
@@ -112,7 +114,7 @@ def test_merge_rejects_empty():
 
 
 def test_merge_single_summary_is_fresh_object():
-    a = _summary(["petId"], [_finding(param="petId")], total_requests=7)
+    a = _summary(["petId"], [_finding(param="petId")], requests_measured=7)
     merged = merge_scan_summaries([a])
     assert merged is not a
     assert merged.total_requests == 7

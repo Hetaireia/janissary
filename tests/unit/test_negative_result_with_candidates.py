@@ -43,9 +43,9 @@ def _vf(**kw):
     return f
 
 
-def _summary_with(findings=None, candidates=None, total_requests=5):
+def _summary_with(findings=None, candidates=None, requests_measured=5):
     s = ScanSummary(target="http://x/", params=["q"], method="GET")
-    s.total_requests = total_requests
+    s.requests_measured = requests_measured
     for f in findings or []:
         s.record(f)
     for c in candidates or []:

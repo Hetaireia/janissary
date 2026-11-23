@@ -256,8 +256,12 @@ def _merge_graphql_into_scan(summary, gql_summary):
             summary.record(f)
     for f in gql_summary.candidates:
         summary.candidates.append(f)
-    summary.total_requests += gql_summary.total_requests
-    summary.approximate_requests += getattr(gql_summary, "approximate_requests", 0)
+    summary.requests_measured += gql_summary.requests_measured
+    summary.requests_estimated += gql_summary.requests_estimated
+    for key, val in gql_summary.requests_estimated_breakdown.items():
+        summary.requests_estimated_breakdown[key] = (
+            summary.requests_estimated_breakdown.get(key, 0) + val
+        )
     if gql_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:
@@ -295,8 +299,12 @@ def _merge_ws_into_scan(summary, ws_summary):
             summary.record(f)
     for f in ws_summary.candidates:
         summary.candidates.append(f)
-    summary.total_requests += ws_summary.total_requests
-    summary.approximate_requests += getattr(ws_summary, "approximate_requests", 0)
+    summary.requests_measured += ws_summary.requests_measured
+    summary.requests_estimated += ws_summary.requests_estimated
+    for key, val in ws_summary.requests_estimated_breakdown.items():
+        summary.requests_estimated_breakdown[key] = (
+            summary.requests_estimated_breakdown.get(key, 0) + val
+        )
     if ws_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:
@@ -320,8 +328,12 @@ def _merge_host_bypass_into_scan(summary, hb_summary):
     """
     for f in hb_summary.candidates:
         summary.candidates.append(f)
-    summary.total_requests += hb_summary.total_requests
-    summary.approximate_requests += getattr(hb_summary, "approximate_requests", 0)
+    summary.requests_measured += hb_summary.requests_measured
+    summary.requests_estimated += hb_summary.requests_estimated
+    for key, val in hb_summary.requests_estimated_breakdown.items():
+        summary.requests_estimated_breakdown[key] = (
+            summary.requests_estimated_breakdown.get(key, 0) + val
+        )
     if hb_summary.scan_incomplete and not summary.scan_incomplete:
         summary.scan_incomplete = True
         if not summary.abort_reason:

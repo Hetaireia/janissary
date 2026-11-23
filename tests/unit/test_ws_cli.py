@@ -40,7 +40,7 @@ def _summary(findings=None, **kw):
         else:
             s.findings.append(f)
     s.finding_count = len(s.findings)
-    s.total_requests = kw.get("total_requests", 10)
+    s.requests_measured = kw.get("total_requests", 10)
     s.aborted = kw.get("aborted", False)
     s.scan_incomplete = kw.get("scan_incomplete", False)
     s.abort_reason = kw.get("abort_reason")
@@ -94,9 +94,9 @@ def test_load_ws_payloads_skips_blanks_and_comments(tmp_path):
 def test_merge_ws_adds_findings_and_sums_requests():
     """M75: unproven WS findings route to summary.candidates, not
     summary.findings. total_requests sums; finding_count is unaffected."""
-    s = _summary([], total_requests=10)
+    s = _summary([], requests_measured=10)
     ws = _summary(
-        [_ws_finding(), _ws_finding(finding_type="websocket_b")], total_requests=7
+        [_ws_finding(), _ws_finding(finding_type="websocket_b")], requests_measured=7
     )
     _merge_ws_into_scan(s, ws)
     assert len(s.findings) == 0

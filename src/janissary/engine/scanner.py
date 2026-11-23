@@ -568,12 +568,6 @@ class ScanSummary:
     target: str
     params: list[str]
     method: str
-    total_requests: int = 0
-    # Formula-based estimate for modules without HTTP instrumentation
-    # (host-bypass, WebSocket protocol probes, GraphQL detect/probes).
-    # Separate from total_requests (measured per-call) so consumers can
-    # distinguish measured from estimated request counts.
-    approximate_requests: int = 0
     requests_measured: int = 0  # D-7: observed HTTP responses
     requests_estimated: int = 0  # D-7: formula/config-derived count
     requests_estimated_breakdown: dict[str, int] = field(
@@ -611,6 +605,22 @@ class ScanSummary:
             return True
         return False
 
+    @property
+    def total_requests(self) -> int:
+        """Deprecated (D-7, ADR-036): requests_measured + requests_estimated.
+
+        Use the explicit fields directly. This property will be removed in 7.12.0.
+        """
+        return self.requests_measured + self.requests_estimated
+
+    @property
+    def approximate_requests(self) -> int:
+        """Deprecated (D-7, ADR-036): alias for requests_estimated.
+
+        Use requests_estimated directly. This property will be removed in 7.12.0.
+        """
+        return self.requests_estimated
+
     def record_estimate(self, key: str, value: int) -> None:
         """D-7 (ADR-036): record an estimated request count with validated source key."""
         if key not in _ESTIMATE_SOURCES:
@@ -619,6 +629,18 @@ class ScanSummary:
         self.requests_estimated_breakdown[key] = (
             self.requests_estimated_breakdown.get(key, 0) + value
         )
+
+    def reset_estimate(self, key: str, value: int) -> None:
+        """D-7 (ADR-036): overwrite an estimate source's count (host-bypass phase).
+
+        Resets requests_estimated to value and replaces the breakdown with a
+        single entry for key. Preserves behaviour at scanner.py host-bypass
+        exactly (requests_estimated becomes value, no prior source kept).
+        """
+        if key not in _ESTIMATE_SOURCES:
+            raise ValueError(f"Unknown estimate source: {key}")
+        self.requests_estimated = value
+        self.requests_estimated_breakdown = {key: value}
 
 
 # -------------------------------------------------------------------
@@ -1052,7 +1074,7 @@ class Scanner:
             except requests.RequestException:
                 r = None
             # D-7 audit: MEASURED — one per SSRF payload sent
-            summary.total_requests += 1
+            summary.requests_measured += 1
             issued.append((uniq, payload.name, url, r))
         if self.ssrf_redirector:
             _red = self.ssrf_redirector.rstrip("?&")
@@ -1077,7 +1099,7 @@ class Scanner:
                 except requests.RequestException:
                     r = None
                 # D-7 audit: MEASURED — one per SSRF redirect payload sent
-                summary.total_requests += 1
+                summary.requests_measured += 1
                 issued.append((uniq, payload.name, url, r))
 
         if not issued:
@@ -1215,7 +1237,7 @@ class Scanner:
 
         ok, reason = self.preflight()
         # D-7 audit: MEASURED — one per WebSocket phase preflight
-        summary.total_requests += 1
+        summary.requests_measured += 1
         if not ok:
             summary.aborted = True
             summary.abort_reason = reason
@@ -1231,7 +1253,7 @@ class Scanner:
             summary.abort_reason = f"learn failed: {type(exc).__name__}"
             return summary
         # D-7 audit: ESTIMATED (websocket_protocol_probe) — len(payloads)+2 from config
-        summary.approximate_requests += len(payloads) + 2
+        summary.record_estimate("websocket_protocol_probe", len(payloads) + 2)
 
         joined_notes = " ".join(model.notes)
         if "no_probe_payloads_provided" in joined_notes:
@@ -1261,7 +1283,9 @@ class Scanner:
             summary.abort_reason = f"discover failed: {type(exc).__name__}"
             return summary
         # D-7 audit: ESTIMATED (websocket_protocol_probe) — candidate count times 2, floor 10
-        summary.approximate_requests += max(len(candidates) * 2, 10)
+        summary.record_estimate(
+            "websocket_protocol_probe", max(len(candidates) * 2, 10)
+        )
 
         for candidate in candidates:
             result = _ENGINE.verify(candidate)
@@ -1328,7 +1352,7 @@ class Scanner:
 
         # Nominal request count: 1 baseline + up to 2 variants.
         # D-7 audit: ESTIMATED (host_bypass_probe) — 1 baseline + up to 2 variants; overwrite preserved per Decision 4
-        summary.approximate_requests = 3
+        summary.reset_estimate("host_bypass_probe", 3)
 
         for c in candidates:
             summary.candidates.append(self._candidate_to_scan_finding(c))
@@ -1367,7 +1391,7 @@ class Scanner:
 
         ok, reason = self.preflight()
         # D-7 audit: MEASURED — one per GraphQL phase preflight
-        summary.total_requests += 1
+        summary.requests_measured += 1
         if not ok:
             summary.aborted = True
             summary.abort_reason = reason
@@ -1385,9 +1409,9 @@ class Scanner:
         # instrument its own HTTP calls. These estimates keep
         # summary.total_requests from being misleadingly zero.
         # D-7 audit: ESTIMATED (graphql_detect) — 4-detector formula, not per-response
-        summary.approximate_requests += (
-            4  # detect: typename/introspection/batch/suggestions
-        )
+        summary.record_estimate(
+            "graphql_detect", 4
+        )  # detect: typename/introspection/batch/suggestions
 
         if not profile.reachable:
             summary.scan_incomplete = True
@@ -1403,7 +1427,9 @@ class Scanner:
 
         if include_probes:
             # D-7 audit: ESTIMATED (graphql_probe) — depth+alias probe count, formula-derived
-            summary.approximate_requests += 6  # depth_probe + alias_probe, rough
+            summary.record_estimate(
+                "graphql_probe", 6
+            )  # depth_probe + alias_probe, rough
 
         for candidate in candidates:
             result = _ENGINE.verify(candidate)
@@ -1440,7 +1466,7 @@ class Scanner:
             AuthConfig(cookie=new_spec.cookie, bearer=new_spec.bearer),
         )
         # D-7 audit: MEASURED — one per 401-retry request in _try_rotate_on_401
-        summary.total_requests += 1
+        summary.requests_measured += 1
         try:
             retry = self._paced_request(self.target, param, value)
         except requests.RequestException as exc:
@@ -1748,7 +1774,7 @@ class Scanner:
         )
         ok, reason = self.preflight()
         # D-7 audit: MEASURED — one per main-scan preflight
-        summary.total_requests += 1
+        summary.requests_measured += 1
         if not ok:
             summary.aborted = True
             summary.abort_reason = reason
@@ -1760,7 +1786,7 @@ class Scanner:
         if self.detect_waf:
             self.waf_profile = self._detect_waf(quiet=quiet)
             # D-7 audit: ESTIMATED (waf_probe) — len(probes) from config, currently mis-filed in total_requests
-            summary.total_requests += len(self.waf_profile.probes)
+            summary.record_estimate("waf_probe", len(self.waf_profile.probes))
         else:
             self.waf_profile = WAFProfile()
 
@@ -1789,7 +1815,7 @@ class Scanner:
             }
             weakrand_seen = False
             # D-7 audit: ESTIMATED (baseline) — baseline_count from config, currently mis-filed in total_requests
-            summary.total_requests += self.baseline_count
+            summary.record_estimate("baseline", self.baseline_count)
             summary.baselines[param] = {
                 "samples": len(baseline.snapshots),
                 "mean_elapsed": round(baseline.mean_elapsed, 4),
@@ -1825,7 +1851,7 @@ class Scanner:
             ldap_wild_resp = None
             for name, value, category, _severity in self._payloads:
                 # D-7 audit: MEASURED — one per payload iteration in main scan loop
-                summary.total_requests += 1
+                summary.requests_measured += 1
                 try:
                     r = self._paced_request(self.target, param, value)
                 except requests.RequestException as e:
@@ -2523,7 +2549,7 @@ class Scanner:
                 except requests.RequestException:
                     r2 = None
                 # D-7 audit: MEASURED — one per traversal noexist probe request
-                summary.total_requests += 1
+                summary.requests_measured += 1
                 if r2 is not None:
                     snap2 = ResponseSnapshot.from_response(
                         r2, normalizer=self.normalizer

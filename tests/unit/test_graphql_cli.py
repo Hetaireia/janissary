@@ -58,7 +58,7 @@ def _summary(findings=None, **kw):
         else:
             s.findings.append(f)
     s.finding_count = len(s.findings)
-    s.total_requests = kw.get("total_requests", 10)
+    s.requests_measured = kw.get("total_requests", 10)
     s.aborted = kw.get("aborted", False)
     s.abort_reason = kw.get("abort_reason")
     s.scan_incomplete = kw.get("scan_incomplete", False)
@@ -81,8 +81,8 @@ def test_merge_appends_findings_and_updates_count():
 
 
 def test_merge_sums_total_requests():
-    s = _summary([], total_requests=20)
-    gql = _summary([], total_requests=15)
+    s = _summary([], requests_measured=20)
+    gql = _summary([], requests_measured=15)
     _merge_graphql_into_scan(s, gql)
     assert s.total_requests == 35
 

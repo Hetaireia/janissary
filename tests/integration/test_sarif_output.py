@@ -16,7 +16,7 @@ def _summary(
         target=target,
         params=params or ["q"],
         method="GET",
-        total_requests=10,
+        requests_measured=10,
     )
 
 
@@ -187,9 +187,9 @@ def test_sarif_invocation_carries_approximate_requests(tmp_path):
     the same pair, or the two reporting surfaces silently disagree.
     """
     summary = _summary()
-    summary.total_requests = 10
-    summary.approximate_requests = 15
+    summary.requests_measured = 10
+    summary.requests_estimated = 15
     doc = _read_sarif(tmp_path, summary)
     props = doc["runs"][0]["invocations"][0]["properties"]
-    assert props["totalRequests"] == 10
+    assert props["totalRequests"] == 25  # 10 measured + 15 estimated
     assert props["approximateRequests"] == 15

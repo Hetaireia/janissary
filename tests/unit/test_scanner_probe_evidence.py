@@ -168,7 +168,7 @@ def test_auth_retry_evidence_links_attempts_and_snapshot_source(
     else:
         monkeypatch.setattr(scanner, "_paced_request", lambda *args: None)
 
-    summary = SimpleNamespace(total_requests=0)
+    summary = SimpleNamespace(requests_measured=0)
     result = scanner._try_rotate_on_401(initial_response, "p", "payload", summary)
     retry_evidence = scanner._last_auth_retry_evidence
 

@@ -25,7 +25,7 @@ def _resp(status: int):
 
 
 def _summary():
-    return SimpleNamespace(total_requests=0)
+    return SimpleNamespace(requests_measured=0)
 
 
 def test_no_rotator_returns_original_response():

@@ -13,7 +13,7 @@ def _fake_summary(**overrides):
     s.target = "http://test/"
     s.params = ["q"]
     s.method = "GET"
-    s.total_requests = 10
+    s.requests_measured = 10
     s.finding_count = 0
     s.groups = []
     s.aborted = False
@@ -37,7 +37,7 @@ def test_clean_scan_prints_negative_result(capsys):
 
 
 def test_clean_scan_reports_correct_request_count(capsys):
-    _print_summary(_fake_summary(total_requests=42))
+    _print_summary(_fake_summary(requests_measured=42))
     out = capsys.readouterr().out
     assert "42 request" in out
 
