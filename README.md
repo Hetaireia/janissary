@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-**7.11.3 is published to PyPI** (2026-11-23; request counts now carry measured/estimated provenance in CLI, JSON and SARIF, ADR-036; adds D-25 approximateRequests in SARIF; released by Trusted Publishing with PEP 740 provenance; also includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination). **The Docker image is still at 7.11.2** and is rebuilt separately.
+**7.11.3 is published to PyPI and Docker Hub** (2026-11-23; request counts now carry measured/estimated provenance in CLI, JSON and SARIF, ADR-036; adds D-25 approximateRequests in SARIF; released by Trusted Publishing with PEP 740 provenance; also includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
 
 <details>
 <summary>pip install</summary>
@@ -112,7 +112,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.2 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.3 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
