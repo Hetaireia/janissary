@@ -549,6 +549,20 @@ class _CandidatesList(list):
             self.append(item)
 
 
+# D-7 (ADR-036): valid source keys for requests_estimated_breakdown.
+# Unknown keys raise ValueError at write time via ScanSummary.record_estimate.
+_ESTIMATE_SOURCES = frozenset(
+    {
+        "waf_probe",
+        "baseline",
+        "graphql_detect",
+        "graphql_probe",
+        "websocket_protocol_probe",
+        "host_bypass_probe",
+    }
+)
+
+
 @dataclass
 class ScanSummary:
     target: str
@@ -560,6 +574,11 @@ class ScanSummary:
     # Separate from total_requests (measured per-call) so consumers can
     # distinguish measured from estimated request counts.
     approximate_requests: int = 0
+    requests_measured: int = 0  # D-7: observed HTTP responses
+    requests_estimated: int = 0  # D-7: formula/config-derived count
+    requests_estimated_breakdown: dict[str, int] = field(
+        default_factory=dict
+    )  # D-7: per-source sub-counts
     finding_count: int = 0
     aborted: bool = False
     abort_reason: str | None = None
@@ -591,6 +610,15 @@ class ScanSummary:
             self.finding_count += 1
             return True
         return False
+
+    def record_estimate(self, key: str, value: int) -> None:
+        """D-7 (ADR-036): record an estimated request count with validated source key."""
+        if key not in _ESTIMATE_SOURCES:
+            raise ValueError(f"Unknown estimate source: {key}")
+        self.requests_estimated += value
+        self.requests_estimated_breakdown[key] = (
+            self.requests_estimated_breakdown.get(key, 0) + value
+        )
 
 
 # -------------------------------------------------------------------
@@ -1023,6 +1051,7 @@ class Scanner:
                 r = self._paced_request(self.target, param, url)
             except requests.RequestException:
                 r = None
+            # D-7 audit: MEASURED — one per SSRF payload sent
             summary.total_requests += 1
             issued.append((uniq, payload.name, url, r))
         if self.ssrf_redirector:
@@ -1047,6 +1076,7 @@ class Scanner:
                     r = self._paced_request(self.target, param, url)
                 except requests.RequestException:
                     r = None
+                # D-7 audit: MEASURED — one per SSRF redirect payload sent
                 summary.total_requests += 1
                 issued.append((uniq, payload.name, url, r))
 
@@ -1184,6 +1214,7 @@ class Scanner:
             return summary
 
         ok, reason = self.preflight()
+        # D-7 audit: MEASURED — one per WebSocket phase preflight
         summary.total_requests += 1
         if not ok:
             summary.aborted = True
@@ -1199,6 +1230,7 @@ class Scanner:
             summary.scan_incomplete = True
             summary.abort_reason = f"learn failed: {type(exc).__name__}"
             return summary
+        # D-7 audit: ESTIMATED (websocket_protocol_probe) — len(payloads)+2 from config
         summary.approximate_requests += len(payloads) + 2
 
         joined_notes = " ".join(model.notes)
@@ -1228,6 +1260,7 @@ class Scanner:
             summary.scan_incomplete = True
             summary.abort_reason = f"discover failed: {type(exc).__name__}"
             return summary
+        # D-7 audit: ESTIMATED (websocket_protocol_probe) — candidate count times 2, floor 10
         summary.approximate_requests += max(len(candidates) * 2, 10)
 
         for candidate in candidates:
@@ -1294,6 +1327,7 @@ class Scanner:
             return summary
 
         # Nominal request count: 1 baseline + up to 2 variants.
+        # D-7 audit: ESTIMATED (host_bypass_probe) — 1 baseline + up to 2 variants; overwrite preserved per Decision 4
         summary.approximate_requests = 3
 
         for c in candidates:
@@ -1332,6 +1366,7 @@ class Scanner:
         )
 
         ok, reason = self.preflight()
+        # D-7 audit: MEASURED — one per GraphQL phase preflight
         summary.total_requests += 1
         if not ok:
             summary.aborted = True
@@ -1349,6 +1384,7 @@ class Scanner:
         # Approximate request count -- GraphQLDiscoveryModule does not
         # instrument its own HTTP calls. These estimates keep
         # summary.total_requests from being misleadingly zero.
+        # D-7 audit: ESTIMATED (graphql_detect) — 4-detector formula, not per-response
         summary.approximate_requests += (
             4  # detect: typename/introspection/batch/suggestions
         )
@@ -1366,6 +1402,7 @@ class Scanner:
         )
 
         if include_probes:
+            # D-7 audit: ESTIMATED (graphql_probe) — depth+alias probe count, formula-derived
             summary.approximate_requests += 6  # depth_probe + alias_probe, rough
 
         for candidate in candidates:
@@ -1402,6 +1439,7 @@ class Scanner:
             self.session,
             AuthConfig(cookie=new_spec.cookie, bearer=new_spec.bearer),
         )
+        # D-7 audit: MEASURED — one per 401-retry request in _try_rotate_on_401
         summary.total_requests += 1
         try:
             retry = self._paced_request(self.target, param, value)
@@ -1709,6 +1747,7 @@ class Scanner:
             "authenticated" if self.auth_configured else "unauthenticated"
         )
         ok, reason = self.preflight()
+        # D-7 audit: MEASURED — one per main-scan preflight
         summary.total_requests += 1
         if not ok:
             summary.aborted = True
@@ -1720,6 +1759,7 @@ class Scanner:
         # WAF detection runs before any payload is sent.
         if self.detect_waf:
             self.waf_profile = self._detect_waf(quiet=quiet)
+            # D-7 audit: ESTIMATED (waf_probe) — len(probes) from config, currently mis-filed in total_requests
             summary.total_requests += len(self.waf_profile.probes)
         else:
             self.waf_profile = WAFProfile()
@@ -1748,6 +1788,7 @@ class Scanner:
                 "sql_or_1eq1": None,
             }
             weakrand_seen = False
+            # D-7 audit: ESTIMATED (baseline) — baseline_count from config, currently mis-filed in total_requests
             summary.total_requests += self.baseline_count
             summary.baselines[param] = {
                 "samples": len(baseline.snapshots),
@@ -1783,6 +1824,7 @@ class Scanner:
             sqli_blind_true_payload = ""
             ldap_wild_resp = None
             for name, value, category, _severity in self._payloads:
+                # D-7 audit: MEASURED — one per payload iteration in main scan loop
                 summary.total_requests += 1
                 try:
                     r = self._paced_request(self.target, param, value)
@@ -2480,6 +2522,7 @@ class Scanner:
                     r2 = self._paced_request(self.target, param, noexist_path)
                 except requests.RequestException:
                     r2 = None
+                # D-7 audit: MEASURED — one per traversal noexist probe request
                 summary.total_requests += 1
                 if r2 is not None:
                     snap2 = ResponseSnapshot.from_response(
