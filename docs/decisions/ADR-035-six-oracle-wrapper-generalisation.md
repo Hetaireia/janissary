@@ -1,7 +1,7 @@
 # ADR-035 — Generalise the six oracle wrappers in engine/scanner.py (tiered migration)
 
 **Status:** Proposed
-**Date:** 2026-11-23 (amended 2026-11-23)
+**Date:** 2026-11-23 (amended 2026-11-24)
 **Defects:** D-23 (GH#4 — six-oracle duplication is how findings get attributed to the wrong family)
 **Related:** ADR-033 (evidence grading), ADR-034 (OOB DNS-vs-HTTP discrimination), D-7, M83, M89
 
@@ -29,7 +29,17 @@
 
 ### Tier definitions
 
-**Tier A (L2140, L2177, L2214)** — single-response in-loop oracles. The oracle function receives the baseline and the current response, and returns hits in one call. Same detect signature across all three. This is the shape D-23 describes.
+**Tier A (L2140, L2177, L2214)** — single-response in-loop oracles. The oracle function receives the baseline and the current observation and returns hits in one call. This is the shape D-23 describes.
+
+The three do not share a detect signature, and the earlier draft's claim that they do is why this ADR needed a second pass:
+
+| Site | Oracle | Signature |
+|---|---|---|
+| L2140 | `check_trustbound_oracle` | `(baseline, snapshot, marker)` |
+| L2177 | `check_securecookie_oracle` | `(baseline, response, marker)` |
+| L2214 | `check_weakrand_oracle` | `(baseline, snapshot)` |
+
+Two take a third marker argument and one does not, and the two that do disagree on whether the second argument is a `ResponseSnapshot` or an http response. The driver therefore carries the shape explicitly — `snapshot+marker`, `response+marker`, `snapshot` — instead of assuming one.
 
 **Tier B (L2399, L2455)** — paired multi-snapshot oracles. The oracle requires two observations (quote plus OR-bypass for SQLi; error plus reflection for XPath) before emitting. Not single-response in the tier-A sense.
 
@@ -45,21 +55,25 @@ Six corrections apply against the previous version:
 4. **Routing** — none of the six sites routes `UnprovenVerification → candidates`. The original draft implied this; it is false.
 5. **L2499 double-`_say`** — noted, out of scope for this ADR.
 6. **L2347** — classified as analyzer primary-detector emitter, out of scope.
+7. **Driver signature** — the draft's `(detect, param, payload_value, response, snapshot, context, quiet, seen_guard=None)` does not hold. There is no `context` object: `baseline` is a separate argument because two of the three oracles read it, `shape` carries the arity difference, and `target`, `method` and `summary` are passed rather than reached for so the driver stays a module-level function. The real signature is in Decision 2.
+8. **Signature parity** — the draft claimed all three tier A oracles share a detect signature. They do not; see the tier table.
 
 ## Decision
 
 1. **First implementation scope: Tier A only** (L2140, L2177, L2214).
-2. Introduce one driver in `engine/scanner.py`: `_emit_oracle_findings(detect, param, payload_value, response, snapshot, context, quiet, seen_guard=None)`. The driver owns the construction-and-routing steps for tier A sites.
-3. Each tier A site becomes a single driver call, passing the `check_*_oracle` function and the four literals (`payload_name`, `category`, `finding_type`, `severity` default).
-4. Migration is per-site, tier A only. Reference migration: **securecookie at L2177**.
-5. **Tier B and Tier C are deferred** to a follow-up ADR or an explicit Accept of amended scope. This ADR does not commit to their migration.
-6. The L2499 double-`_say` bug at 2532–2538 is noted. Fixing it is out of scope. Recommend a new defect entry (D-31).
-7. `CandidateFinding`, `_ENGINE`, `summary.record()`, `summary.candidates`, `_say()`, `_to_scan_finding()`, and both stream guards remain unchanged.
+2. Introduce one driver in `engine/scanner.py`: `_emit_oracle_findings(detect, *, param, payload_value, response, snapshot, baseline, shape, payload_name, category, finding_type, severity, target, method, summary, quiet, seen_guard=None)`. The driver owns the construction-and-routing steps for tier A sites. Everything after `detect` is keyword-only: at this width a positional call is unreadable and one transposed pair would pass silently.
+3. Each tier A site becomes a single driver call, passing the `check_*_oracle` function, its `shape`, and the four literals (`payload_name`, `category`, `finding_type`, `severity` default).
+4. `seen_guard` is an `_OracleSeenGuard` instance owned by `scan()`, not a bool: the driver would only rebind a bool, so the latch could never travel back out. The guard trips when the oracle returns hits, not when a hit verifies — which is what the `weakrand_seen` flag meant before migration.
+5. Migration is per-site, tier A only. Reference migration: **securecookie at L2177**.
+6. **Tier B and Tier C are deferred** to a follow-up ADR or an explicit Accept of amended scope. This ADR does not commit to their migration.
+7. The L2499 double-`_say` bug at 2532–2538 is noted. Fixing it is out of scope. Recommend a new defect entry (D-31).
+8. `CandidateFinding`, `_ENGINE`, `summary.record()`, `summary.candidates`, `_say()`, `_to_scan_finding()`, and both stream guards remain unchanged.
 
 ## Gate
 
 - Tier A sites (L2140, L2177, L2214) inspected in full and documented in the reference migration PR.
-- `tests/unit/test_oracle_driver.py`: driver routes verified to `record()`, emits the quiet line only when not quiet, suppresses second hits when `seen_guard` is supplied.
+- `tests/unit/test_oracle_driver.py`: driver routes verified findings to `record()`, emits the quiet line only when not quiet, suppresses every hit after the first when a `seen_guard` is supplied, trips the guard even when nothing verifies, and feeds each shape the arguments its oracle declares.
+- Driver neutrality is proved before any migration: `test_driver_matches_legacy_securecookie_field_for_field` compares the driver against a frozen copy of the pre-migration site body and requires an equal `ScanFinding`, equal `_say` arguments and an equal serialiser call order.
 - Per-site parity test for each tier A migration: byte-identical `ScanFinding` for same fixture — same `finding_type`, `severity`, `detail`, `payload_name`, `raw_request`, `raw_response`.
 - M89 delta 0 after each tier A migration commit.
 - Per-class recall on M89 unchanged or better, measured per class.
@@ -73,7 +87,7 @@ Six corrections apply against the previous version:
 - D-23's misattribution class is closed for tier A. Tier B and tier C remain as noted.
 - The M83 Gate E fix (`f9fbc1d`) becomes a single change at the driver for tier A oracles.
 - Cost: one driver function, three migration commits, one inspection pass. Tier B/C deferred.
-- Risk: the driver accumulates per-oracle branches as future sites need quirks. Mitigation: tier A sites share signature by definition; a site needing new behaviour belongs in tier B/C scope, not as a new tier A argument.
+- Risk: the driver accumulates per-oracle branches as future sites need quirks. Mitigation: the three tier-A shapes are enumerated in the driver and in the tier table above, so a fourth shape is a visible change to both; a site needing anything beyond an argument shape belongs in tier B/C scope, not as a new tier A argument.
 - Risk: the parity fixture is incomplete and drift escapes it. Mitigation: M89 delta-0 after each migration commit.
 
 ## Alternatives considered
@@ -93,6 +107,8 @@ Six corrections apply against the previous version:
 - `engine/scanner.py` L453–L456, L536–L545 (stream guards)
 - `verification/confirmers.py` (`OracleConfirmer` from `f9fbc1d`)
 - `detection/analyzer.py` L1002 (`check_trustbound_oracle`), L1068 (`check_securecookie_oracle`), L947 (`check_weakrand_oracle`) — tier A
+- `engine/scanner.py` L382–L479 (the driver and `_OracleSeenGuard`)
+- `tests/unit/test_oracle_driver.py` (five tests, including the neutrality parity test)
 - `detection/analyzer.py` L854 (`check_sqli_quote_oracle`), L891 (`check_xpath_error_oracle`) — tier B
 - `detection/analyzer.py` L1112 (`check_ldap_injection_oracle`) — tier C
 - ADR-033 (evidence grading), ADR-034 (SSRF phase shape)
