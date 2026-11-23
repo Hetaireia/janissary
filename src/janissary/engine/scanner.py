@@ -436,6 +436,13 @@ def _emit_oracle_findings(
     """
     if seen_guard is not None and seen_guard.fired:
         return
+    if shape not in (
+        _SHAPE_RESPONSE_MARKER,
+        _SHAPE_SNAPSHOT_MARKER,
+        _SHAPE_SNAPSHOT_ONLY,
+    ):
+        raise ValueError(f"Unsupported oracle shape: {shape!r}")
+
     if shape == _SHAPE_RESPONSE_MARKER:
         raw = detect(baseline, response, payload_value)
     elif shape == _SHAPE_SNAPSHOT_MARKER:
@@ -1911,7 +1918,6 @@ class Scanner:
                 "sql_single_quote": None,
                 "sql_or_1eq1": None,
             }
-            weakrand_seen = False
             # D-7 audit: ESTIMATED (baseline) — baseline_count from config, currently mis-filed in total_requests
             summary.record_estimate("baseline", self.baseline_count)
             summary.baselines[param] = {
@@ -2232,114 +2238,67 @@ class Scanner:
                 # marker payload; fires only when the marker is echoed
                 # into the "saved in session" sink.
                 if name == "trustbound_marker":
-                    tb_findings = check_trustbound_oracle(baseline, snapshot, value)
-                    for f in tb_findings:
-                        tb_req = getattr(r, "request", None)
-                        candidate = CandidateFinding(
-                            param=param,
-                            payload_name="trustbound_marker",
-                            payload_value=value,
-                            category="trustbound",
-                            severity=f.get("severity", "high"),
-                            finding_type=f.get("type", "trustbound_session_oracle"),
-                            detail=f.get("detail", ""),
-                            response_status=r.status_code,
-                            response_length=len(r.text or ""),
-                            response_time=snapshot.elapsed,
-                            response_content_type=snapshot.content_type,
-                            url=getattr(tb_req, "url", None) or self.target,
-                            method=self.method,
-                            raw_request=serialize_request(tb_req),
-                            raw_response=serialize_response(r),
-                        )
-                        result = _ENGINE.verify(candidate)
-                        if not isinstance(result, VerifiedFinding):
-                            continue
-                        tb_finding = _to_scan_finding(result)
-                        summary.record(tb_finding)
-                        if not quiet:
-                            _say(
-                                f"  [{param}] {tb_finding.payload_name} -> "
-                                f"{tb_finding.severity.upper()}: "
-                                f"{tb_finding.finding_type} "
-                                f"| {tb_finding.detail[:80]}"
-                            )
+                    # Trustbound session-sink oracle: per-scan high-entropy
+                    # marker payload; fires only when the marker is echoed
+                    # into the "saved in session" sink.
+                    _emit_oracle_findings(
+                        check_trustbound_oracle,
+                        param=param,
+                        payload_value=value,
+                        snapshot=snapshot,
+                        baseline=baseline,
+                        shape=_SHAPE_SNAPSHOT_MARKER,
+                        payload_name="trustbound_marker",
+                        category="trustbound",
+                        finding_type="trustbound_session_oracle",
+                        severity="high",
+                        target=self.target,
+                        method=self.method,
+                        summary=summary,
+                        quiet=quiet,
+                    )
 
                     # Securecookie Set-Cookie oracle: same marker
                     # payload, checks whether the reflected cookie
                     # lacks the Secure attribute. Reuses the trustbound
                     # response -- no additional request issued.
-                    sc_findings = check_securecookie_oracle(baseline, r, value)
-                    for f in sc_findings:
-                        sc_req = getattr(r, "request", None)
-                        candidate = CandidateFinding(
-                            param=param,
-                            payload_name="securecookie_flag_oracle",
-                            payload_value=value,
-                            category="securecookie",
-                            severity=f.get("severity", "medium"),
-                            finding_type=f.get("type", "securecookie_flag_oracle"),
-                            detail=f.get("detail", ""),
-                            response_status=r.status_code,
-                            response_length=len(r.text or ""),
-                            response_time=snapshot.elapsed,
-                            response_content_type=snapshot.content_type,
-                            url=getattr(sc_req, "url", None) or self.target,
-                            method=self.method,
-                            raw_request=serialize_request(sc_req),
-                            raw_response=serialize_response(r),
-                        )
-                        result = _ENGINE.verify(candidate)
-                        if not isinstance(result, VerifiedFinding):
-                            continue
-                        sc_finding = _to_scan_finding(result)
-                        summary.record(sc_finding)
-                        if not quiet:
-                            _say(
-                                f"  [{param}] {sc_finding.payload_name} -> "
-                                f"{sc_finding.severity.upper()}: "
-                                f"{sc_finding.finding_type} "
-                                f"| {sc_finding.detail[:80]}"
-                            )
+                    _emit_oracle_findings(
+                        check_securecookie_oracle,
+                        param=param,
+                        payload_value=value,
+                        response=r,
+                        snapshot=snapshot,
+                        baseline=baseline,
+                        shape=_SHAPE_RESPONSE_MARKER,
+                        payload_name="securecookie_flag_oracle",
+                        category="securecookie",
+                        finding_type="securecookie_flag_oracle",
+                        severity="medium",
+                        target=self.target,
+                        method=self.method,
+                        summary=summary,
+                        quiet=quiet,
+                    )
 
                 # Weakrand RNG-class oracle: single-response body
                 # signature. Checked on every payload response; fires
-                # at most once per parameter.
-                if not weakrand_seen:
-                    wr_findings = check_weakrand_oracle(baseline, snapshot)
-                    for f in wr_findings:
-                        wr_req = getattr(r, "request", None)
-                        candidate = CandidateFinding(
-                            param=param,
-                            payload_name="weakrand_rng_oracle",
-                            payload_value=value,
-                            category="weakrand",
-                            severity=f.get("severity", "high"),
-                            finding_type=f.get("type", "weakrand_rng_oracle"),
-                            detail=f.get("detail", ""),
-                            response_status=r.status_code,
-                            response_length=len(r.text or ""),
-                            response_time=snapshot.elapsed,
-                            response_content_type=snapshot.content_type,
-                            url=getattr(wr_req, "url", None) or self.target,
-                            method=self.method,
-                            raw_request=serialize_request(wr_req),
-                            raw_response=serialize_response(r),
-                        )
-                        result = _ENGINE.verify(candidate)
-                        if not isinstance(result, VerifiedFinding):
-                            continue
-                        wr_finding = _to_scan_finding(result)
-                        summary.record(wr_finding)
-                        if not quiet:
-                            _say(
-                                f"  [{param}] {wr_finding.payload_name} -> "
-                                f"{wr_finding.severity.upper()}: "
-                                f"{wr_finding.finding_type} "
-                                f"| {wr_finding.detail[:80]}"
-                            )
-                    if wr_findings:
-                        weakrand_seen = True
+                # WeakRand RNG oracle: body-scan for weak RNG class references.
+                _emit_oracle_findings(
+                    check_weakrand_oracle,
+                    param=param,
+                    payload_value=value,
+                    snapshot=snapshot,
+                    baseline=baseline,
+                    shape=_SHAPE_SNAPSHOT_ONLY,
+                    payload_name="weakrand_rng_oracle",
+                    category="weakrand",
+                    finding_type="weakrand_rng_oracle",
+                    severity="high",
+                    target=self.target,
+                    method=self.method,
+                    summary=summary,
+                    quiet=quiet,
+                )
 
                 # ADR-027 D4: capture first 2xx traversal response for existence
                 # oracle, and record which payload produced it. The noexist probe
