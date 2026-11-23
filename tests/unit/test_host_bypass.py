@@ -330,7 +330,9 @@ def test_scan_host_bypass_returns_populated_summary():
     assert summary.candidates[0].verification_status == "unproven"
     assert summary.method == "HOST-BYPASS"
     assert summary.approximate_requests == 3
-    assert summary.total_requests == 0
+    assert summary.requests_estimated == 3
+    assert summary.requests_measured == 0
+    assert summary.total_requests == 3
 
 
 def test_scan_host_bypass_clean_summary():

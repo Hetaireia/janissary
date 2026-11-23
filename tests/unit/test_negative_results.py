@@ -14,6 +14,7 @@ def _fake_summary(**overrides):
     s.params = ["q"]
     s.method = "GET"
     s.requests_measured = 10
+    s.total_requests = 10
     s.finding_count = 0
     s.groups = []
     s.aborted = False
@@ -25,6 +26,8 @@ def _fake_summary(**overrides):
     s.findings = []
     for k, v in overrides.items():
         setattr(s, k, v)
+        if k == "requests_measured":
+            s.total_requests = v
     return s
 
 

@@ -58,7 +58,7 @@ def _summary(findings=None, **kw):
         else:
             s.findings.append(f)
     s.finding_count = len(s.findings)
-    s.requests_measured = kw.get("total_requests", 10)
+    s.requests_measured = kw.get("requests_measured", 10)
     s.aborted = kw.get("aborted", False)
     s.abort_reason = kw.get("abort_reason")
     s.scan_incomplete = kw.get("scan_incomplete", False)

@@ -56,7 +56,9 @@ def _src(**kw):
     base = {
         "findings": [],
         "candidates": [],
-        "total_requests": 0,
+        "requests_measured": 0,
+        "requests_estimated": 0,
+        "requests_estimated_breakdown": {},
         "scan_incomplete": False,
         "abort_reason": None,
         "aborted": False,

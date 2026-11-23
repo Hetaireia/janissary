@@ -60,7 +60,7 @@ def test_rotates_on_401_and_returns_retry():
     assert p.call_count == 1
     assert s._session_rotator.current_index == 1
     assert s.session.headers.get("Cookie") == "b=2"
-    assert summary.total_requests == 1
+    assert summary.requests_measured == 1
 
 
 def test_retry_still_401_returns_retry_response():
