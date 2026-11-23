@@ -83,6 +83,71 @@ Verification: dictionary contains all six forms.
 
 Refs: ADR-003, ADR-027
 
+## Tier 1b — minted 2026-11-23 (register D-26..D-30; NOT live WORKFLOW queue)
+
+Promotable to WORKFLOW only via Post-launch Tier 1 rule (WORKFLOW rule 3). Item 0 remains D-7. ADR before code for new oracle/shape (rule 4). Corpus/M89 gate before default-on.
+
+### BL-6 — Traversal encode levels 0–3 + depth pad (D-29)
+
+Status: Open. Does **not** reopen BL-3’s closed decision on overlong UTF-8 / mixed-slash.
+
+Gap: pathtraver recall still target-capped and weak; WAF depth models block naive `../` while equal-level `%252e` / depth padding may pass. Same existence, collapse, LFI oracles — matrix only.
+
+Needs: payload matrix levels 0–3; optional probe-evidence field for encode level; regression on pathtraver-01; M89 delta 0.
+
+Refs: D-29, BL-3 (closed), ADR-027, M37/M83, engine/scanner.py DEFAULT_PAYLOADS
+
+### BL-7 — Path-segment URL-join SSRF + same-host retarget (D-26)
+
+Status: Open.
+
+Gap: classic absolute-URL SSRF and BL-1 redirector path do not cover `../` inside path-shaped segments under a fixed API prefix (Vimeo-class URL join).
+
+Needs: path-shaped param heuristic + climb payloads; confirmer for same-host wrong-route body/schema vs baseline; then optional external hop. ADR before code.
+
+Refs: D-26, ADR-034, _ssrf_phase, check_ssrf_response_oracle
+
+### BL-8 — Redirect-chain / final-host SSRF grading residual (D-27)
+
+Status: Open. BL-1 SHIPPED redirector+metadata path; this is evidence grading residual.
+
+Gap: followed 3xx count, final host class, attacker body markers not fully first-class on the finding after ADR-034 DNS-vs-HTTP split.
+
+Needs: grade fields + tests; DNS-only ceiling P4 preserved; M89 delta 0. ADR-034 amend or ADR-036 if emission shape changes.
+
+Refs: D-27, D-6, ADR-033, ADR-034, BL-1
+
+### BL-9 — Post-verify metadata canary pack default-off (D-28)
+
+Status: Open. Complements shipped BL-1/M13; must not spray metadata on every param.
+
+Gap: escalation after verified HTTP SSRF only.
+
+Needs: flag default off; confirmer; 404 ≠ finding. ADR before code.
+
+Refs: D-28, BL-1, ADR-012, ADR-034
+
+### BL-10 — WAF path-depth probe preference (D-30, with D-8)
+
+Status: Open.
+
+Gap: pacer/WAF profile does not yet prefer depth-safe encodings when negative-depth blocks are inferred.
+
+Needs: preference policy only; promotion still requires D-8 parse proof. Not CSPT.
+
+Refs: D-30, D-8, P1.2 pacer, BL-6
+
+## Tier 3 addendum — 2026-11-23 (never queued)
+
+- **CSPT-as-CLI-class:** out of scope without browser/CDP. Encoding theory may inform BL-6/D-30 only.
+- **Browser CSPT / client path sink (enterprise):** open-core future engine; not Apache CLI default.
+- **CSRF → markdown/javascript: XSS → GraphQL side effects:** session/playbook; stop at verified XSS in core.
+
+## Tier 3 addendum — 2026-11-23 (never queued)
+- CSPT-as-CLI-class without browser: out of scope (encoding theory may inform BL-6/D-30 only).
+- Browser CSPT / client path sink: enterprise/open-core later.
+- CSRF to markdown javascript XSS to GraphQL: out of core DAST.
+
 ## Tier 2 — verify first
 
 May already be covered. Verification before implementation.
@@ -158,4 +223,3 @@ Needs: parallel allocation path in `_ssrf_phase`, or tuple change that ripples t
 Verification: mock server 302s to Interactsh unique URL; poll returns a hit; finding emitted.
 
 Refs: ADR-029 (partial implementation note), ADR-012, ADR-015
-
