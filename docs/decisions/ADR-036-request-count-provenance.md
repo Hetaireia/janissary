@@ -1,6 +1,6 @@
 # ADR-036 — Split request counts into measured and estimated, with deprecated aliases
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-11-23
 **Defects:** D-7 (C-1 — summary.total_requests mixes measured and estimated counts)
 **Related:** D-25 (SARIF approximateRequests precedent), ADR-001 (benchmark methodology), ADR-008 (SARIF enterprise parity), ADR-019 (triage output), D-5, D-6, D-26..D-30 (all gated on D-7)
