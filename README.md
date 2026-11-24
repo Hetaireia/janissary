@@ -92,7 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
-**7.11.3 is published to PyPI and Docker Hub** (2026-11-23; request counts now carry measured/estimated provenance in CLI, JSON and SARIF, ADR-036; adds D-25 approximateRequests in SARIF; released by Trusted Publishing with PEP 740 provenance; also includes ADR-032 SPA false-positive floor, ADR-033 evidence grading P1-P4, ADR-034 DNS-vs-HTTP OOB discrimination).
+**7.11.4 is published to PyPI and Docker Hub** (2026-11-25; narrows the own-repository entropy allowlist to the repository URL span, so a real secret beside a github.com/Hetaireia link is reported again; released by Trusted Publishing with PEP 740 provenance; carries every 7.11.3 change -- ADR-036 request-count provenance in CLI/JSON/SARIF, ADR-032 SPA floor, ADR-033 evidence grading, ADR-034 OOB discrimination).
 
 <details>
 <summary>pip install</summary>
@@ -112,7 +112,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.3 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.4 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
