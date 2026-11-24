@@ -34,6 +34,14 @@ from janissary.detection import (
 from janissary.detection.blind_sqli_oracle import check_blind_sqli_oracle
 from janissary.detection.collapse_oracle import check_traversal_collapse_oracle
 from janissary.detection.lfi_oracle import check_lfi_content_oracle
+from janissary.detection.pathtraver_convergence_oracle import (
+    check_convergence_oracle,
+    derive_depth_variants,
+)
+from janissary.detection.pathtraver_normalization_probe import (
+    build_self_referential_probe,
+    check_normalization_probe,
+)
 from janissary.detection.ssrf_response_oracle import check_ssrf_response_oracle
 from janissary.engine.baseline_struct import compute_arming_state
 from janissary.finding_identity import compute_fingerprint
@@ -2663,6 +2671,151 @@ class Scanner:
                                 f"{finding.finding_type} "
                                 f"| {finding.detail[:80]}"
                             )
+
+                # ADR-036 Phase 5: the two independent traversal oracles.
+                # Both are additive: they run after the existence oracle
+                # whatever it returned, and each tags its finding with an
+                # oracle_mechanism so the mechanism stays attributable.
+                exists_dict = {
+                    "status_code": traversal_snap.status,
+                    "body": traversal_snap.body,
+                }
+                canary_dict = {
+                    "status_code": r2.status_code,
+                    "body": r2.text or "",
+                }
+
+                # Self-referential normalization probe (ADR-036 Phase 3).
+                probe_payload = build_self_referential_probe(traversal_snap_payload)
+                if probe_payload is not None and baseline.snapshots:
+                    try:
+                        r3 = self._paced_request(self.target, param, probe_payload)
+                    except requests.RequestException:
+                        r3 = None
+                    # D-7 audit: MEASURED -- one per normalization probe request
+                    summary.requests_measured += 1
+                    if r3 is not None:
+                        snap3 = ResponseSnapshot.from_response(
+                            r3, normalizer=self.normalizer
+                        )
+                        baseline_snap = baseline.snapshots[0]
+                        if check_normalization_probe(
+                            probe_payload=probe_payload,
+                            existing_asset_response=exists_dict,
+                            self_referential_response={
+                                "status_code": snap3.status,
+                                "body": snap3.body,
+                            },
+                            nonexistent_canary_response=canary_dict,
+                            baseline_response={
+                                "status_code": baseline_snap.status,
+                                "body": baseline_snap.body,
+                            },
+                        ):
+                            probe_req = getattr(r3, "request", None)
+                            candidate = CandidateFinding(
+                                param=param,
+                                payload_name="traversal_self_reference_probe",
+                                payload_value=probe_payload,
+                                category="traversal",
+                                severity="critical",
+                                finding_type="pathtraver_normalization_oracle",
+                                detail=(
+                                    "Self-referential path resolved back to the "
+                                    "known asset; canary and baseline stayed distinct"
+                                ),
+                                response_status=snap3.status,
+                                response_length=snap3.length,
+                                response_time=snap3.elapsed,
+                                response_content_type=snap3.content_type,
+                                url=getattr(probe_req, "url", None) or self.target,
+                                method=self.method,
+                                raw_request=serialize_request(probe_req),
+                                raw_response=serialize_response(r3),
+                                oracle_mechanism="self_referential_normalization",
+                            )
+                            result = _ENGINE.verify(candidate)
+                            if isinstance(result, VerifiedFinding):
+                                finding = _to_scan_finding(result)
+                                summary.record(finding)
+                                if not quiet:
+                                    _say(
+                                        f"  [{param}] {finding.payload_name} -> "
+                                        f"{finding.severity.upper()}: "
+                                        f"{finding.finding_type} "
+                                        f"| {finding.detail[:80]}"
+                                    )
+
+                # Depth-invariant convergence oracle (ADR-036 Phase 4).
+                variants = derive_depth_variants(traversal_snap_payload)
+                if variants is not None:
+                    shallower, deeper = variants
+                    try:
+                        r_prev = self._paced_request(self.target, param, shallower)
+                    except requests.RequestException:
+                        r_prev = None
+                    # D-7 audit: MEASURED -- one per depth ladder request
+                    summary.requests_measured += 1
+                    try:
+                        r_next = self._paced_request(self.target, param, deeper)
+                    except requests.RequestException:
+                        r_next = None
+                    # D-7 audit: MEASURED -- one per depth ladder request
+                    summary.requests_measured += 1
+                    if r_prev is not None and r_next is not None:
+                        snap_prev = ResponseSnapshot.from_response(
+                            r_prev, normalizer=self.normalizer
+                        )
+                        snap_next = ResponseSnapshot.from_response(
+                            r_next, normalizer=self.normalizer
+                        )
+                        if check_convergence_oracle(
+                            payload_n=traversal_snap_payload,
+                            payload_n_plus_1=deeper,
+                            depth_n_minus_1_response={
+                                "status_code": snap_prev.status,
+                                "body": snap_prev.body,
+                            },
+                            depth_n_response=exists_dict,
+                            depth_n_plus_1_response={
+                                "status_code": snap_next.status,
+                                "body": snap_next.body,
+                            },
+                            nonexistent_canary_response=canary_dict,
+                        ):
+                            next_req = getattr(r_next, "request", None)
+                            candidate = CandidateFinding(
+                                param=param,
+                                payload_name="traversal_convergence_probe",
+                                payload_value=deeper,
+                                category="traversal",
+                                severity="critical",
+                                finding_type="pathtraver_convergence_oracle",
+                                detail=(
+                                    "Response converged across depths N and N+1 "
+                                    "while N-1 and the canary stayed distinct"
+                                ),
+                                response_status=snap_next.status,
+                                response_length=snap_next.length,
+                                response_time=snap_next.elapsed,
+                                response_content_type=snap_next.content_type,
+                                url=getattr(next_req, "url", None) or self.target,
+                                method=self.method,
+                                raw_request=serialize_request(next_req),
+                                raw_response=serialize_response(r_next),
+                                oracle_mechanism="root_clamp_convergence",
+                            )
+                            result = _ENGINE.verify(candidate)
+                            if isinstance(result, VerifiedFinding):
+                                finding = _to_scan_finding(result)
+                                summary.record(finding)
+                                if not quiet:
+                                    _say(
+                                        f"  [{param}] {finding.payload_name} -> "
+                                        f"{finding.severity.upper()}: "
+                                        f"{finding.finding_type} "
+                                        f"| {finding.detail[:80]}"
+                                    )
 
                 # Group findings by root cause so the summary reports bugs,
             # not raw evidence rows.
