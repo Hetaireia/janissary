@@ -274,6 +274,8 @@ def _iter_secret_matches(
             classes += 1
         return classes >= 2
 
+    own_repo_url = re.compile(r"(?:https?://)?github\.com/Hetaireia/[A-Za-z0-9._/-]*")
+    own_repo_spans = [(u.start(), u.end()) for u in own_repo_url.finditer(text)]
     for charset, pattern in (
         ("base64", re.compile(r"[A-Za-z0-9+/=]{20,}")),
         ("hex", re.compile(r"[0-9a-fA-F]{20,}")),
@@ -286,9 +288,7 @@ def _iter_secret_matches(
                 continue
             if not _classes_ok(candidate):
                 continue
-            ls = text.rfind("\n", 0, m.start()) + 1
-            le = text.find("\n", m.end())
-            if "github.com/Hetaireia/" in text[ls : len(text) if le == -1 else le]:
+            if any(s <= m.start() and m.end() <= e for s, e in own_repo_spans):
                 continue
             ent = shannon_entropy(candidate, charset)
             if ent >= min_entropy:
