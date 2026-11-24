@@ -3,6 +3,7 @@
 from janissary.detection.pathtraver_normalization_probe import (
     _compute_normalized_hash,
     _normalize_body_for_comparison,
+    build_self_referential_probe,
     check_normalization_probe,
 )
 
@@ -70,3 +71,24 @@ def test_hash_computation_deterministic() -> None:
     assert _compute_normalized_hash("test body") != _compute_normalized_hash(
         "other body"
     )
+
+
+def test_build_self_referential_probe_duplicates_last_segment() -> None:
+    assert (
+        build_self_referential_probe("../../../etc/passwd")
+        == "../../../etc/passwd/../passwd"
+    )
+
+
+def test_build_self_referential_probe_absolute_path() -> None:
+    assert build_self_referential_probe("/etc/passwd") == "/etc/passwd/../passwd"
+
+
+def test_build_self_referential_probe_backslash() -> None:
+    assert build_self_referential_probe(r"..\..\win.ini") == r"..\..\win.ini\..\win.ini"
+
+
+def test_build_self_referential_probe_rejects_unusable_shapes() -> None:
+    assert build_self_referential_probe("") is None
+    assert build_self_referential_probe("passwd") is None
+    assert build_self_referential_probe("etc/") is None

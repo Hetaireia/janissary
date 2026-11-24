@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from janissary.detection.pathtraver_normalization_probe import _compute_normalized_hash
@@ -57,3 +58,28 @@ def check_convergence_oracle(
             or status_n != nonexistent_canary_response.get("status_code")
         )
     )
+
+
+_DEPTH_PREFIX_RE = re.compile(r"^(?:\.\.[\\/])+")
+
+
+def derive_depth_variants(payload: str) -> tuple[str, str] | None:
+    """Return shallower and deeper payloads one level apart, or None.
+
+    Both variants shift only the leading run of ``..`` segments, so the
+    rest of the path stays byte-identical and the depth ladder isolates
+    depth. None when the payload does not open with two or more levels:
+    a single level has no N - 1 to compare against.
+    """
+    match = _DEPTH_PREFIX_RE.match(payload or "")
+    if match is None:
+        return None
+    run = match.group(0)
+    if run.count("..") < 2:
+        return None
+    sep = run[-1]
+    shallower = payload[2 + len(sep) :]
+    deeper = ".." + sep + payload
+    if not shallower or shallower == payload:
+        return None
+    return shallower, deeper

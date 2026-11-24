@@ -1,6 +1,9 @@
 """Unit tests for pathtraver_convergence_oracle (ADR-036 Phase 4)."""
 
-from janissary.detection.pathtraver_convergence_oracle import check_convergence_oracle
+from janissary.detection.pathtraver_convergence_oracle import (
+    check_convergence_oracle,
+    derive_depth_variants,
+)
 
 
 def test_convergence_oracle_fires_on_root_clamp() -> None:
@@ -53,3 +56,33 @@ def test_convergence_oracle_rejects_reflected_error_page() -> None:
         )
         is False
     )
+
+
+def test_derive_depth_variants_shifts_one_level() -> None:
+    got = derive_depth_variants("../../../etc/passwd")
+    assert got is not None
+    assert got[0] == "../../etc/passwd"
+    assert got[1] == "../../../../etc/passwd"
+
+
+def test_derive_depth_variants_keeps_tail_byte_identical() -> None:
+    got = derive_depth_variants("../../../a/b/c")
+    assert got is not None
+    assert got[0].endswith("/a/b/c") and got[1].endswith("/a/b/c")
+
+
+def test_derive_depth_variants_backslash_separators() -> None:
+    got = derive_depth_variants(r"..\..\..\windows\win.ini")
+    assert got is not None
+    assert got[0] == r"..\..\windows\win.ini"
+    assert got[1] == r"..\..\..\..\windows\win.ini"
+
+
+def test_derive_depth_variants_rejects_single_level() -> None:
+    assert derive_depth_variants("../etc/passwd") is None
+
+
+def test_derive_depth_variants_rejects_absent_prefix() -> None:
+    assert derive_depth_variants("/etc/passwd") is None
+    assert derive_depth_variants("") is None
+    assert derive_depth_variants("....//....//") is None

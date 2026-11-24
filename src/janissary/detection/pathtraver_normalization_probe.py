@@ -75,3 +75,21 @@ def check_normalization_probe(
             or baseline_response.get("status_code") != 200
         )
     )
+
+
+def build_self_referential_probe(payload: str) -> str | None:
+    """Return a probe naming the payload last segment twice, or None.
+
+    The probe is ``<payload><sep>..<sep><last>``, which resolves back to
+    the same asset on a server that normalizes the path textually and
+    fails on one that does not. None when there is no separator to
+    build the double reference on.
+    """
+    if not payload:
+        return None
+    cut = max(payload.rfind("/"), payload.rfind("\\"))
+    if cut <= 0 or cut == len(payload) - 1:
+        return None
+    sep = payload[cut]
+    last = payload[cut + 1 :]
+    return payload + sep + ".." + sep + last
