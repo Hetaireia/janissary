@@ -122,6 +122,20 @@ _SPECS: list[tuple[str, str, str, tuple[int, ...], str]] = [
         (22,),
         "critical",
     ),
+    (
+        "traversal",
+        "pathtraver_convergence_oracle",
+        "Path Traversal (depth-invariant convergence)",
+        (22,),
+        "critical",
+    ),
+    (
+        "traversal",
+        "pathtraver_normalization_oracle",
+        "Path Traversal (self-referential normalization)",
+        (22,),
+        "critical",
+    ),
     # Command injection
     ("cmdi", "command_output", "Command Injection", (78,), "critical"),
     ("cmdi", "output_region", "Command Output in Response", (78,), "critical"),
