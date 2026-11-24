@@ -75,6 +75,7 @@ class CandidateFinding:
     last_observation_id: str = ""
     payload_families: tuple[str, ...] = ()
     contributing_observation_ids: tuple[str, ...] = ()
+    oracle_mechanism: str = ""
 
 
 @dataclass(frozen=True)
@@ -136,6 +137,7 @@ class VerifiedFinding:
     last_observation_id: str = ""
     payload_families: tuple[str, ...] = ()
     contributing_observation_ids: tuple[str, ...] = ()
+    oracle_mechanism: str = ""
 
 
 @dataclass(frozen=True)

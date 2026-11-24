@@ -183,6 +183,7 @@ def _normalize_finding(finding: Any) -> dict:
         "payload": _coerce_str(m.get("payload") or m.get("payload_value")),
         "detail": _coerce_str(m.get("detail")),
         "finding_type": _coerce_str(m.get("finding_type")),
+        "oracle_mechanism": _coerce_str(m.get("oracle_mechanism") or None),
         "evidence": _normalize_value(m.get("evidence")),
         "request": _normalize_request(m.get("request")),
         "response": _normalize_response(m.get("response")),

@@ -59,6 +59,7 @@ _EVIDENCE_FIELDS = (
     "last_observation_id",
     "payload_families",
     "contributing_observation_ids",
+    "oracle_mechanism",
 )
 
 

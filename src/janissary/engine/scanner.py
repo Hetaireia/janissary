@@ -329,6 +329,7 @@ class ScanFinding:
     last_observation_id: str = ""
     payload_families: tuple[str, ...] = ()
     contributing_observation_ids: tuple[str, ...] = ()
+    oracle_mechanism: str = ""
 
     def __post_init__(self) -> None:
         if not self.fingerprint:
@@ -374,6 +375,7 @@ def _to_scan_finding(verified: VerifiedFinding) -> ScanFinding:
         last_observation_id=verified.last_observation_id,
         payload_families=verified.payload_families,
         contributing_observation_ids=verified.contributing_observation_ids,
+        oracle_mechanism=verified.oracle_mechanism,
     )
     finding._engine_emitted = True
     return finding
