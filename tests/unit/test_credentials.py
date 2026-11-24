@@ -294,3 +294,30 @@ def test_scanner_does_not_flag_its_own_source():
     here = Path(__file__).resolve().parents[2] / "src" / "janissary" / "credentials"
     hits = scan_directory(str(here), enable_entropy=False)
     assert hits == [], f"self-scan flagged: {[h['token_type'] for h in hits]}"
+
+
+# -------------------------------------------------------------------
+# OWN-REPO ENTROPY ALLOWLIST
+# -------------------------------------------------------------------
+
+_HIGH_ENTROPY = "Qm9yaW5nTGFiZWxQcm9iZUtleTkzMjhacVhwV3RRbE1rUzJ2RGY"
+
+
+def _entropy_types(text: str) -> list[str]:
+    hits = scan_text_for_secrets(text, "test")
+    return [h["token_type"] for h in hits if h["token_type"].startswith("entropy_")]
+
+
+def test_entropy_on_own_repo_path_is_skipped():
+    text = f"see https://github.com/Hetaireia/janissary/{_HIGH_ENTROPY}"
+    assert _entropy_types(text) == []
+
+
+def test_entropy_in_url_userinfo_is_still_reported():
+    text = f"git clone https://{_HIGH_ENTROPY}@github.com/Hetaireia/janissary"
+    assert _entropy_types(text) != []
+
+
+def test_unrelated_entropy_on_same_line_is_still_reported():
+    text = f"repo github.com/Hetaireia/janissary secret={_HIGH_ENTROPY}"
+    assert _entropy_types(text) != []

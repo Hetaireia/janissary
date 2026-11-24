@@ -8,7 +8,7 @@
 <img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
 <img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
 <img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
-<img alt="Version 7.11.3" src="https://img.shields.io/badge/version-7.11.3-4B5057?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.4" src="https://img.shields.io/badge/version-7.11.4-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
 <p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
