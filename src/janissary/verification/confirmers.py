@@ -268,7 +268,15 @@ class OracleConfirmer:
 
     name = "oracle"
 
-    _ORACLE_TYPES = frozenset({"securecookie_flag_oracle", "weakrand_rng_oracle"})
+    _ORACLE_TYPES = frozenset(
+        {
+            "securecookie_flag_oracle",
+            "weakrand_rng_oracle",
+            "pathtraver_existence_oracle",
+            "pathtraver_normalization_oracle",
+            "pathtraver_convergence_oracle",
+        }
+    )
 
     def confirm(self, candidate: CandidateFinding) -> Confirmation | None:
         if candidate.finding_type in self._ORACLE_TYPES:

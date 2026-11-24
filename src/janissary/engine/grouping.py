@@ -23,6 +23,8 @@ _ROOT_CAUSE_MAP: dict[tuple[str, str], str] = {
     ("sqli", "length_anomaly"): "sql_injection",
     ("sqli", "timing_anomaly"): "sql_injection",
     ("traversal", "status_change"): "path_traversal",
+    ("traversal", "pathtraver_normalization_oracle"): "path_traversal",
+    ("traversal", "pathtraver_convergence_oracle"): "path_traversal",
     ("traversal", "length_anomaly"): "path_traversal",
     ("cmdi", "timing_anomaly"): "command_injection",
     ("cmdi", "status_change"): "command_injection",
