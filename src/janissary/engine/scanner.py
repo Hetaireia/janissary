@@ -2258,6 +2258,7 @@ class Scanner:
                         method=self.method,
                         summary=summary,
                         quiet=quiet,
+                        response=r,
                     )
 
                     # Securecookie Set-Cookie oracle: same marker
@@ -2300,6 +2301,7 @@ class Scanner:
                     method=self.method,
                     summary=summary,
                     quiet=quiet,
+                    response=r,
                 )
 
                 # ADR-027 D4: capture first 2xx traversal response for existence
