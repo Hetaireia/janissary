@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.4] - 2026-11-25
+### Fixed
+- Own-repository entropy allowlist skipped any high-entropy token that shared a line with a github.com/Hetaireia URL, so a real secret beside a repo link went unreported. The exemption is now scoped to the URL span itself and applies only to tokens wholly inside it.
+
 ## [7.11.3] - 2026-11-23
 ### Fixed
 - SARIF output: invocation.properties now includes approximateRequests, matching the JSON output (D-25).
