@@ -64,3 +64,11 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+      - id: changelog-section
+        name: changelog section length (declared version)
+        entry: python scripts/check_changelog_sections.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
