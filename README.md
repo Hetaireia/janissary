@@ -8,7 +8,7 @@
 <img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
 <img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
 <img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
-<img alt="Version 7.11.4" src="https://img.shields.io/badge/version-7.11.4-4B5057?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.5" src="https://img.shields.io/badge/version-7.11.5-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
 <p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
@@ -92,6 +92,8 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
+**7.11.5 is published to PyPI and Docker Hub** (2026-11-25; adds the three-run aggregation harness that scores a run set against per-family recall floors and fails closed on any family regression, corrects the published path-traversal baseline from an unsupported 0.323 to the measured 44/133 = 0.331, and records the provenance discrepancies in an ADR-037 addendum; released by Trusted Publishing with PEP 740 provenance).
+
 **7.11.4 is published to PyPI and Docker Hub** (2026-11-25; narrows the own-repository entropy allowlist to the repository URL span, so a real secret beside a github.com/Hetaireia link is reported again; released by Trusted Publishing with PEP 740 provenance; carries every 7.11.3 change -- ADR-036 request-count provenance in CLI/JSON/SARIF, ADR-032 SPA floor, ADR-033 evidence grading, ADR-034 OOB discrimination).
 
 <details>
@@ -112,7 +114,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.4 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.5 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.5] - 2026-11-25
+### Added
+- `benchmark/track_a/runner_3run_aggregation.py`: three-run aggregation harness that scores a run set against a per-family recall floor and fails closed when a family regresses (ADR-037 phase 6).
+### Fixed
+- Published path-traversal baseline corrected from an unsupported 0.323 (43/133; no run in the tree yields it) to the measured 44/133 = 0.331, gated per family at 11/18/12/3 so a single-TP regression fails. `docs/decisions/ADR-037-addendum-2026-11-25.md` records the three provenance discrepancies and the reproduction command.
+
 ## [7.11.4] - 2026-11-25
 ### Fixed
 - Own-repository entropy allowlist skipped any high-entropy token that shared a line with a github.com/Hetaireia URL, so a real secret beside a repo link went unreported. The exemption is now scoped to the URL span itself and applies only to tokens wholly inside it.
