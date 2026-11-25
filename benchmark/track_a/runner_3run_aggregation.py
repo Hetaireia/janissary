@@ -12,7 +12,7 @@ population of interest.
 Usage
     python -m benchmark.track_a.runner_3run_aggregation --run DIR --run DIR \
         --run DIR --baseline-runs DIR DIR DIR \
-        --cases-csv benchmark/track_a/case_vectors.csv --floor 0.323
+        --cases-csv benchmark/track_a/case_vectors.csv --floor 0.3308
 
 Exit codes
     0   every requested gate passed

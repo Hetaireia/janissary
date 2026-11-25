@@ -3,12 +3,12 @@
 **Status:** Proposed (2026-11-25)
 **Supersedes:** None.
 **Extends:** ADR-003 (pathtraver ceiling), ADR-006 (traversal collapse oracle), ADR-027 (pathtraver recall strategy), ADR-028 (pathtraver signatures and verbose).
-**Blocks:** Any published traversal recall claim above 0.323, and the 7.11.5 release.
+**Blocks:** Any published traversal recall claim above 0.331, and the 7.11.5 release.
 **Cited by:** traversal commits from this ADR onward cite it. The commits from 4bbcca1 to de1418e cite "ADR-036", which in docs/decisions is the request-count provenance decision (D-7). Their citations are stale. No history is rewritten; this ADR is the canonical record for that work.
 
 ## Context
 
-Path traversal recall on the Track A corpus is 0.323, the weakest measured number in the project. The README's Known limitations section attributes the remaining false negatives to the response layout: most responses do not leak a file-existence signal, so the existing oracle cannot see them. This ADR adds two oracles that detect traversal from response shape rather than an existence signal, under the same precision contract as every other class.
+Path traversal recall on the Track A corpus is 0.331 (44 of 133 DAST-applicable traversal cases), the weakest measured number in the project. The README's Known limitations section attributes the remaining false negatives to the response layout: most responses do not leak a file-existence signal, so the existing oracle cannot see them. This ADR adds two oracles that detect traversal from response shape rather than an existence signal, under the same precision contract as every other class.
 
 The traversal commits from 4bbcca1 to de1418e implement the mechanisms and are on main, unreleased.
 
@@ -51,7 +51,7 @@ A5. A new SARIF rule identifier per oracle. Rejected: it splits one class of fin
 ## Acceptance gates (measured on recorded runs, not asserted)
 
 G1. The reflection guard removes no true positive from Track A.
-G2. The two additive oracles introduce no true-positive regression against the 0.323 baseline. Measured with the three-run aggregation harness, all gates.
+G2. No true-positive regression against the measured traversal baseline of 44 TP over a 133-case DAST-applicable denominator (recall 0.331) on `benchmark/track_a/runs/20261118T113000Z-janissary-r1`, scored with `benchmark/track_a/score_dast_aware.py`. The gate is aggregate and per-family both: at least 44 traversal TPs in aggregate, and no family below its own floor (pathtraver-00 11, pathtraver-01 18, pathtraver-02 12, pathtraver-03 3). Per-oracle reporting runs through the three-run aggregation harness with all gates. Only full-corpus runs against the pinned `20cbf3d` target count toward the three; a truncated or empty run does not.
 G3. M89 negative corpus precision stays at 1.000, with zero false positives.
 G4. Recall is reported as a computed number with its run directories, per family and per oracle, not only as a corpus-wide aggregate. Any change is reported as measured, including zero or negative.
 
@@ -68,7 +68,7 @@ Verification items, all answerable from the code and the runs:
 1. Read all three modules in full. Record line anchors in an addendum.
 2. Confirm the emission path (_emit_oracle_findings and the oracle_mechanism field) matches D1 to D4 and P1 to P3.
 3. Establish the M89 negative corpus path. Not established as of 2026-11-25.
-4. Nominate the three baseline runs for the 0.323 measurement. Not confirmed.
+4. Nominate the three baseline runs for the baseline measurement. Confirmed by the 2026-11-25 addendum: baseline run `benchmark/track_a/runs/20261118T113000Z-janissary-r1` (manifest `8ecb302`; detection change `f964339`), with the invalid repeat set recorded there.
 5. Confirm test_sarif_rules passes unchanged under D4, with no new rule identifiers registered.
 
 The SARIF question is no longer open here: D4 decides it, and item 5 only verifies the decision held.

@@ -84,7 +84,7 @@ def test_three_clean_runs_pass_all_gates(tmp_path):
     root.mkdir()
     runs = [_write_run(root, f"run{i}", i, HITS) for i in (1, 2, 3)]
     out = tmp_path / "agg.json"
-    extra = ["--out", str(out), "--floor", "0.323", "--baseline-runs"]
+    extra = ["--out", str(out), "--floor", "0.3308", "--baseline-runs"]
     extra += [str(r) for r in runs]
     assert agg.main(_argv(runs, cases, extra)) == 0
     data = json.loads(out.read_text(encoding="utf-8"))
