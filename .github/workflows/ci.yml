@@ -50,6 +50,9 @@ jobs:
       - name: Ruff format
         run: ruff format --check .
         
+      - name: Changelog section length
+        run: python scripts/check_changelog_sections.py
+
       - name: Pytest
         run: pytest -q --junitxml=pytest-junit.xml
 
