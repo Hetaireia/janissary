@@ -28,7 +28,7 @@ jobs:
       - name: Build sdist and wheel
         run: python -m build
       - name: Store distributions
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: python-package-distributions
           path: dist/
@@ -44,7 +44,7 @@ jobs:
       id-token: write
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
@@ -67,7 +67,7 @@ jobs:
           v=$(grep -m1 ^version pyproject.toml | tr -dc 0-9.)
           [ "$v" = "${TAG#v}" ] || { echo "tag ${TAG#v} does not match pyproject $v"; exit 1; }
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -81,3 +81,24 @@ jobs:
         run: docker push "$IMAGE:${TAG#v}"
       - name: Push latest
         run: docker push "$IMAGE:latest"
+
+  create-release:
+    name: Create GitHub Release
+    needs: [publish-to-pypi, publish-to-dockerhub]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Create the Release from the changelog section
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          v="${TAG#v}"
+          body=$(awk -v v="$v" '$0 ~ "^## \\[" v "\\] " { f=1; next } f && /^## \[/ { exit } f { print }' CHANGELOG.md)
+          if [ "${#body}" -lt 200 ]; then echo "changelog section for $v is only ${#body} chars"; exit 1; fi
+          gh release create "$TAG" --title "$TAG" --notes "$body" --verify-tag
