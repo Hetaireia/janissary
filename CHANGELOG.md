@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.7] - 2026-11-26
+
+### Added
+- `.github/workflows/ci.yml`: `Changelog section length` step between Ruff format and Pytest. CI ran `ruff` and `pytest` as bare steps and never invoked pre-commit, so the checker added in 7.11.6 ran only where hooks were installed. The step gives it a Linux execution on every push and pull request, so a thin section fails at push time instead of at tag time after PyPI and Docker have already accepted the version.
+
+### Changed
+- README version badge, release note and `docker run` example corrected to the current version; all three were left at 7.11.5 while 7.11.6 was on both registries.
+
+### Release note
+- 7.11.6 provenance is split and accepted forward-only: the PyPI artefacts were built from `68d642a`, the Docker image was rebuilt from `b9937a5` after the tag was moved. No shipped content differs, because the seven files in that range are four workflows, `.pre-commit-config.yaml`, `CHANGELOG.md` and the hook script, and `Dockerfile` copies only `pyproject.toml README.md LICENSE NOTICE LEGAL.md THIRD_PARTY_NOTICES.md` and `src/`.
+
+### Fixed
+- A second run against an already-published version fails at PyPI as a duplicate filename and skips `create-release` silently, so the Release has to be made by hand. This release is the first clean single-push run of that job.
+
+
 ## [7.11.6] - 2026-11-25
 ### Added
 - `.github/workflows/release.yml`: `publish-to-dockerhub` job. On a `v*` tag it builds `oraclemode337/janissary` from the repository `Dockerfile`, asserts the built image reports the tag version, and pushes the version tag and `latest` only if that assertion passes. The job runs in parallel with the PyPI publish, both depending only on `build`.
