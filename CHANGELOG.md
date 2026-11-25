@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.6] - 2026-11-25
+### Added
+- `.github/workflows/release.yml`: `publish-to-dockerhub` job. On a `v*` tag it builds `oraclemode337/janissary` from the repository `Dockerfile`, asserts the built image reports the tag version, and pushes the version tag and `latest` only if that assertion passes. The job runs in parallel with the PyPI publish, both depending only on `build`.
+- `Dockerfile`: `python:3.12-slim`, unprivileged uid 1000, `ENTRYPOINT ["janissary"]`, plus `.dockerignore`. Present since 7.11.5 but unused until this release.
+
+### Changed
+- Docker Hub credentials narrowed: the stored `DOCKERHUB_TOKEN` is a `repo:write` PAT with a one-year expiry, replacing a `repo:admin` token. Stale desktop tokens revoked.
+
+### Release note
+First run of the Docker job. Two consequences, both settled by the job graph: Docker does not gate the PyPI publish, so a build fault would publish to PyPI and only then fail the run; and re-pushing a tag already accepted by PyPI is rejected as a duplicate filename. `latest` already exists on Docker Hub and is retagged by the first success.
+
+The tag must be exactly `v7.11.6` to satisfy the version assertion.
+
 ## [7.11.5] - 2026-11-25
 ### Added
 - `benchmark/track_a/runner_3run_aggregation.py`: three-run aggregation harness that scores a run set against a per-family recall floor and fails closed when a family regresses (ADR-037 phase 6).
