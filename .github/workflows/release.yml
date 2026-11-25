@@ -50,3 +50,34 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-to-dockerhub:
+    name: Publish to Docker Hub
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: oraclemode337/janissary
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check tag matches package version
+        run: |
+          v=$(grep -m1 ^version pyproject.toml | tr -dc 0-9.)
+          [ "$v" = "${TAG#v}" ] || { echo "tag ${TAG#v} does not match pyproject $v"; exit 1; }
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build image
+        run: docker build -t "$IMAGE:${TAG#v}" -t "$IMAGE:latest" .
+      - name: Verify the image reports the tag version
+        run: |
+          got=$(docker run --rm --entrypoint python "$IMAGE:${TAG#v}" -c "import janissary;print(janissary.__version__)")
+          [ "$got" = "${TAG#v}" ] || { echo "image reports $got, tag ${TAG#v}"; exit 1; }
+      - name: Push versioned tag
+        run: docker push "$IMAGE:${TAG#v}"
+      - name: Push latest
+        run: docker push "$IMAGE:latest"

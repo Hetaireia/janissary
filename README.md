@@ -8,7 +8,7 @@
 <img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
 <img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
 <img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
-<img alt="Version 7.11.4" src="https://img.shields.io/badge/version-7.11.4-4B5057?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.5" src="https://img.shields.io/badge/version-7.11.5-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
 <p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
@@ -45,14 +45,14 @@ OWASP Benchmark, DAST-applicable subset, 2,258 cases. Clean-exit run at harness 
 
 <p align="center"><sub><b>0.922</b> BASELINE · P 1.000 · R 0.855 · TP 988 · <code>ea7b3e5</code></sub></p>
 
-> **Attribution.** The +34 TPs over that baseline are entirely path traversal, all from commit `f964339`; every other category is unchanged. This is not a generalised capability jump.
+> **Attribution.** The +34 TPs over that baseline are entirely path traversal, all from commit `f964339`; every other category is unchanged. This is not a generalised capability jump. The committed run manifest records 8ecb302; f964339 is the detection change.
 
 > **Single run.** These figures are one execution at 8ecb302, not a mean of repeats.
 
 > [!NOTE]
 > Precision 1.000 is scoped to this corpus and does not establish a real-world false-positive rate. The M89 negative corpus targets that.
 
-The +34 true positives over that baseline are entirely path traversal and all trace to one commit, f964339. Every other category is unchanged, and precision stays at 1.000 in both runs. Path traversal recall moves from 0.075 BASELINE to 0.323.
+The +34 true positives over that baseline are entirely path traversal and all trace to one commit, f964339. Every other category is unchanged, and precision stays at 1.000 in both runs. Path traversal recall moves from 0.075 BASELINE to 0.331.
 
 Full corpus: TP 1,022, FP 0, FN 393, TN 1,325, P 1.000, R 0.722, F1 0.839. Supported-classes subset, which excludes path traversal: TP 978, FP 0, FN 45, TN 967, F1 0.978. Method, dispositions and provenance are in BENCHMARK.md, Amendment 30.
 
@@ -82,7 +82,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 | Reflected XSS | Context-aware payloads | shipped |
 | Command injection | Shell and argument forms | shipped |
 | SSRF | Out-of-band via collaborator, cloud metadata markers | shipped |
-| Path traversal | Content-signature differential | partial, 0.323 recall |
+| Path traversal | Content-signature differential | partial, 0.331 recall |
 | Recon | CMS and technology fingerprint, 18-platform admin probe | shipped |
 | Protocols | HTTP, XML-RPC, GraphQL, WebSocket | shipped |
 | Orchestration | Agent: fingerprint, WAF, KB, modules, findings | shipped |
@@ -91,6 +91,8 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 <a id="install"></a>
 
 ## Install
+
+**7.11.5 is published to PyPI and Docker Hub** (2026-11-25; adds the three-run aggregation harness that scores a run set against per-family recall floors and fails closed on any family regression, corrects the published path-traversal baseline from an unsupported 0.323 to the measured 44/133 = 0.331, and records the provenance discrepancies in an ADR-037 addendum; released by Trusted Publishing with PEP 740 provenance).
 
 **7.11.4 is published to PyPI and Docker Hub** (2026-11-25; narrows the own-repository entropy allowlist to the repository URL span, so a real secret beside a github.com/Hetaireia link is reported again; released by Trusted Publishing with PEP 740 provenance; carries every 7.11.3 change -- ADR-036 request-count provenance in CLI/JSON/SARIF, ADR-032 SPA floor, ADR-033 evidence grading, ADR-034 OOB discrimination).
 
@@ -112,7 +114,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.4 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.5 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
@@ -211,7 +213,7 @@ Governing law is Victoria, Australia. IDOR stays in the Apache-2.0 core, not beh
 
 ## Known limitations
 
-Path traversal recall is 0.323, up from 0.075 BASELINE. The remaining false negatives are target-capped on this corpus: the response layout does not leak the file-existence oracle for most cases, so they are structurally undetectable rather than unimplemented.
+Path traversal recall is 0.331, up from 0.075 BASELINE. The remaining false negatives are target-capped on this corpus: the response layout does not leak the file-existence oracle for most cases, so they are undetectable by that oracle rather than unimplemented; ADR-037 adds two oracles that read response shape instead.
 
 Precision 1.000 is scoped to this corpus. It does not establish a real-world false-positive rate, which is the target of the M89 negative regression corpus.
 

@@ -2318,7 +2318,7 @@ Container reconciliation:
 
 Supersedes:
   - Amendment 29's "first complete v7.11.1 corpus measurement." That run scored correctly from committed artifacts but the runner exited 1 and 87 cases were recording_indeterminate. Amendment 29 remains the historical 0.922 baseline; it is no longer the current headline.
-  - README's stated 0.922 F1 and 0.075 path-traversal recall. Both are replaced by 0.938 and 0.323 (44/133 TP) in this amendment.
+  - README's stated 0.922 F1 and 0.075 path-traversal recall. Both are replaced by 0.938 and 0.331 (44/133 TP) in this amendment.
 
 Does not claim:
   - That 0.938 is a statistically distinguishable improvement over 0.922. The delta is entirely path traversal (a single detection-code change), not a statistical signal on other categories.
@@ -2336,4 +2336,5 @@ Files referenced:
 
 ## Repeatability (Stage 1)
 
-The OWASP Benchmark DAST-applicable F1 of **0.938** (TP=1,022, FP=0, FN=134) was validated across three consecutive runs (1, 2, 3) on the pinned 20cbf3d target. The resulting standard deviation across TP, FP, and FN is zero. The harness and detection engine are deterministic.
+The OWASP Benchmark DAST-applicable F1 of **0.938** (TP=1,022, FP=0, FN=134) was validated across three consecutive runs (1, 2, 3) on the pinned 20cbf3d target. The resulting standard deviation across TP, FP, and FN is zero. The harness and detection engine are deterministic.
+[Correction 2026-11-25, see ADR-037 addendum] The zero standard deviation above holds for FP only. The three f964339 runs differ by 34 DAST-applicable TPs and 2 traversal TPs: 065815Z is an empty findings file, 080501Z is truncated at 114 findings across two classes, and 093521Z scores 988 TP / 0.922 / 0.855 with 42 traversal TPs. The committed run 20261118T113000Z (TP 1,022, R 0.884, 44 traversal TPs) is 8ecb302, a runner-only fix, so the detection change remains f964339. Traversal recall is 44/133 = 0.331, not 0.323.
