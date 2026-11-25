@@ -49,6 +49,19 @@ The tag must be exactly `v7.11.6` to satisfy the version assertion.
 ### Notice
 - The supplemental Terms of Use acceptance step and indemnity text that shipped with releases up to and including 7.11.1 are withdrawn and will not be enforced. JANISSARY is licensed solely under the Apache License 2.0. Releases 7.3.0, 7.4.0, 7.5.0, 7.10.2 and 7.11.1 have been yanked from PyPI.
 
+## [7.11.1] - 2026-11-07
+
+### Fixed
+- `scanner.py`: duplicate fingerprints are now rejected on emit. The ADR-007 identity scheme already classifies every payload against one case as the same finding, so N payloads produced N identical findings (worst case N=39). The fingerprint carries category and finding_type, so dedupe cannot collapse across families; findings without a fingerprint are preserved. Verified TP-safe by scoring the 5632-finding 7.11.0 run against a fingerprinted copy of the same artifact (5632 to 2062 findings, TP/FP/FN/F1 identical) because the scorer is case-based, not finding-based.
+- `benchmark/track_a/Dockerfile.owasp-benchmark`: unzip the nested Tomcat archive instead of relying on the single-level extraction.
+- `benchmark/track_a/runner.py`: capture JSONL without `--quiet`, which swallowed it on the Windows shim.
+- `.githooks/`: LF-only shims so hook invocation stops failing on CRLF.
+
+### Release process
+- The tag was cut before the version bump, so `pyproject.toml` still declared 7.11.0 at `v7.11.1`. `4ad03dd` corrected it afterwards as a forward commit; the tag was not moved.
+- Published to PyPI by hand on 2026-11-21, two weeks after the tag, with no `release.yml` in the tree.
+- Yanked from PyPI: superseded by 7.11.2.
+
 ## [7.11.0] - 2026-11-06
 
 241 commits since v7.10.2.
