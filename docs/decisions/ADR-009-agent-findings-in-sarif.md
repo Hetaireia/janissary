@@ -220,7 +220,7 @@ independently. Split would be artificial.
 - **Sibling `_write_sarif_summary` / `_write_sarif_findings`** —
   rejected: the handover names the union signature as the
   requirement. Pushes dispatch to callers who already know.
-- **Separate `src/janissary/sarif_agent.py` module** — rejected:
+- **Separate `sarif_agent.py` module** — rejected:
   shared rendering logic (taxonomies, invocation emission, file
   write, rules dedup) would be duplicated.
 - **Duck typing instead of `isinstance`** — rejected:

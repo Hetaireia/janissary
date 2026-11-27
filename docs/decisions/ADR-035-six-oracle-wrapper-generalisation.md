@@ -49,7 +49,7 @@ Two take a third marker argument and one does not, and the two that do disagree 
 
 Ten corrections apply against the previous version:
 
-1. **Path** — `src/janissary/scanner.py` → `src/janissary/engine/scanner.py`
+1. **Path** — `scanner.py` → `src/janissary/engine/scanner.py`
 2. **Tier split** — the original treated all six as one shape. Tier A/B/C split reflects the observed structure.
 3. **Field count** — `CandidateFinding` takes ~15 kwargs, not "fourteen." No `evidence_grade` or `reflection_context` at these sites.
 4. **Routing** — none of the six sites routes `UnprovenVerification → candidates`. The original draft implied this; it is false.
