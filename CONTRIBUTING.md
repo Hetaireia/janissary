@@ -84,6 +84,35 @@ commit a real token.
 4. Update `CHANGELOG.md` under `## [Unreleased]`.
 5. Open a PR. Fill in the template.
 
+## Release Process
+
+Maintainer only. A release is a bump commit, a tag on that commit, and the tag
+push. The tag push is what runs the publish workflow — a bump commit on its own
+publishes nothing.
+
+1. Confirm `main` is green in CI and the working tree is clean.
+2. Bump `[project].version` in `pyproject.toml`. `janissary.__version__` is read
+   from installed distribution metadata, not hardcoded, so nothing in `src/`
+   moves with it.
+3. **Reinstall the package into the venv** with `python -m pip install -e .`
+   before running the suite. The editable install records the declared version
+   at install time and that metadata survives a `pyproject.toml` edit, while
+   `tests/unit/test_version_consistency.py` compares the two. Skip this and the
+   version-consistency test fails at pre-push on a bump that is otherwise
+   correct — the failure is stale metadata, not a bad edit.
+   The venv carries no `setuptools` or `wheel`, so leave build isolation on:
+   `--no-build-isolation` fails on the `supports_feature` backend hook.
+4. Move the `## [Unreleased]` entries into a new `## [<version>] - <date>`
+   section and write a release note. The section must clear 200 characters or
+   the release workflow refuses the tag.
+5. Update the README version badge, the release-note list and the `docker run`
+   tag.
+6. Commit, tag the commit `v<version>`, and push the tag.
+
+Retry a failed publish with `workflow_dispatch` against the existing tag. Do not
+delete and re-push the tag: the version assertion and the PyPI duplicate check
+both trip on a moved tag, and each retry costs a published version number.
+
 PRs are reviewed within 72 hours. We aim to merge within 7 days.
 
 ## Governance

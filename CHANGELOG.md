@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.11.8] - 2026-11-28
+
+### Fixed
+- `.github/workflows/release.yml`: the green-CI gate was conditioned on `if: github.event_name == 'push'`, so the `workflow_dispatch` retry path could reach PyPI with no CI check on the commit. The condition is gone and the step resolves `SHA=$(git rev-parse HEAD)` after the tag checkout, so both entry paths gate identically.
+- `.githooks/pre-push`: the tag gate consumed stdin ahead of the hook `exec`, so an empty or blank-line-only payload left pre-commit with nothing to read and the push was rejected with an unexplained parse failure. Stdin is now buffered to a temp file and replayed on fd 3, and blank lines are stripped before the emptiness test.
+
+### Changed
+- `release.yml` takes a `workflow_dispatch` trigger with a `tag` input, so a failed publish is retried against the same tag instead of by deleting and re-pushing it. That matters because half the tag pushes in the 7.11.3-7.11.6 window failed, in two shapes: the tag landed ahead of the bump commit and tripped the version assertion, or the version was already on PyPI and the run died at attestation.
+- The publish job now decides what PyPI already holds before building, names the colliding filename in the failure, and passes `skip-existing` to the upload.
+
+### Release note
+- `pre-push` refuses a `v*` tag whose commit does not declare that version, placed in front of the hook `exec` rather than replacing it so `pytest -q` still runs. A tag placed ahead of its bump commit now fails locally at push time instead of at PyPI.
+
 ## [7.11.7] - 2026-11-26
+
 
 ### Added
 - `.github/workflows/ci.yml`: `Changelog section length` step between Ruff format and Pytest. CI ran `ruff` and `pytest` as bare steps and never invoked pre-commit, so the checker added in 7.11.6 ran only where hooks were installed. The step gives it a Linux execution on every push and pull request, so a thin section fails at push time instead of at tag time after PyPI and Docker have already accepted the version.

@@ -8,7 +8,7 @@
 <img alt="OWASP F1 0.938" src="https://img.shields.io/badge/OWASP_F1-0.938-D4AF37?style=flat-square&labelColor=0B0B0F">
 <img alt="Precision 1.000" src="https://img.shields.io/badge/precision-1.000-12141A?style=flat-square&labelColor=0B0B0F">
 <img alt="Licence Apache-2.0 core" src="https://img.shields.io/badge/licence-Apache--2.0_core-12141A?style=flat-square&labelColor=0B0B0F">
-<img alt="Version 7.11.5" src="https://img.shields.io/badge/version-7.11.7-4B5057?style=flat-square&labelColor=0B0B0F">
+<img alt="Version 7.11.8" src="https://img.shields.io/badge/version-7.11.8-4B5057?style=flat-square&labelColor=0B0B0F">
 </p>
 
 <p align="center"><a href="#architecture">Architecture</a> · <a href="#benchmark">Benchmark</a> · <a href="#install">Install</a> · <a href="#licence">Licence</a> · <a href="#limitations">Limitations</a></p>
@@ -92,6 +92,7 @@ HTTP, XML-RPC, GraphQL and WebSocket combined into a single agent run.
 
 ## Install
 
+**7.11.8 is published to PyPI and Docker Hub** (2026-11-28; makes the green-CI gate in the publish workflow unconditional so a dispatch retry is checked too, resolves the gate sha from the tag, adds the dispatch retry path and a PyPI collision guard, and stops the pre-push tag guard eating its own stdin; released by Trusted Publishing with PEP 740 provenance).
 **7.11.7 is published to PyPI and Docker Hub** (2026-11-26; gives the changelog section check a CI execution on every push and pull request, corrects the README version strings, and records the split 7.11.6 provenance; released by Trusted Publishing with PEP 740 provenance).
 **7.11.5 is published to PyPI and Docker Hub** (2026-11-25; adds the three-run aggregation harness that scores a run set against per-family recall floors and fails closed on any family regression, corrects the published path-traversal baseline from an unsupported 0.323 to the measured 44/133 = 0.331, and records the provenance discrepancies in an ADR-037 addendum; released by Trusted Publishing with PEP 740 provenance).
 
@@ -115,7 +116,7 @@ pip install -e .
 <summary>Docker</summary>
 
 ```bash
-docker run --rm oraclemode337/janissary:7.11.7 scan -u https://target.example/sqli?q=test -p q
+docker run --rm oraclemode337/janissary:7.11.8 scan -u https://target.example/sqli?q=test -p q
 ```
 
 </details>
