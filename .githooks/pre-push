@@ -1,8 +1,12 @@
 #!/bin/sh
 # LF only. Uses this repository's Windows .venv under Git for Windows.
 # Refuses a v* tag whose commit does not declare the matching version.
+# stdin is buffered so the check can consume it and pre-commit still receives it.
 export PATH=".venv/Scripts:$PATH"
 set -u
+
+tmp=$(mktemp 2>/dev/null) || { echo "pre-push: mktemp failed"; exit 1; }
+cat > "$tmp"
 
 bad=0
 while read -r lref lsha rref rsha; do
@@ -29,10 +33,14 @@ while read -r lref lsha rref rsha; do
     continue
   fi
   echo "pre-push: $tag ok (version $ver at $commit)"
-done
+done < "$tmp"
+
 if [ "$bad" -ne 0 ]; then
   echo "pre-push: tag/version check failed"
+  rm -f "$tmp"
   exit 1
 fi
 
-exec ".venv/Scripts/pre-commit.exe" hook-impl --config=.pre-commit-config.yaml --hook-type=pre-push --hook-dir . -- "$@"
+# Replay the buffered stdin for pre-commit. The temp file is left for the exec'd
+# process; it lives in the OS temp directory.
+exec ".venv/Scripts/pre-commit.exe" hook-impl --config=.pre-commit-config.yaml --hook-type=pre-push --hook-dir . -- "$@" < "$tmp"
