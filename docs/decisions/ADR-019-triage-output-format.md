@@ -86,7 +86,7 @@ reads `janissary.sarif`, filters to `runs[i].properties.track ==
 "show the triage queue in a comment" filters to `properties.track ==
 "discovery"`.
 
-This is documented in a new `docs/CI-INTEGRATION.md` (deferred to
+This is documented in a new `docs/CI-INTEGRATION.md` (not written yet; deferred to
 M40 implementation, not part of this ADR). The ADR only commits to
 the SARIF shape. Documentation follows when M40 ships.
 
@@ -127,7 +127,7 @@ findings).
 
 **Negative:**
 - The two-run shape is more complex than one-run for simple
-  consumers. Mitigation: `docs/CI-INTEGRATION.md` (M40) shows
+  consumers. Mitigation: `docs/CI-INTEGRATION.md` (M40; not written yet) shows
   copy-paste examples for both "block on verified" and "show triage
   queue" workflows.
 - Migration from M20's single-run shape to M40's two-run shape is a

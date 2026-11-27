@@ -58,7 +58,7 @@ rejected.
 
 ## Adding a Payload
 
-Payloads live in `src/janissary/detection/payloads.py`. Each payload
+Payloads live in `src/janissary/engine/scanner.py` as the `DEFAULT_PAYLOADS` list at line 89. Each payload
 is a tuple of `(name, value, category, severity)`.
 
 - `name` must be unique and snake_case.

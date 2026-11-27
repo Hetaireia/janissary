@@ -153,12 +153,12 @@ Suite: 235 tests passing. Ruff clean.
   licence; LEGAL.md supplements it. Governing law: Victoria,
   Australia.
 - `src/janissary/legal.py` — versioned terms text, marker helpers
-  (`~/.janissary/terms-accepted.json`), `require_acceptance()`.
+  (`~/.janissary/terms-accepted.json`), `require_acceptance()`. Removed in 7.11.2.
 - `src/janissary/cli.py` — gate in `main()`. Gated commands: scan,
   fingerprint, graphql, ws, admin, attack. New `janissary terms
   {show,status,accept}` subcommand.
 - `README.md` — Authorised-Use block at the top.
-- `tests/unit/test_legal.py` — 19 tests.
+- `tests/unit/test_legal.py` — 19 tests. Removed in 7.11.2.
   Superseded in 7.11.2: the acceptance gate, `src/janissary/legal.py`, the `terms` subcommand and `tests/unit/test_legal.py` were removed. `LEGAL.md` remains as guidance. See CHANGELOG.md.
 
 ---
@@ -588,7 +588,7 @@ Remote refs as of 2026-11-11: preserve-7.5.0-c8c0030 is a remote-only branch (it
 
 ## Session hazards
 
-- The unqualified git rm aborts atomically on any pathspec that is not tracked (observed 2026-11-11 with scripts/check-ascension.ps1). Split tracked vs untracked deletions into git rm and rm respectively, or the whole command is a no-op. Also: gits index refresh against /mnt/c takes 6-8 seconds on this repo; not a hang.
+- The unqualified git rm aborts atomically on any pathspec that is not tracked (observed 2026-11-11 with scripts/check-ascension.ps1 (never committed)). Split tracked vs untracked deletions into git rm and rm respectively, or the whole command is a no-op. Also: gits index refresh against /mnt/c takes 6-8 seconds on this repo; not a hang.
 
 - Local JANISSARY_ASCENSION.md PART FOUR still instructs running python tools/ascension.py (complete/reset/list). That tool was deleted 2026-11-11. The roadmap file is local-only and gitignored, so this is a local documentation defect to fix or accept; it does not affect the public repo.
 

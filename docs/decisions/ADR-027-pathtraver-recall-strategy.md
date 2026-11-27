@@ -215,7 +215,7 @@ against real OWASP Benchmark reveals which payloads produce TPs.
 
 Exception: D4 (broaden `traversal_snap` capture) is a control-flow
 change and needs one integration test in
-`tests/integration/test_scan_invariant.py` verifying that any
+`tests/unit/test_scan_invariant.py` verifying that any
 traversal-category 2xx response can set the snap regardless of
 payload name.
 

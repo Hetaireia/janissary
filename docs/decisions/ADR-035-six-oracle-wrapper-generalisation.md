@@ -47,7 +47,7 @@ Two take a third marker argument and one does not, and the two that do disagree 
 
 ### Corrections to the original ADR-035 draft
 
-Six corrections apply against the previous version:
+Ten corrections apply against the previous version:
 
 1. **Path** — `src/janissary/scanner.py` → `src/janissary/engine/scanner.py`
 2. **Tier split** — the original treated all six as one shape. Tier A/B/C split reflects the observed structure.
