@@ -4,27 +4,136 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing v* tag to release (e.g. v7.11.8)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
-  build:
-    name: Build distribution
+  prepare:
+    name: Resolve tag, CI and PyPI state
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      tag: ${{ steps.res.outputs.tag }}
+      version: ${{ steps.res.outputs.version }}
+      skip_existing: ${{ steps.guard.outputs.skip_existing }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - name: Resolve tag and version
+        id: res
+        env:
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            v[0-9]*) ;;
+            *) echo "::error::'$TAG' is not a v* tag"; exit 1 ;;
+          esac
+          v="${TAG#v}"
+          got=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "$got" != "$v" ]; then
+            echo "::error::tag $TAG declares pyproject version $got; bump the version and commit before tagging"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "resolved $TAG (version $v) at $(git rev-parse --short HEAD)"
+      - name: Require green CI on this commit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=10"
+          state=none
+          for _ in $(seq 1 36); do
+            json=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$api")
+            state=$(printf '%s' "$json" | jq -r '[ .workflow_runs[] ] as $r | if ($r | length) == 0 then "none" elif ($r | map(select(.status != "completed")) | length) > 0 then "running" elif ($r | any(.conclusion == "success")) then "green" else "red" end')
+            case "$state" in
+              green) echo "CI is green on $SHA"; exit 0 ;;
+              running) sleep 5 ;;
+              none) echo "no ci.yml run on $SHA yet; waiting"; sleep 5 ;;
+              red)
+                printf '%s' "$json" | jq -r '.workflow_runs[] | "::error::run \(.id): \(.conclusion) (.html_url)"'
+                exit 1
+                ;;
+            esac
+          done
+          echo "::error::ci.yml did not go green on $SHA within 180s (last state: $state)"
+          exit 1
+      - name: Decide what PyPI already holds
+        id: guard
+        env:
+          V: ${{ steps.res.outputs.version }}
+          TAG: ${{ steps.res.outputs.tag }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/pypi.json -w '%{http_code}' "https://pypi.org/pypi/janissary/$V/json")
+          case "$code" in
+            404) echo "PyPI has no $V; this is a clean publish."; echo "skip_existing=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            200) echo "PyPI returned metadata for $V." ;;
+            *) echo "::error::PyPI metadata for $V returned HTTP $code"; exit 1 ;;
+          esac
+          have=$(python - "$V" <<'PY'
+          import json, sys
+          v = sys.argv[1]
+          want = {f"janissary-{v}-py3-none-any.whl", f"janissary-{v}.tar.gz"}
+          data = json.load(open("/tmp/pypi.json"))["urls"]
+          got = {f["filename"] for f in data}
+          print(",".join(sorted(want & got)))
+          PY
+          )
+          if [ -z "$have" ]; then
+            echo "PyPI has metadata for $V but no files; treating it as fresh."
+            echo "skip_existing=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$have" = "janissary-$V-py3-none-any.whl,janissary-$V.tar.gz" ]; then
+            echo "PyPI already holds every file for $V: $have"
+            if [ "$EVENT" = "workflow_dispatch" ]; then
+              echo "Dispatched run: continuing, existing files are skipped."
+              echo "skip_existing=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::PyPI already holds $V. Re-release from Actions > Publish to PyPI > Run workflow with tag=$TAG instead of moving the tag."
+            exit 1
+          fi
+          echo "::warning::PyPI holds only: $have. Partial upload; only the missing file will be added."
+          echo "skip_existing=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build distribution
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ${{ needs.prepare.outputs.tag }}
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.x"
-      - name: Check tag matches package version
-        run: |
-          v=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} does not match pyproject v$v"; exit 1; }
+          python-version: "3.12"
       - name: Install build
-        run: python -m pip install build --user
+        run: python -m pip install build==1.2.2.post1 --user
       - name: Build sdist and wheel
         run: python -m build
       - name: Store distributions
@@ -35,8 +144,9 @@ jobs:
 
   publish-to-pypi:
     name: Publish to PyPI
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: pypi
       url: https://pypi.org/p/janissary
@@ -48,24 +158,26 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
+      - name: List what will be uploaded
+        run: ls -l dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: ${{ needs.prepare.outputs.skip_existing == 'true' }}
 
   publish-to-dockerhub:
     name: Publish to Docker Hub
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       IMAGE: oraclemode337/janissary
-      TAG: ${{ github.ref_name }}
+      TAG: ${{ needs.prepare.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Check tag matches package version
-        run: |
-          v=$(grep -m1 ^version pyproject.toml | tr -dc 0-9.)
-          [ "$v" = "${TAG#v}" ] || { echo "tag ${TAG#v} does not match pyproject $v"; exit 1; }
+          ref: ${{ needs.prepare.outputs.tag }}
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -84,21 +196,28 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [publish-to-pypi, publish-to-dockerhub]
+    needs: [prepare, publish-to-pypi, publish-to-dockerhub]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - name: Create the Release from the changelog section
+          ref: ${{ needs.prepare.outputs.tag }}
+      - name: Create or update the Release from the changelog section
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           set -euo pipefail
           v="${TAG#v}"
           body=$(awk -v v="$v" '$0 ~ "^## \\[" v "\\] " { f=1; next } f && /^## \[/ { exit } f { print }' CHANGELOG.md)
           if [ "${#body}" -lt 200 ]; then echo "changelog section for $v is only ${#body} chars"; exit 1; fi
-          gh release create "$TAG" --title "$TAG" --notes "$body" --verify-tag
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release $TAG already exists; updating its notes"
+            gh release edit "$TAG" --title "$TAG" --notes "$body"
+          else
+            gh release create "$TAG" --title "$TAG" --notes "$body" --verify-tag
+          fi

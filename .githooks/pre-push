@@ -1,4 +1,38 @@
 #!/bin/sh
 # LF only. Uses this repository's Windows .venv under Git for Windows.
+# Refuses a v* tag whose commit does not declare the matching version.
 export PATH=".venv/Scripts:$PATH"
+set -u
+
+bad=0
+while read -r lref lsha rref rsha; do
+  case "$lref" in
+    refs/tags/v[0-9]*) ;;
+    *) continue ;;
+  esac
+  tag=${lref#refs/tags/}
+  if ! commit=$(git rev-parse --verify --quiet "$lsha^{commit}"); then
+    echo "pre-push: cannot resolve $tag ($lsha) to a commit"
+    bad=1
+    continue
+  fi
+  ver=$(git show "$commit:pyproject.toml" 2>/dev/null | sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+  if [ -z "$ver" ]; then
+    echo "pre-push: no [project].version readable at $tag ($commit)"
+    bad=1
+    continue
+  fi
+  if [ "v$ver" != "$tag" ]; then
+    echo "pre-push: $tag points at $commit, which declares version $ver"
+    echo "pre-push: commit the version bump first, then tag the bump commit"
+    bad=1
+    continue
+  fi
+  echo "pre-push: $tag ok (version $ver at $commit)"
+done
+if [ "$bad" -ne 0 ]; then
+  echo "pre-push: tag/version check failed"
+  exit 1
+fi
+
 exec ".venv/Scripts/pre-commit.exe" hook-impl --config=.pre-commit-config.yaml --hook-type=pre-push --hook-dir . -- "$@"
