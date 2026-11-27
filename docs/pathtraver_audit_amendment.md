@@ -8,6 +8,12 @@
 
 ---
 
+> **Document pairing.** This amendment corrects `docs/pathtraver.md`, the user-facing
+explanation of the pathtraver ceiling. Commit `5fae530` (2026-11-13) replaced that
+file's text with a copy of this amendment instead of applying the corrections in place;
+the essay was restored on 2026-11-28. Every `docs/pathtraver.md:NN` reference below is to
+the restored essay.
+
 ## 1. Corrected outcome counts
 
 The handover recorded "14 skipped (header_any mode)". That figure is wrong by a factor of seven. `skipped.jsonl` for the baseline run contains **101** lines, with three distinct modes:
@@ -17,10 +23,12 @@ The handover recorded "14 skipped (header_any mode)". That figure is wrong by a 
 | Traversal findings | 10 | In `findings.jsonl`, existence oracle | `existence_divergence` |
 | SSRF-only findings | 60 | `class=ssrf` on pathtraver URLs; scorer treats as out-of-scope | Out of traversal scope; §5.3 capability model |
 | Executed, no finding | 49 | Absent from `findings.jsonl`, `skipped.jsonl`, `timeouts.jsonl` | `inconclusive` |
-| Skipped — `header_any` (vulnerable) | 14 | In `skipped.jsonl`; payload never delivered | `payload_neutralised` |
-The 133 census is confirmed by `_pathtraver_only.csv` (133 `,true$` rows) and
-by intersection with `case_vectors.csv` (133 vulnerable cases, no orphans
-either direction). The corrected breakdown by disposition closes exactly:
+| Skipped — `header_any`, vulnerable | 14 | In `skipped.jsonl`; payload never delivered | `payload_neutralised` |
+| Skipped — `header_any`, not vulnerable | 84 | In `skipped.jsonl`; payload never delivered | Outside the 133 |
+| Skipped — `out_of_scope_stream` | 3 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
+| Skipped — `out_of_scope_uri` | 1 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
+
+The 133 census is confirmed by `_pathtraver_only.csv` (133 `,true$` rows) and by intersection with `case_vectors.csv` (133 vulnerable cases, no orphans either direction). The corrected breakdown by disposition closes exactly:
 
     10 (findings)
   + 60 (SSRF-only findings, inside the 133)
@@ -28,18 +36,9 @@ either direction). The corrected breakdown by disposition closes exactly:
   + 14 (skipped header_any, vulnerable)
   = 133
 
-The 98 figure in `skipped.jsonl` counts all `header_any` skips, of which 14
-are vulnerable and 84 are not. The 4 `out_of_scope_*` skips are not
-vulnerable, do not enter the 133, and are not part of M83.
+The 98 figure in `skipped.jsonl` counts all `header_any` skips, of which 14 are vulnerable and 84 are not. The 4 `out_of_scope_*` skips are not vulnerable, do not enter the 133, and are not part of M83.
 
-**Recall consequence.** 10 / 133 = 0.075, which is exactly the figure already
-recorded in `docs/pathtraver.md:57`. The documentation's recall number was
-always correct; what was wrong was its justification — "123 non-firing cases
-fall into a 'no divergence' bucket by construction" is now replaced by the
-three-way decomposition above. None of the 123 has been classified as
-`no_observable_divergence`; that is what the §5.2 harness exists to determine.| Skipped — `header_any` (non-vulnerable) | 84 | In `skipped.jsonl`; not in the 133 census | Not classified (TN cases) |
-| Skipped — `out_of_scope_stream` | 3 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
-| Skipped — `out_of_scope_uri` | 1 | In `skipped.jsonl`; scoping decision | Out of traversal scope |
+**Recall consequence.** 10 / 133 = 0.075, which is exactly the figure already recorded in `docs/pathtraver.md:57`. The documentation recall number was always correct; what was wrong was its justification — "123 non-firing cases fall into a no-divergence bucket by construction" is now replaced by the three-way decomposition above. None of the 123 has been classified as `no_observable_divergence`; that is what the §5.2 harness exists to determine.
 
 `timeouts.jsonl` is empty for this run. No vulnerable case is attributable to timeout.
 
@@ -51,18 +50,19 @@ three-way decomposition above. None of the 123 has been classified as
 
 ## 3. Arithmetic gap requiring re-derivation
 
-The handover states 133 vulnerable cases. The corrected breakdown by disposition gives:
+The handover states 133 vulnerable cases. Its own disposition breakdown, taken at face value, does not close:
 
+    10 (findings) + 49 (executed silent) + 98 (header_any skipped) = 157
 
-157 ≠ 133. The difference is 24. This means either the 133 census is wrong, or the outcomes above count cases that are not in the 133.
+157 is not 133. The difference is 24, and the reason is that 98 counted every `header_any` skip rather than only the 14 vulnerable ones inside the 133.
 
-**M83 must re-derive the 133 figure** from `benchmark/track_a/case_vectors.csv` ∩ `benchmark/track_a/_pathtraver_only.csv` before any achievable-recall denominator is stated. The 133 figure appears in:
+**Resolved in §1.** The 133 census re-derives exactly from `benchmark/track_a/case_vectors.csv` intersect `benchmark/track_a/_pathtraver_only.csv` (133 on both sides, no orphans either direction), and the breakdown closes at 133 once the 84 non-vulnerable `header_any` skips and the 4 `out_of_scope_*` skips are separated out. The 133 figure stands in all three places that carry it:
 
 - `docs/pathtraver.md:57` (provenance note)
-- The handover's §4 table
+- The handover §4 table
 - The Amendment 29 commentary
 
-If the re-derivation shows a number other than 133, all three must be corrected.
+**M83 still owes** the denominator rule and the adjudication rule for the 49 `inconclusive` cases. What it no longer owes is the census itself.
 
 ## 4. Exit-code semantics recorded
 
@@ -102,7 +102,7 @@ Both use genuine newlines. The audit's claim **does not reproduce**. No fix is r
 
 | Item | Reason |
 |---|---|
-| Re-derivation of 133 census | §3 above; requires census query |
+| Re-derivation of 133 census | §1 and §3 above; resolved — census re-derived at 133 both sides |
 | Denominator rule decision | M83 scope; three options with arithmetic |
 | Inconclusive adjudication rule | M83 scope; three options |
 | Disposition of 60 SSRF-only cases | M83 scope; §5.3 capability model |
